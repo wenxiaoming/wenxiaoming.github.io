@@ -93,21 +93,21 @@
 
 
 
-<meta name="description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍多线程框架介绍典型的多线程框架包括一个主线程，多个工作线程，一个工作队列. 主线程负责接收外部分配过来">
+<meta name="description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍我们对应用程序采用多线程化来充分利用多核的性能，下面介绍一下多线程框架. 多线程框架介绍典型的多线程框">
 <meta name="keywords" content="multicore codec">
 <meta property="og:type" content="article">
 <meta property="og:title" content="optimize jpeg decoder on multicore cpu">
 <meta property="og:url" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍多线程框架介绍典型的多线程框架包括一个主线程，多个工作线程，一个工作队列. 主线程负责接收外部分配过来">
+<meta property="og:description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍我们对应用程序采用多线程化来充分利用多核的性能，下面介绍一下多线程框架. 多线程框架介绍典型的多线程框">
 <meta property="og:image" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/dct_jpeg.png">
 <meta property="og:image" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/spatial_jpeg.png">
 <meta property="og:image" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/multithread_framework.png">
 <meta property="og:image" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/execution_flow.png">
-<meta property="og:updated_time" content="2017-06-19T01:00:10.667Z">
+<meta property="og:updated_time" content="2017-07-03T12:28:53.975Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="optimize jpeg decoder on multicore cpu">
-<meta name="twitter:description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍多线程框架介绍典型的多线程框架包括一个主线程，多个工作线程，一个工作队列. 主线程负责接收外部分配过来">
+<meta name="twitter:description" content="0x1 jpeg解码流程JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式， 有失真的非可逆的DCT方式. 无失真的可逆的Spatial方式. DCT方式的解码流程 Spatial方式的解码流程 0x2 多核优化介绍我们对应用程序采用多线程化来充分利用多核的性能，下面介绍一下多线程框架. 多线程框架介绍典型的多线程框">
 <meta name="twitter:image" content="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/dct_jpeg.png">
 
 
@@ -331,7 +331,8 @@
 <p>无失真的可逆的Spatial方式.</p>
 <h2 id="DCT方式的解码流程"><a href="#DCT方式的解码流程" class="headerlink" title="DCT方式的解码流程"></a>DCT方式的解码流程</h2><p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/dct_jpeg.png" alt="dct_jpeg"></p>
 <h2 id="Spatial方式的解码流程"><a href="#Spatial方式的解码流程" class="headerlink" title="Spatial方式的解码流程"></a>Spatial方式的解码流程</h2><p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/spatial_jpeg.png" alt="spatial_jpeg"></p>
-<h1 id="0x2-多核优化介绍"><a href="#0x2-多核优化介绍" class="headerlink" title="0x2 多核优化介绍"></a>0x2 多核优化介绍</h1><h2 id="多线程框架介绍"><a href="#多线程框架介绍" class="headerlink" title="多线程框架介绍"></a>多线程框架介绍</h2><p>典型的多线程框架包括一个主线程，多个工作线程，一个工作队列.</p>
+<h1 id="0x2-多核优化介绍"><a href="#0x2-多核优化介绍" class="headerlink" title="0x2 多核优化介绍"></a>0x2 多核优化介绍</h1><p>我们对应用程序采用多线程化来充分利用多核的性能，下面介绍一下多线程框架.</p>
+<h2 id="多线程框架介绍"><a href="#多线程框架介绍" class="headerlink" title="多线程框架介绍"></a>多线程框架介绍</h2><p>典型的多线程框架包括一个主线程，多个工作线程，一个工作队列.</p>
 <p>主线程负责接收外部分配过来的任务，把任务拆分成子任务并保存到工作队列中，然后调度工作线程进行具体的操作.</p>
 <p>工作线程执行具体的操作，工作线程完成一个操作以后通知主线程，并更新当前子任务的状态到工作队列中，工作线程进入空闲状态.</p>
 <p>主线程根据工作队列中子任务的状态，分配子任务到刚才空闲的工作线程中，工作线程继续执行分配到的子任务.</p>
@@ -361,6 +362,7 @@
 <p>我们整个图像分解成几部分以后，只有前面一部分的huffman decoder解码完成以后，后面一部分的huffman decoder才能开始，因为前后部分的码流只有在解码以后才能分清楚从具体什么位置开始是后面一部分的码流，也就是说不经过解码，前后部分的码流没办法分割，另外一个原因是DC值得解码需要参考前面一个像素块的DC.</p>
 <p>前面一部分完成了huffman解码以后，可以开始inverse quantizer和idct，在这个时候后面一部分可以开始huffman解码，以此类推.</p>
 <h2 id="解码模块的执行过程演示"><a href="#解码模块的执行过程演示" class="headerlink" title="解码模块的执行过程演示"></a>解码模块的执行过程演示</h2><p>下图演示了多线程解码的过程.</p>
+<p>我们把一个解码图像分成多块block1,block2,block3,block4,… 对每块图像分别执行上面介绍的解码子模块.</p>
 <p>T0时间点，只有block1进行huffman解码. block1的解码工作由线程1完成.</p>
 <p>T1时间点，block1进行iq/idct, block2进行huffman解码. block1的解码工作由线程1完成，block2的解码工作由线程2完成.</p>
 <p>T2时间点，block1进行csc, block2进行iq/idct解码, block3进行huffman解码. block1的解码工作由线程1完成，block2的解码工作由线程2完成，block3的解码工作由线程3完成</p>
