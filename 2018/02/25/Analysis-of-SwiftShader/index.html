@@ -93,13 +93,13 @@
 
 
 
-<meta name="description" content="0x1 Architecture IntroductionFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API l">
+<meta name="description" content="0x1 ArchitectureFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API layer is an im">
 <meta name="keywords" content="graphics">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Analysis of SwiftShader">
 <meta property="og:url" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1 Architecture IntroductionFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API l">
+<meta property="og:description" content="0x1 ArchitectureFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API layer is an im">
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/architecture.png">
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/graphic_pipeline.png">
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/generate_ir.png">
@@ -108,10 +108,10 @@
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/task_producer.png">
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/task_consumer.png">
 <meta property="og:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/task_consumer_pixel.png">
-<meta property="og:updated_time" content="2018-02-27T00:57:26.792Z">
+<meta property="og:updated_time" content="2018-03-13T14:51:56.686Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Analysis of SwiftShader">
-<meta name="twitter:description" content="0x1 Architecture IntroductionFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API l">
+<meta name="twitter:description" content="0x1 ArchitectureFrom the doc of swiftshader in the following link, we can see the architecture introduction of it.https://github.com/google/swiftshader/blob/master/docs/Index.md The API layer is an im">
 <meta name="twitter:image" content="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/architecture.png">
 
 
@@ -295,7 +295,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-02-25T20:50:24+08:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-02-25T20:50:24+09:00">
                 2018-02-25
               </time>
             
@@ -341,7 +341,7 @@
       
 
       
-        <h1 id="0x1-Architecture-Introduction"><a href="#0x1-Architecture-Introduction" class="headerlink" title="0x1 Architecture Introduction"></a>0x1 Architecture Introduction</h1><p>From the doc of swiftshader in the following link, we can see the architecture introduction of it.<br><a href="https://github.com/google/swiftshader/blob/master/docs/Index.md" target="_blank" rel="external">https://github.com/google/swiftshader/blob/master/docs/Index.md</a><br><img src="/2018/02/25/Analysis-of-SwiftShader/architecture.png" alt="swiftshader1"></p>
+        <h1 id="0x1-Architecture"><a href="#0x1-Architecture" class="headerlink" title="0x1 Architecture"></a>0x1 Architecture</h1><p>From the doc of swiftshader in the following link, we can see the architecture introduction of it.<br><a href="https://github.com/google/swiftshader/blob/master/docs/Index.md" target="_blank" rel="external">https://github.com/google/swiftshader/blob/master/docs/Index.md</a><br><img src="/2018/02/25/Analysis-of-SwiftShader/architecture.png" alt="swiftshader1"></p>
 <p>The API layer is an implementation of a graphics API, such as OpenGL (ES) or Direct3D, on top of the Renderer interface. It is responsible for managing API-level resources and rendering state, as well as compiling high-level shaders to bytecode form.</p>
 <p>The Renderer layer generates specialized processing routines for draw calls and coordinates the execution of rendering tasks. It defines the data structures used and how the processing is performed.</p>
 <p>Reactor is an embedded language for C++ to dynamically generate code in a WYSIWYG fashion. It allows to specialize the processing routines for the state and shaders used by each draw call. Its syntax closely resembles C and shading languages, to make the code generation easily readable.</p>
@@ -419,6 +419,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2018/03/13/How-renderscript-supports-parallel-compution/" rel="prev" title="How renderscript supports parallel compution">
+                How renderscript supports parallel compution <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -489,7 +493,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-count">7</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -537,7 +541,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Architecture-Introduction"><span class="nav-number">1.</span> <span class="nav-text">0x1 Architecture Introduction</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Graphics-Pipeline"><span class="nav-number">2.</span> <span class="nav-text">0x2 Graphics Pipeline</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-JIT-through-LLVM"><span class="nav-number">3.</span> <span class="nav-text">0x3 JIT through LLVM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-GLSL-compiler-frontend"><span class="nav-number">3.1.</span> <span class="nav-text">0x31 GLSL compiler frontend</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-Vertex-processor"><span class="nav-number">3.2.</span> <span class="nav-text">0x31 Vertex processor</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Prepare-the-draw-state"><span class="nav-number">3.2.1.</span> <span class="nav-text">Prepare the draw state</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Generate-LLVM-IR"><span class="nav-number">3.2.2.</span> <span class="nav-text">Generate LLVM IR</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x32-Setup-processor"><span class="nav-number">3.3.</span> <span class="nav-text">0x32 Setup processor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x33-Pixel-processor"><span class="nav-number">3.4.</span> <span class="nav-text">0x33 Pixel processor</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Multithread"><span class="nav-number">4.</span> <span class="nav-text">0x4 Multithread</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x41-Task-producer"><span class="nav-number">4.1.</span> <span class="nav-text">0x41 Task producer.</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x42-Task-consumer"><span class="nav-number">4.2.</span> <span class="nav-text">0x42 Task consumer.</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Architecture"><span class="nav-number">1.</span> <span class="nav-text">0x1 Architecture</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Graphics-Pipeline"><span class="nav-number">2.</span> <span class="nav-text">0x2 Graphics Pipeline</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-JIT-through-LLVM"><span class="nav-number">3.</span> <span class="nav-text">0x3 JIT through LLVM</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-GLSL-compiler-frontend"><span class="nav-number">3.1.</span> <span class="nav-text">0x31 GLSL compiler frontend</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-Vertex-processor"><span class="nav-number">3.2.</span> <span class="nav-text">0x31 Vertex processor</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Prepare-the-draw-state"><span class="nav-number">3.2.1.</span> <span class="nav-text">Prepare the draw state</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Generate-LLVM-IR"><span class="nav-number">3.2.2.</span> <span class="nav-text">Generate LLVM IR</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x32-Setup-processor"><span class="nav-number">3.3.</span> <span class="nav-text">0x32 Setup processor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x33-Pixel-processor"><span class="nav-number">3.4.</span> <span class="nav-text">0x33 Pixel processor</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Multithread"><span class="nav-number">4.</span> <span class="nav-text">0x4 Multithread</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x41-Task-producer"><span class="nav-number">4.1.</span> <span class="nav-text">0x41 Task producer.</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x42-Task-consumer"><span class="nav-number">4.2.</span> <span class="nav-text">0x42 Task consumer.</span></a></li></ol></li></ol></div>
             
 
           </div>
