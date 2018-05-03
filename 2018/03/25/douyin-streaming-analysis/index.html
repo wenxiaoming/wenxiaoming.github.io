@@ -93,23 +93,23 @@
 
 
 
-<meta name="description" content="0x1    简介抖音是最近火热的段视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
+<meta name="description" content="0x1    简介抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
 <meta name="keywords" content="video streaming">
 <meta property="og:type" content="article">
 <meta property="og:title" content="douyin streaming analysis">
 <meta property="og:url" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1    简介抖音是最近火热的段视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
+<meta property="og:description" content="0x1    简介抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/architecture.png">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/dns.png">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/dns_result.png">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/connection.png">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/download.png">
 <meta property="og:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/local_playback.png">
-<meta property="og:updated_time" content="2018-04-14T00:18:32.082Z">
+<meta property="og:updated_time" content="2018-05-03T15:04:37.290Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="douyin streaming analysis">
-<meta name="twitter:description" content="0x1    简介抖音是最近火热的段视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
+<meta name="twitter:description" content="0x1    简介抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。通过分析，可以知道其播放流程如下，server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。 其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下">
 <meta name="twitter:image" content="http://yoursite.com/2018/03/25/douyin-streaming-analysis/architecture.png">
 
 
@@ -339,7 +339,7 @@
       
 
       
-        <h1 id="0x1-简介"><a href="#0x1-简介" class="headerlink" title="0x1    简介"></a>0x1    简介</h1><p>抖音是最近火热的段视频app, 本文通过抓包来分析douyin的在线视频播放过程。<br>通过分析，可以知道其播放流程如下，<br><img src="/2018/03/25/douyin-streaming-analysis/architecture.png" alt="architecture"><br>server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。</p>
+        <h1 id="0x1-简介"><a href="#0x1-简介" class="headerlink" title="0x1    简介"></a>0x1    简介</h1><p>抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。<br>通过分析，可以知道其播放流程如下，<br><img src="/2018/03/25/douyin-streaming-analysis/architecture.png" alt="architecture"><br>server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。</p>
 <p>其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下载下来，并把下载下来的数据送给local streamer进行本地streaming, 然后local player连接到local streamer来得到需要播放的数据进行播放。通过下面的抓包分析可知，downloader是通过http协议来从远端server下载数据，local streamer也是通过提供本地http服务把播放数据提供给local player.</p>
 <p>下面分析android平台上douyin下载数据并播放的过程。</p>
 <h1 id="0x2-下载"><a href="#0x2-下载" class="headerlink" title="0x2  下载"></a>0x2  下载</h1><h2 id="0x21-dns查询服务器的ip地址"><a href="#0x21-dns查询服务器的ip地址" class="headerlink" title="0x21 dns查询服务器的ip地址"></a>0x21 dns查询服务器的ip地址</h2><p>通过dns查询v1-dy.ixiguavideo.com的ip地址，这一步是为后面的http连接服务的。<br>如下图所示，第49号包是发送dns查询请求，第56号包是返回dns查询结果。<br><img src="/2018/03/25/douyin-streaming-analysis/dns.png" alt="dns"></p>
@@ -349,7 +349,7 @@
 <h1 id="0x3-播放"><a href="#0x3-播放" class="headerlink" title="0x3  播放"></a>0x3  播放</h1><p>下载过程中，启动本地http服务, 播放器通过访问这个http服务来得到播放数据，<br>前面三个包(1130, 1131, 1132)是三次握手的过程。<br>后面的包是发送给播放器的播放数据。<br><img src="/2018/03/25/douyin-streaming-analysis/local_playback.png" alt="http_playback"></p>
 <p>下面是douyin app中的lib，从其中可以看到其播放架构是基于ffmpeg实现的。通过分析可知，这里面有好几个库都包括了ffmpeg的代码，感觉模块之间划分不是很清楚，代码有冗余。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">libaudiocore.so             libdaemon.so          libijkffmpeg.so      libst_mobile.so     libttnativecrash.so</div><div class="line">libaudiofp.so               libdys.so             libijkplayer.so      libstatic-webp.so   libttvideouploader.so</div><div class="line">libbdEASRAndroid.v1<span class="number">.5</span><span class="number">.6</span>.so  libeffect.so          libijksdl.so         libsupervisor.so    libuserinfo.so</div><div class="line">libbspatch.so               libffmpeg.so          libimagepipeline.so  libtnet<span class="number">-3.1</span><span class="number">.11</span>.so   libweibosdkcore.so</div><div class="line">libBugly.so                 libffmpeg-invoker.so  liblivestream.so     libtongdun.so       libyuv.so</div><div class="line">libcocklogic<span class="number">-1.1</span><span class="number">.3</span>.so       libffmpeg-main.so     libmain.so           libttEncrypt.so</div><div class="line">libcrashlytics.so           libgif.so             libNailSLAM_jni.so   libttmplayer.so</div><div class="line">libcrashlytics-envelope.so  libgifimage.so        libSDL2.so           libttmplayer_mc.so</div></pre></td></tr></table></figure>
-<p>其中libeffect.so实现了对用户拍摄好的视频内容进行编辑，加特效等工作，如下所示，其中包括了CV相关的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="number">00493</span>ecd T cvGetImage</div><div class="line"><span class="number">00494511</span> T cvGetImageCOI</div><div class="line"><span class="number">0049439</span>d T cvGetImageROI</div><div class="line"><span class="number">00491261</span> T cvGetMat</div><div class="line"><span class="number">0048f</span>e41 T cvGetND</div><div class="line"><span class="number">0053</span>d33d T cvGetNumThreads</div><div class="line"><span class="number">004b</span>a981 T cvGetOptimalDFTSize</div><div class="line"><span class="number">0041f</span>609 T cvGetPerspectiveTransform</div><div class="line"><span class="number">0048f</span>4f5 T cvGetRawData</div><div class="line"><span class="number">0048f</span>ea1 T cvGetReal1D</div><div class="line"><span class="number">004900</span>d9 T cvGetReal2D</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div><div class="line"><span class="number">004904</span>a9 T cvGetRealND</div><div class="line"><span class="number">00545685</span> T cvGetRootFileNode</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div><div class="line"><span class="number">004904</span>a9 T cvGetRealND</div></pre></td></tr></table></figure></p>
+<p>其中libeffect.so实现了对用户拍摄好的视频内容进行编辑，加特效等工作，如下所示，其中包括了CV相关的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">00493</span>ecd T cvGetImage</div><div class="line"><span class="number">00494511</span> T cvGetImageCOI</div><div class="line"><span class="number">0049439</span>d T cvGetImageROI</div><div class="line"><span class="number">00491261</span> T cvGetMat</div><div class="line"><span class="number">0048f</span>e41 T cvGetND</div><div class="line"><span class="number">0053</span>d33d T cvGetNumThreads</div><div class="line"><span class="number">004b</span>a981 T cvGetOptimalDFTSize</div><div class="line"><span class="number">0041f</span>609 T cvGetPerspectiveTransform</div><div class="line"><span class="number">0048f</span>4f5 T cvGetRawData</div><div class="line"><span class="number">0048f</span>ea1 T cvGetReal1D</div><div class="line"><span class="number">004900</span>d9 T cvGetReal2D</div><div class="line"><span class="number">00545685</span> T cvGetRootFileNode</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -401,6 +401,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/04/01/learning-rate-in-neural-network/" rel="prev" title="learning rate in neural network">
+                learning rate in neural network <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -472,7 +476,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-count">10</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -485,7 +489,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">8</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

@@ -254,6 +254,139 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/01/learning-rate-in-neural-network/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/04/01/learning-rate-in-neural-network/" itemprop="url">learning rate in neural network</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-01T20:58:40+09:00">
+                2018-04-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/04/01/learning-rate-in-neural-network/" class="leancloud_visitors" data-flag-title="learning rate in neural network">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-学习率简介"><a href="#0x1-学习率简介" class="headerlink" title="0x1 学习率简介"></a>0x1 学习率简介</h1><p>学习率是一个重要的超参数，在大多数神经网络优化算法（如SGD、Adam）中都会用到，它控制着我们基于损失梯度调整神经网络权值的速度。如果学习率过大，可能会错过最小值，并且可能造成不能收敛，损失在某一个值附近反复震荡。如果学习率过小，我们沿着损失梯度下降的速度就很慢，收敛的速度也很慢。</p>
+<p>神经网络优化算法的功能是，控制方差，寻找最小值，更新模型参数，最终使模型收敛。<br>神经网络更新参数的公式为：θ=θ−η×∇(θ).J(θ)，其中η是学习率，∇(θ).J(θ)是损失函数J(θ)的梯度。</p>
+<p>学习率是神经网络中难以设置的超参数之一，它对模型的性能有很大的影响。目前出现了很多自适应学习率算法，如下文测试中用到的Adam。</p>
+<h1 id="0x2-构造计算图"><a href="#0x2-构造计算图" class="headerlink" title="0x2 构造计算图"></a>0x2 构造计算图</h1><p>用python编写tensorflow测试代码，构造如下图所示的卷积神经网络，用来对MNIST数据集进行0～9分类。</p>
+<p>从下图神经网络图可知，首先载入MNIST数据，然后进行处理，包括卷积层layer1, 卷积层layer2, 接下来是一个全连接层fc_layer, 接下来是dropout层，最后连接上softmax层layer3, 得到概率输出。</p>
+<p>优化算法采用Adam，在设置Adam优化器的时候设置需要初始学习率，其代码如下。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)</div></pre></td></tr></table></figure></p>
+<p>总体网络图如下<br><img src="/2018/04/01/learning-rate-in-neural-network/computation graph.png" alt="computation_graph"><br>Layer1内部结构如下所示<br><img src="/2018/04/01/learning-rate-in-neural-network/layer1.png" alt="layer1"><br>Layer2内部结构如下所示<br><img src="/2018/04/01/learning-rate-in-neural-network/layer2.png" alt="layer2"></p>
+<h1 id="0x3-高初始学习率的测试结果"><a href="#0x3-高初始学习率的测试结果" class="headerlink" title="0x3 高初始学习率的测试结果"></a>0x3 高初始学习率的测试结果</h1><p>这个时候初始学习率被设置为0.5，从训练集上的测试准确率上来看，准确率是很低的，在0.05～0.15之间来回震荡。<br><img src="/2018/04/01/learning-rate-in-neural-network/hight_learning_rate.png" alt="high_learning_rate"></p>
+<h1 id="0x4-低初始学习率的测试结果"><a href="#0x4-低初始学习率的测试结果" class="headerlink" title="0x4 低初始学习率的测试结果"></a>0x4 低初始学习率的测试结果</h1><p>这个时候初始学习率被设置为0.001，从训练集上的测试准确率上来看，准确率是慢慢升高的，最后稳定在0.95以上。<br><img src="/2018/04/01/learning-rate-in-neural-network/low_learning_rate.png" alt="low_learning_rate"></p>
+<h1 id="0x5-Adam优化器"><a href="#0x5-Adam优化器" class="headerlink" title="0x5 Adam优化器"></a>0x5 Adam优化器</h1><p>通过gdb调试可知，tensorflow中Adam优化器调用堆栈如下。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#0  tensorflow::functor::ApplyAdamNonCuda&lt;Eigen::ThreadPoolDevice, float&gt;::operator()(Eigen::ThreadPoolDevice const&amp;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float const, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, bool) (this=0x7fffc58d8260, d=..., var=..., m=..., v=..., beta1_power=..., </div><div class="line">    beta2_power=..., lr=..., beta1=..., beta2=..., epsilon=..., grad=..., use_nesterov=false) at tensorflow/core/kernels/training_ops.cc:293</div><div class="line">#1  0x00007fffede52e6d in tensorflow::ApplyAdamOp&lt;Eigen::ThreadPoolDevice, float&gt;::Compute (this=0x555558f61cf0, ctx=0x7fffc58d8840)</div><div class="line">    at tensorflow/core/kernels/training_ops.cc:2523</div><div class="line">#2  0x00007fffe6a2e91b in tensorflow::ThreadPoolDevice::Compute (this=0x555557f25fa0, op_kernel=0x555558f61cf0, context=0x7fffc58d8840)</div><div class="line">    at tensorflow/core/common_runtime/threadpool_device.cc:59</div><div class="line">#3  0x00007fffe69c9c0a in tensorflow::(anonymous namespace)::ExecutorState::Process (this=0x55555945b6c0, tagged_node=..., scheduled_usec=0)</div><div class="line">    at tensorflow/core/common_runtime/executor.cc:1652</div><div class="line">#4  0x00007fffe69d81a7 in std::_Mem_fn_base&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long), true&gt;::operator()&lt;tensorflow::(anonymous namespace)::ExecutorState::TaggedNode&amp;, long long&amp;, void&gt; (</div><div class="line">    this=0x7fff8c04b440, __object=0x55555945b6c0) at /usr/include/c++/5/functional:600</div><div class="line">#5  0x00007fffe69d7c62 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::__call&lt;void, 0ul, 1ul, 2ul&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;, std::_Index_tuple&lt;0ul, 1ul, 2ul&gt;) (this=0x7fff8c04b440, </div><div class="line">    __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;) at /usr/include/c++/5/functional:1074</div><div class="line">#6  0x00007fffe69d5a06 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::operator()&lt;, void&gt;(void) (this=0x7fff8c04b440) at /usr/include/c++/5/functional:1133</div><div class="line">#7  0x00007fffe69d32ac in std::_Function_handler&lt;void(), std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt; &gt;::_M_invoke(const std::_Any_data &amp;) (__functor=...)</div><div class="line">    at /usr/include/c++/5/functional:1871</div><div class="line">#8  0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x7fff8c04a930) at /usr/include/c++/5/functional:2267</div><div class="line">#9  0x00007fffe64afb9e in tensorflow::thread::EigenEnvironment::ExecuteTask (this=0x555557f5ca48, t=...)</div><div class="line">    at tensorflow/core/lib/core/threadpool.cc:81</div><div class="line">#10 0x00007fffe64b265c in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (this=0x555557f5ca40, </div><div class="line">    thread_id=1) at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:232</div><div class="line">#11 0x00007fffe64b0aae in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;::operator()() const ()</div><div class="line">    at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:65</div><div class="line">#12 0x00007fffe64b3c7c in std::_Function_handler&lt;void (), Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...)</div><div class="line">    at /usr/include/c++/5/functional:1871</div><div class="line">#13 0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x555557f6d0b0) at /usr/include/c++/5/functional:2267</div><div class="line">#14 0x00007fffe64af907 in tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;::operator()() const (</div><div class="line">    __closure=0x555557f6d0b0) at tensorflow/core/lib/core/threadpool.cc:56</div><div class="line">#15 0x00007fffe64b18d8 in std::_Function_handler&lt;void (), tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...) at /usr/include/c++/5/functional:1871</div><div class="line">#16 0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x555557f6d108) at /usr/include/c++/5/functional:2267</div><div class="line">#17 0x00007fffe64f4f38 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::_M_invoke&lt;&gt;(std::_Index_tuple&lt;&gt;) (this=0x555557f6d108)</div><div class="line">    at /usr/include/c++/5/functional:1531</div><div class="line">#18 0x00007fffe64f4ea1 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::operator()() (this=0x555557f6d108)</div><div class="line">    at /usr/include/c++/5/functional:1520</div><div class="line">#19 0x00007fffe64f4e40 in std::thread::_Impl&lt;std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt; &gt;::_M_run() (this=0x555557f6d0f0)</div><div class="line">    at /usr/include/c++/5/thread:115</div><div class="line">#20 0x00007fffe5067c80 in ?? () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6</div><div class="line">#21 0x00007ffff7bc16ba in start_thread (arg=0x7fffc58d9700) at pthread_create.c:333</div><div class="line">#22 0x00007ffff78f741d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109</div></pre></td></tr></table></figure></p>
+<p>tensorflow中Adam优化器更新参数的代码如下。<br>tensorflow/core/kernels/training_ops.cc<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">template</span> &lt;<span class="keyword">typename</span> Device, <span class="keyword">typename</span> T&gt;</div><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ApplyAdamNonCuda</span> &#123;</span></div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">operator</span><span class="params">()</span><span class="params">(<span class="keyword">const</span> Device&amp; d, <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat var,</span></span></div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat m, <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat v,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta1_power,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta2_power,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar lr,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta1,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta2,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar epsilon,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstFlat grad, <span class="keyword">bool</span> use_nesterov) &#123;</div><div class="line">    <span class="keyword">const</span> T alpha = lr() * Eigen::numext::<span class="built_in">sqrt</span>(T(<span class="number">1</span>) - beta2_power()) /</div><div class="line">                    (T(<span class="number">1</span>) - beta1_power());</div><div class="line">    <span class="comment">// beta1 == μ</span></div><div class="line">    <span class="comment">// beta2 == ν</span></div><div class="line">    <span class="comment">// v     == n</span></div><div class="line">    <span class="comment">// var   == θ</span></div><div class="line"></div><div class="line">    m.device(d) += (grad - m) * (T(<span class="number">1</span>) - beta1());</div><div class="line">    v.device(d) += (grad.square() - v) * (T(<span class="number">1</span>) - beta2());</div><div class="line">    <span class="keyword">if</span> (use_nesterov) &#123;</div><div class="line">      var.device(d) -= ((grad * (T(<span class="number">1</span>) - beta1()) + beta1() * m) * alpha) /</div><div class="line">                       (v.<span class="built_in">sqrt</span>() + epsilon());</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      var.device(d) -= (m * alpha) / (v.<span class="built_in">sqrt</span>() + epsilon());</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/25/douyin-streaming-analysis/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -333,7 +466,7 @@
       
         
           
-            <h1 id="0x1-简介"><a href="#0x1-简介" class="headerlink" title="0x1    简介"></a>0x1    简介</h1><p>抖音是最近火热的段视频app, 本文通过抓包来分析douyin的在线视频播放过程。<br>通过分析，可以知道其播放流程如下，<br><img src="/2018/03/25/douyin-streaming-analysis/architecture.png" alt="architecture"><br>server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。</p>
+            <h1 id="0x1-简介"><a href="#0x1-简介" class="headerlink" title="0x1    简介"></a>0x1    简介</h1><p>抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。<br>通过分析，可以知道其播放流程如下，<br><img src="/2018/03/25/douyin-streaming-analysis/architecture.png" alt="architecture"><br>server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。</p>
 <p>其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下载下来，并把下载下来的数据送给local streamer进行本地streaming, 然后local player连接到local streamer来得到需要播放的数据进行播放。通过下面的抓包分析可知，downloader是通过http协议来从远端server下载数据，local streamer也是通过提供本地http服务把播放数据提供给local player.</p>
 <p>下面分析android平台上douyin下载数据并播放的过程。</p>
 <h1 id="0x2-下载"><a href="#0x2-下载" class="headerlink" title="0x2  下载"></a>0x2  下载</h1><h2 id="0x21-dns查询服务器的ip地址"><a href="#0x21-dns查询服务器的ip地址" class="headerlink" title="0x21 dns查询服务器的ip地址"></a>0x21 dns查询服务器的ip地址</h2><p>通过dns查询v1-dy.ixiguavideo.com的ip地址，这一步是为后面的http连接服务的。<br>如下图所示，第49号包是发送dns查询请求，第56号包是返回dns查询结果。<br><img src="/2018/03/25/douyin-streaming-analysis/dns.png" alt="dns"></p>
@@ -343,7 +476,7 @@
 <h1 id="0x3-播放"><a href="#0x3-播放" class="headerlink" title="0x3  播放"></a>0x3  播放</h1><p>下载过程中，启动本地http服务, 播放器通过访问这个http服务来得到播放数据，<br>前面三个包(1130, 1131, 1132)是三次握手的过程。<br>后面的包是发送给播放器的播放数据。<br><img src="/2018/03/25/douyin-streaming-analysis/local_playback.png" alt="http_playback"></p>
 <p>下面是douyin app中的lib，从其中可以看到其播放架构是基于ffmpeg实现的。通过分析可知，这里面有好几个库都包括了ffmpeg的代码，感觉模块之间划分不是很清楚，代码有冗余。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">libaudiocore.so             libdaemon.so          libijkffmpeg.so      libst_mobile.so     libttnativecrash.so</div><div class="line">libaudiofp.so               libdys.so             libijkplayer.so      libstatic-webp.so   libttvideouploader.so</div><div class="line">libbdEASRAndroid.v1<span class="number">.5</span><span class="number">.6</span>.so  libeffect.so          libijksdl.so         libsupervisor.so    libuserinfo.so</div><div class="line">libbspatch.so               libffmpeg.so          libimagepipeline.so  libtnet<span class="number">-3.1</span><span class="number">.11</span>.so   libweibosdkcore.so</div><div class="line">libBugly.so                 libffmpeg-invoker.so  liblivestream.so     libtongdun.so       libyuv.so</div><div class="line">libcocklogic<span class="number">-1.1</span><span class="number">.3</span>.so       libffmpeg-main.so     libmain.so           libttEncrypt.so</div><div class="line">libcrashlytics.so           libgif.so             libNailSLAM_jni.so   libttmplayer.so</div><div class="line">libcrashlytics-envelope.so  libgifimage.so        libSDL2.so           libttmplayer_mc.so</div></pre></td></tr></table></figure>
-<p>其中libeffect.so实现了对用户拍摄好的视频内容进行编辑，加特效等工作，如下所示，其中包括了CV相关的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="number">00493</span>ecd T cvGetImage</div><div class="line"><span class="number">00494511</span> T cvGetImageCOI</div><div class="line"><span class="number">0049439</span>d T cvGetImageROI</div><div class="line"><span class="number">00491261</span> T cvGetMat</div><div class="line"><span class="number">0048f</span>e41 T cvGetND</div><div class="line"><span class="number">0053</span>d33d T cvGetNumThreads</div><div class="line"><span class="number">004b</span>a981 T cvGetOptimalDFTSize</div><div class="line"><span class="number">0041f</span>609 T cvGetPerspectiveTransform</div><div class="line"><span class="number">0048f</span>4f5 T cvGetRawData</div><div class="line"><span class="number">0048f</span>ea1 T cvGetReal1D</div><div class="line"><span class="number">004900</span>d9 T cvGetReal2D</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div><div class="line"><span class="number">004904</span>a9 T cvGetRealND</div><div class="line"><span class="number">00545685</span> T cvGetRootFileNode</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div><div class="line"><span class="number">004904</span>a9 T cvGetRealND</div></pre></td></tr></table></figure></p>
+<p>其中libeffect.so实现了对用户拍摄好的视频内容进行编辑，加特效等工作，如下所示，其中包括了CV相关的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">00493</span>ecd T cvGetImage</div><div class="line"><span class="number">00494511</span> T cvGetImageCOI</div><div class="line"><span class="number">0049439</span>d T cvGetImageROI</div><div class="line"><span class="number">00491261</span> T cvGetMat</div><div class="line"><span class="number">0048f</span>e41 T cvGetND</div><div class="line"><span class="number">0053</span>d33d T cvGetNumThreads</div><div class="line"><span class="number">004b</span>a981 T cvGetOptimalDFTSize</div><div class="line"><span class="number">0041f</span>609 T cvGetPerspectiveTransform</div><div class="line"><span class="number">0048f</span>4f5 T cvGetRawData</div><div class="line"><span class="number">0048f</span>ea1 T cvGetReal1D</div><div class="line"><span class="number">004900</span>d9 T cvGetReal2D</div><div class="line"><span class="number">00545685</span> T cvGetRootFileNode</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div></pre></td></tr></table></figure></p>
 
           
         
@@ -1604,7 +1737,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-count">10</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1617,7 +1750,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">8</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
