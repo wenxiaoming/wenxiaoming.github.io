@@ -77,7 +77,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="p2p streamer," />
+  <meta name="keywords" content="Hexo, NexT" />
 
 
 
@@ -93,22 +93,12 @@
 
 
 
-<meta name="description" content="0x1 需求分析0x10 HTTP监控   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.    RsStreamer在运行的过程中，很多内部状态需要及时地提供给用户，如统计有多少个用户观看了某部影片，提供某部影片流媒体服务的总带宽是多少，通过http服务的形">
-<meta name="keywords" content="p2p streamer">
-<meta property="og:type" content="article">
-<meta property="og:title" content="RsStreamer监控模块设计">
-<meta property="og:url" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/index.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Kevin Wen&#39;s Blog">
+<meta property="og:url" content="http://yoursite.com/page/2/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1 需求分析0x10 HTTP监控   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.    RsStreamer在运行的过程中，很多内部状态需要及时地提供给用户，如统计有多少个用户观看了某部影片，提供某部影片流媒体服务的总带宽是多少，通过http服务的形">
-<meta property="og:image" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats_architecture.png">
-<meta property="og:image" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats_sequence_diagram.png">
-<meta property="og:image" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats.png">
-<meta property="og:image" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/rsstreamer_monitor_architecture.png">
-<meta property="og:updated_time" content="2017-06-10T04:18:44.487Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="RsStreamer监控模块设计">
-<meta name="twitter:description" content="0x1 需求分析0x10 HTTP监控   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.    RsStreamer在运行的过程中，很多内部状态需要及时地提供给用户，如统计有多少个用户观看了某部影片，提供某部影片流媒体服务的总带宽是多少，通过http服务的形">
-<meta name="twitter:image" content="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats_architecture.png">
+<meta name="twitter:title" content="Kevin Wen&#39;s Blog">
 
 
 
@@ -136,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/"/>
+  <link rel="canonical" href="http://yoursite.com/page/2/"/>
 
 
 
 
 
-  <title>RsStreamer监控模块设计 | Kevin Wen's Blog</title>
+  <title>Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -168,7 +158,9 @@
     
   
 
-  <div class="container sidebar-position-left page-post-detail ">
+  <div class="container sidebar-position-left 
+   page-home 
+ ">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -251,9 +243,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-
-  <div id="posts" class="posts-expand">
+  <section id="posts" class="posts-expand">
     
+      
 
   
 
@@ -279,7 +271,9 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">RsStreamer监控模块设计</h1>
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/06/04/design-monitor-interface-for-rsstreamer/" itemprop="url">RsStreamer监控模块设计</a></h1>
         
 
         <div class="post-meta">
@@ -337,7 +331,9 @@
       
 
       
-        <h1 id="0x1-需求分析"><a href="#0x1-需求分析" class="headerlink" title="0x1 需求分析"></a>0x1 需求分析</h1><h2 id="0x10-HTTP监控"><a href="#0x10-HTTP监控" class="headerlink" title="0x10 HTTP监控"></a>0x10 HTTP监控</h2><p>   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.</p>
+        
+          
+            <h1 id="0x1-需求分析"><a href="#0x1-需求分析" class="headerlink" title="0x1 需求分析"></a>0x1 需求分析</h1><h2 id="0x10-HTTP监控"><a href="#0x10-HTTP监控" class="headerlink" title="0x10 HTTP监控"></a>0x10 HTTP监控</h2><p>   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.</p>
 <p>   RsStreamer在运行的过程中，很多内部状态需要及时地提供给用户，如统计有多少个用户观看了某部影片，提供某部影片流媒体服务的总带宽是多少，通过http服务的形式提供这些内部状态的监控信息，用户可以通过浏览器来直观地访问这些数据，从而了解系统运行的相关信息.</p>
 <p>   另外用户还可以通过浏览器来配置RsStreamer，如限制某个用户的带宽，对某个特定的媒体频道限制用户数目.</p>
 <p>   其他流媒体平台如helix server也提供网页形式的界面供用户查看运行状态和进行相关配置管理.</p>
@@ -360,72 +356,46 @@
 <h2 id="0x24-浏览器运行效果如下"><a href="#0x24-浏览器运行效果如下" class="headerlink" title="0x24 浏览器运行效果如下"></a>0x24 浏览器运行效果如下</h2><p>   从图中可以看到系统运行的状态.<br>   <img src="/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats.png" alt="haproxy stats"></p>
 <h1 id="0x3-系统设计"><a href="#0x3-系统设计" class="headerlink" title="0x3 系统设计"></a>0x3 系统设计</h1><p>   参考haproxy的监控模块，设计RssStreamer的监控模块如下图所示.<br>   http service基于st对外提供http服务，st是基于epoll来实现的, 接受浏览器的请求，建立和浏览器之间的tcp连接，state monitor负责收集系统各个模块的运行状态，html generator根据运行状态生成对应的html格式数据，通过tcp把html数据发送给浏览器，浏览器接收到数据以后显示RsStreamer的运行状态.<br>   <img src="/2017/06/04/design-monitor-interface-for-rsstreamer/rsstreamer_monitor_architecture.png" alt="rsstreamer stats architecture"></p>
 
+          
+        
       
     </div>
 
     <div>
       
-        
-
-      
     </div>
 
     <div>
       
-        
-
-      
     </div>
 
     <div>
-      
-        
-
       
     </div>
 
     <footer class="post-footer">
       
-        <div class="post-tags">
-          
-            <a href="/tags/p2p-streamer/" rel="tag"># p2p streamer</a>
-          
-        </div>
+
+      
+
       
 
       
       
-      
-
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
-            
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/" rel="prev" title="optimize jpeg decoder on multicore cpu">
-                optimize jpeg decoder on multicore cpu <i class="fa fa-chevron-right"></i>
-              </a>
-            
-          </div>
-        </div>
-      
-
-      
+        <div class="post-eof"></div>
       
     </footer>
   </article>
 
 
+    
+  </section>
 
-    <div class="post-spread">
-      
-    </div>
-  </div>
+  
+  <nav class="pagination">
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+  </nav>
+
 
 
           </div>
@@ -433,10 +403,6 @@
 
 
           
-  <div class="comments" id="comments">
-    
-  </div>
-
 
         </div>
         
@@ -456,17 +422,8 @@
       
 
       
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview">
-            站点概览
-          </li>
-        </ul>
-      
 
-      <section class="site-overview sidebar-panel">
+      <section class="site-overview sidebar-panel sidebar-panel-active">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/images/avatar.gif"
@@ -519,22 +476,6 @@
 
       </section>
 
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-需求分析"><span class="nav-number">1.</span> <span class="nav-text">0x1 需求分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x10-HTTP监控"><span class="nav-number">1.1.</span> <span class="nav-text">0x10 HTTP监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x11-数据分析"><span class="nav-number">1.2.</span> <span class="nav-text">0x11 数据分析</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-HAProxy的实现"><span class="nav-number">2.</span> <span class="nav-text">0x2 HAProxy的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x20-总体结构"><span class="nav-number">2.1.</span> <span class="nav-text">0x20 总体结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x21-代码流程"><span class="nav-number">2.2.</span> <span class="nav-text">0x21 代码流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#程序执行流程图如下"><span class="nav-number">2.2.1.</span> <span class="nav-text">程序执行流程图如下</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x22-相关代码模块分析"><span class="nav-number">2.3.</span> <span class="nav-text">0x22 相关代码模块分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#处理网络连接的主循环"><span class="nav-number">2.3.1.</span> <span class="nav-text">处理网络连接的主循环</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#poller的poll-函数实现"><span class="nav-number">2.3.2.</span> <span class="nav-text">poller的poll()函数实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#applet-run-active-函数实现"><span class="nav-number">2.3.3.</span> <span class="nav-text">applet_run_active()函数实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#stats模块在applet中的注册"><span class="nav-number">2.3.4.</span> <span class="nav-text">stats模块在applet中的注册</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#生成html格式监控数据"><span class="nav-number">2.3.5.</span> <span class="nav-text">生成html格式监控数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x23-监控相关配置"><span class="nav-number">2.4.</span> <span class="nav-text">0x23 监控相关配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x24-浏览器运行效果如下"><span class="nav-number">2.5.</span> <span class="nav-text">0x24 浏览器运行效果如下</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-系统设计"><span class="nav-number">3.</span> <span class="nav-text">0x3 系统设计</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
       
 
       
@@ -642,10 +583,10 @@
   
 
   
-  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+    <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
 <script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
 
-
+  
 
   
 
