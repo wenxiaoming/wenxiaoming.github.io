@@ -254,6 +254,171 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/" itemprop="url">optimize jpeg decoder on multicore cpu</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-10T20:14:25+09:00">
+                2017-06-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/" class="leancloud_visitors" data-flag-title="optimize jpeg decoder on multicore cpu">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-jpeg解码流程"><a href="#0x1-jpeg解码流程" class="headerlink" title="0x1 jpeg解码流程"></a>0x1 jpeg解码流程</h1><p>JPEG是Joint Photographic Expert Group的缩写，按照解码算法的基本结构进行分类的话，可以分为两种方式，</p>
+<p>有失真的非可逆的DCT方式.</p>
+<p>无失真的可逆的Spatial方式.</p>
+<h2 id="DCT方式的解码流程"><a href="#DCT方式的解码流程" class="headerlink" title="DCT方式的解码流程"></a>DCT方式的解码流程</h2><p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/dct_jpeg.png" alt="dct_jpeg"></p>
+<h2 id="Spatial方式的解码流程"><a href="#Spatial方式的解码流程" class="headerlink" title="Spatial方式的解码流程"></a>Spatial方式的解码流程</h2><p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/spatial_jpeg.png" alt="spatial_jpeg"></p>
+<h1 id="0x2-多核优化介绍"><a href="#0x2-多核优化介绍" class="headerlink" title="0x2 多核优化介绍"></a>0x2 多核优化介绍</h1><p>我们对应用程序采用多线程化来充分利用多核的性能，下面介绍一下多线程框架.</p>
+<h2 id="多线程框架介绍"><a href="#多线程框架介绍" class="headerlink" title="多线程框架介绍"></a>多线程框架介绍</h2><p>典型的多线程框架包括一个主线程，多个工作线程，一个工作队列.</p>
+<p>主线程负责接收外部分配过来的任务，把任务拆分成子任务并保存到工作队列中，然后调度工作线程进行具体的操作.</p>
+<p>工作线程执行具体的操作，工作线程完成一个操作以后通知主线程，并更新当前子任务的状态到工作队列中，工作线程进入空闲状态.</p>
+<p>主线程根据工作队列中子任务的状态，分配子任务到刚才空闲的工作线程中，工作线程继续执行分配到的子任务.</p>
+<p>多线程框架可以表示如下图所示</p>
+<p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/multithread_framework.png" alt="multithread_framework"></p>
+<h2 id="多线程并行执行和线程间同步"><a href="#多线程并行执行和线程间同步" class="headerlink" title="多线程并行执行和线程间同步"></a>多线程并行执行和线程间同步</h2><p>多个工作线程之间是并行执行的，这样可以充分利用多核的优势.</p>
+<p>但是工作线程执行完成以后，需要和其他工作线程进行同步，因为工作线程执行的子任务之间可能有依赖关系，也就是说某一个子任务可能需要等其他子任务执行完成以后才能继续执行.</p>
+<h2 id="多线程程序框架"><a href="#多线程程序框架" class="headerlink" title="多线程程序框架"></a>多线程程序框架</h2><p>下面列出各个模块的代码.</p>
+<p>工作线程<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">workthread</span></span></div><div class="line">&#123;</div><div class="line"><span class="keyword">public</span>:</div><div class="line">      <span class="function"><span class="keyword">virtual</span> <span class="keyword">void</span> <span class="title">threadproc</span><span class="params">()</span></span>;</div><div class="line">      <span class="function"><span class="keyword">bool</span> <span class="title">start</span><span class="params">()</span></span>;</div><div class="line">      <span class="function"><span class="keyword">void</span> <span class="title">stop</span><span class="params">()</span></span>;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">      workerqueue* worker_queue;         </div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>工作队列<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">task</span></span></div><div class="line">&#123;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">      <span class="keyword">int</span> start;</div><div class="line">      <span class="keyword">int</span> end;</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">workerqueue</span></span></div><div class="line">&#123;</div><div class="line"><span class="keyword">public</span>:</div><div class="line">      <span class="function"><span class="keyword">void</span> <span class="title">puttask</span><span class="params">()</span></span>;</div><div class="line">      <span class="function"><span class="keyword">void</span> <span class="title">gettask</span><span class="params">()</span></span>;</div><div class="line">      <span class="function"><span class="keyword">void</span> <span class="title">updatetask</span><span class="params">()</span></span>;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">      <span class="built_in">vector</span>&lt;task*&gt; task_vector;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>主线程<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">mainthread</span></span></div><div class="line">&#123;</div><div class="line"><span class="keyword">public</span>:</div><div class="line">      <span class="function"><span class="keyword">void</span> <span class="title">schedule_workerthread</span><span class="params">()</span></span>;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">      <span class="built_in">vector</span>&lt;workthread*&gt; thread_vector;</div><div class="line">      workerqueue* worker_queue;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<h1 id="0x3-jpeg解码多核优化分析"><a href="#0x3-jpeg解码多核优化分析" class="headerlink" title="0x3 jpeg解码多核优化分析"></a>0x3 jpeg解码多核优化分析</h1><h2 id="解码模块分解"><a href="#解码模块分解" class="headerlink" title="解码模块分解"></a>解码模块分解</h2><p>从上面的解码流程图可知，一个jpeg解码包括熵解码, 反量化，idct，加上后处理如颜色空间转换csc等.</p>
+<p>先分析各个模块在整个解码过程中占用多少时间，这个过程可以通过运行典型的测试来得到，通过计算典型jpeg文件的解码时间在各个模块中的分布，可以知道这几个子模块在jpeg解码器中占用多少时间。通过分析各个模块的时间，我们可以把这个解码流程分成几个时间差不多的子模块，如可以分解成这三个子模块，huffman decoder, iq和idct, csc. 进行这样的分析是为了使各个模块的执行时间差不多，这样采用多核执行的时候能使各个核的运行更balance.</p>
+<p>另外我们可以把整个图像分解成几部分，对这几部分分别进行解码。可以按照16/32/64/128的高度进行分解，这样可以把图像分解成很多份，如1920*1080的jpeg图像，分解成1920/16 = 120份，这120份的图像分别进行解码，可以提高解码效率，当然这个120份之间还有一些前后依赖关系，所以不能完全并行，需要进行同步和调度，下面会提到如何进行同步和调度. 另外具体是按16的高度，还是按照其他高度进行分解，需要进行tuning，需要参考图像的大小和工作线程的个数（一般等同于cpu的核数），进行各个高度分解下的性能比较，得出一个性能最好的分解方式.</p>
+<h2 id="解码模块实现"><a href="#解码模块实现" class="headerlink" title="解码模块实现"></a>解码模块实现</h2><p>把jpeg解码器的模块独立成子模块来实现. 下面简单介绍一下这些模块.</p>
+<p>1.熵解码器，记为huffman decoder</p>
+<p>扩展系统中也包括算术解码器，这里仅以huffman decoder来代替.</p>
+<p>分别对DC和AC系数进行解码，根据DC/AC的解码表来解码.</p>
+<p>DC系数的解码还需要参考前一个像素块的DC系数，因为huffman decoder解码出来的只是和前一个像素块的DC系数的查分值，把查分值加上前一个像素块的DC系数就得到了当前像素块的DC值.</p>
+<p>AC系数的解码是根据解码表计算出非零AC系数和该AC系数前面的零的个数，就是通常所说的run和level, 然后根据zigzag的扫描方式还原成8*8的系数.</p>
+<p>2.反量化器和反DCT，记为iq/idct</p>
+<p>对前面得到的8*8的系数，查找量化表，然后进行IDCT计算，得到解码以后的像素值.</p>
+<p>3.颜色空间转换，记为csc</p>
+<p>执行yuv到rgb的转换.</p>
+<h2 id="解码模块之间的同步"><a href="#解码模块之间的同步" class="headerlink" title="解码模块之间的同步"></a>解码模块之间的同步</h2><p>前面提到把整个解码流程分解成huffman decoder, inverse quantizer/idct, csc.</p>
+<p>对于某一个8*8的像素块来说，只能是按照前面的解码流程来进行解码，不能有跳跃</p>
+<p>我们整个图像分解成几部分以后，只有前面一部分的huffman decoder解码完成以后，后面一部分的huffman decoder才能开始，因为前后部分的码流只有在解码以后才能分清楚从具体什么位置开始是后面一部分的码流，也就是说不经过解码，前后部分的码流没办法分割，另外一个原因是DC值得解码需要参考前面一个像素块的DC.</p>
+<p>前面一部分完成了huffman解码以后，可以开始inverse quantizer和idct，在这个时候后面一部分可以开始huffman解码，以此类推.</p>
+<h2 id="解码模块的执行过程演示"><a href="#解码模块的执行过程演示" class="headerlink" title="解码模块的执行过程演示"></a>解码模块的执行过程演示</h2><p>下图演示了多线程解码的过程.</p>
+<p>我们把一个解码图像分成多块block1,block2,block3,block4,… 对每块图像分别执行上面介绍的解码子模块.</p>
+<p>T0时间点，只有block1进行huffman解码. block1的解码工作由线程1完成.</p>
+<p>T1时间点，block1进行iq/idct, block2进行huffman解码. block1的解码工作由线程1完成，block2的解码工作由线程2完成.</p>
+<p>T2时间点，block1进行csc, block2进行iq/idct解码, block3进行huffman解码. block1的解码工作由线程1完成，block2的解码工作由线程2完成，block3的解码工作由线程3完成</p>
+<p>T3时间点，block2进行csc解码, block3进行iq/idct解码, block4进行huffman解码. block2的解码工作由线程2完成，block3的解码工作由线程3完成，block4的解码工作由线程1完成</p>
+<p>如上分析所示，这个多线程解码的过程只能保证3个线程被利用到，如果cpu的核比较多的话，并不能很好地利用cpu资源. 这个时候可以考虑多个jpeg同时解码来充分利用cpu资源.</p>
+<p><img src="/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/execution_flow.png" alt="multithread_framework"></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -438,7 +603,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">11</span>
+                <span class="site-state-item-count">12</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
