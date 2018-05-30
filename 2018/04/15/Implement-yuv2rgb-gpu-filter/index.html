@@ -93,18 +93,18 @@
 
 
 
-<meta name="description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 https://github.com/wenxiaoming/YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V">
+<meta name="description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V是从yuv420p数据中读取的三个分量。    B=1.164">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Implement yuv2rgb gpu filter">
 <meta property="og:url" content="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 https://github.com/wenxiaoming/YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V">
-<meta property="og:image" content="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.png">
-<meta property="og:updated_time" content="2018-05-30T01:11:16.040Z">
+<meta property="og:description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V是从yuv420p数据中读取的三个分量。    B=1.164">
+<meta property="og:image" content="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.jpg">
+<meta property="og:updated_time" content="2018-05-30T12:32:41.220Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Implement yuv2rgb gpu filter">
-<meta name="twitter:description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 https://github.com/wenxiaoming/YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V">
-<meta name="twitter:image" content="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.png">
+<meta name="twitter:description" content="0x1     Introduction本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。详细代码请参考 YUVRender YUV2RGB转换的算法原理如下，其中Y/U/V是从yuv420p数据中读取的三个分量。    B=1.164">
+<meta name="twitter:image" content="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.jpg">
 
 
 
@@ -333,7 +333,7 @@
       
 
       
-        <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1     Introduction"></a>0x1     Introduction</h1><p>本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。<br>详细代码请参考 <a href="https://github.com/wenxiaoming/YUVRender" target="_blank" rel="external">https://github.com/wenxiaoming/YUVRender</a></p>
+        <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1     Introduction"></a>0x1     Introduction</h1><p>本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。<br>详细代码请参考 <a href="https://github.com/wenxiaoming/YUVRender" target="_blank" rel="external">YUVRender</a></p>
 <p>YUV2RGB转换的算法原理如下，其中Y/U/V是从yuv420p数据中读取的三个分量。<br>    B=1.164(Y−16)+2.018(U−128)<br>    G=1.164(Y−16)−0.813(V−128)−0.391(U−128)<br>    R=1.164(Y−16)+1.596(V−128)</p>
 <h1 id="0x2-Shader代码"><a href="#0x2-Shader代码" class="headerlink" title="0x2     Shader代码"></a>0x2     Shader代码</h1><h2 id="0x21-vertex-shader代码"><a href="#0x21-vertex-shader代码" class="headerlink" title="0x21 vertex shader代码"></a>0x21 vertex shader代码</h2><p>vertex shader代码首先输入顶点坐标和纹理坐标。<br>输出变量gl_Position用于在计算顶点位置以后将其写入裁剪坐标。<br>输出变量vtexcoord是输入给fragment shader作为纹理坐标的。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">precision mediump <span class="keyword">float</span>;</div><div class="line">varying   mediump vec2 vtexcoord;</div><div class="line">attribute mediump vec4 position;</div><div class="line">attribute mediump vec2 texcoord;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">	gl_Position  = position;</div><div class="line">	vtexcoord = texcoord;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <h2 id="0x22-fragment-shader代码"><a href="#0x22-fragment-shader代码" class="headerlink" title="0x22 fragment shader代码"></a>0x22 fragment shader代码</h2><p>fragment shader代码首先输入texture坐标, 该坐标首先经过了vertex shader处理，<br>然后又经过了Primitive Assembly阶段的clip和插值处理。<br>然后输入三个sampler2D，这三个sampler2D分别对应yuv420p的Y/U/V数据，通过texture2D这个内置的纹理访问函数，我们可以读取对应纹理坐标下的Y/U/V数据。<br>接下面的代码就是执行YUV到RGB的转换矩阵了，具体的矩阵可以参考前面的介绍。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">precision mediump <span class="keyword">float</span>;</div><div class="line">varying   mediump vec2 vtexcoord;</div><div class="line">uniform   lowp  sampler2D samplerY;</div><div class="line">uniform   lowp  sampler2D samplerU;</div><div class="line">uniform   lowp  sampler2D samplerV;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    mediump <span class="keyword">float</span> y;</div><div class="line">    mediump <span class="keyword">float</span> u;</div><div class="line">    mediump <span class="keyword">float</span> v;</div><div class="line">    lowp  vec3 rgb;</div><div class="line">    mat3 convmatrix = mat3(vec3(<span class="number">1.164</span>,  <span class="number">1.164</span>, <span class="number">1.164</span>),</div><div class="line">                           vec3(<span class="number">0.0</span>,   <span class="number">-0.392</span>, <span class="number">2.017</span>),</div><div class="line">                           vec3(<span class="number">1.596</span>, <span class="number">-0.813</span>, <span class="number">0.0</span>));</div><div class="line"></div><div class="line">    y = (texture2D(samplerY, vtexcoord).r - (<span class="number">16.0</span> / <span class="number">255.0</span>));</div><div class="line">    u = (texture2D(samplerU, vtexcoord).r - (<span class="number">128.0</span> / <span class="number">255.0</span>));</div><div class="line">    v = (texture2D(samplerV, vtexcoord).r - (<span class="number">128.0</span> / <span class="number">255.0</span>));</div><div class="line"></div><div class="line">    rgb = convmatrix * vec3(y, u, v);</div><div class="line">    gl_FragColor = vec4(rgb, <span class="number">1.0</span>);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
@@ -345,7 +345,7 @@
 <p>再怀疑是因为texture没有被正确地送入到GPU中，通过dump glTexImage2D()输入的pixel，发现也是正确的。</p>
 <p>最后在fragment shader中写hard code, 强制输出某种颜色，也是正确的，说明整个流程没有问题。</p>
 <p>最后怀疑是texture的坐标没有正确地设置，在打印glVertexAttribPointer()的输入参数，发现这个时候的texture坐标都是0，明显不是正确的值，一步一步往上debug， 发现是因为Java ByteBuffer的order没有被设置成本机字节顺序(ByteOrder.nativeOrder()), 设置了以后，texture的坐标就正确了。</p>
-<p>解决了绿屏的问题以后，yuv420p的数据能在Android上正确显示了，显示效果如下<br><img src="/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.png" alt="result"></p>
+<p>解决了绿屏的问题以后，yuv420p的数据能在Android上正确显示了，显示效果如下<br><img src="/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.jpg" alt="result"></p>
 
       
     </div>
