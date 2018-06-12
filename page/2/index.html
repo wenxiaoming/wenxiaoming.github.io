@@ -254,6 +254,160 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/17/design-rsplayer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/06/17/design-rsplayer/" itemprop="url">P2P直播客户端RsPlayer的设计</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-17T21:59:26+09:00">
+                2017-06-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2017/06/17/design-rsplayer/" class="leancloud_visitors" data-flag-title="P2P直播客户端RsPlayer的设计">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-客户端总体框架"><a href="#0x1-客户端总体框架" class="headerlink" title="0x1 客户端总体框架"></a>0x1 客户端总体框架</h1><p>传统的直播客户端只能从流媒体服务器下载流媒体数据，RsPlayer作为一个P2P(peer to peer)的直播客户端，可以同时从流媒体服务器和其他客户端请求媒体数据，比传统的直播客户端相比可以节省流媒体服务器的带宽.</p>
+<p>下图显示了客户端的框架图.</p>
+<p>最上层是UI层，提供用户的交互操作，用来显示播放视频窗口.</p>
+<p>然后是P2PCore层，该层采用P2P方式接收和发送媒体数据.</p>
+<p>P2PCore的下面是network层，用来处理socket接收和发送.</p>
+<p>ffmpeg层用来处理媒体数据，音视频分离，音视频解码，音视频输出等.</p>
+<p><img src="/2017/06/17/design-rsplayer/architecture.png" alt="architecture"></p>
+<h1 id="0x2-P2PCore模块"><a href="#0x2-P2PCore模块" class="headerlink" title="0x2 P2PCore模块"></a>0x2 P2PCore模块</h1><p>如下图所示，p2pcore模块需要和三类服务器进行通讯，先从web server得到需要播放的流媒体链接，然后从tracker得到super peer的相关信息，然后再连接到super peer下载所需要的直播流数据，同时也会从其他p2pcore处下载直播流数据.</p>
+<p>下面会详细介绍一下和这三类服务器的交互，也会介绍一下和其他p2pcore的交互过程.<br><img src="/2017/06/17/design-rsplayer/p2pcore.png" alt="p2pcore"></p>
+<h2 id="与web服务器交互"><a href="#与web服务器交互" class="headerlink" title="与web服务器交互"></a>与web服务器交互</h2><p>RsStreamer把p2p直播流链接存储在web服务器上，RsPlayer读取存储在web服务器上的p2p直播流链接，然后解析该链接，从中读取tracker服务器的地址，然后建立和tracker服务器的tcp连接.</p>
+<h2 id="与tracker服务器交互"><a href="#与tracker服务器交互" class="headerlink" title="与tracker服务器交互"></a>与tracker服务器交互</h2><p>p2pcore发送登录消息到tracker服务器.</p>
+<p>p2pcore把p2p直播流链接（从web服务器下载得到）解析得到的直播流信息发送给tracker服务器.</p>
+<p>tracker服务器返回消息给p2pcore，告诉将要播放的直播流对应的super peer地址信息，同时也告诉播放同一直播流的其他p2pcore的地址信息.</p>
+<p>p2pcore得到super peer地址以后，请求与其建立连接，并请求其发送相应的媒体数据.</p>
+<p>p2pcore得到其他p2pcore地址以后也会请求与其建立相应的连接.</p>
+<p>p2pcore还会定期向tracker服务器请求直播流的相关信息, 如当前播放的数据包的编号.</p>
+<p>tracker服务器发送信息告诉p2pcore当前直播播放的数据包的编号.</p>
+<h2 id="与super-peer交互"><a href="#与super-peer交互" class="headerlink" title="与super peer交互"></a>与super peer交互</h2><p>p2pcore建立和super peer的连接以后，把需要播放的直播流资源的信息发送给super peer, 并把直播流的数据包编号发送给super peer.</p>
+<p>super peer然后把需要播放的直播流的头文件信息发送给p2p client, 然后根据其请求的资源编号发送直播流数据包.</p>
+<p>上面提到了直播流的数据包编号，这个编号用来标记直播数据包，可以在p2p服务器和客户端之间统一管理直播数据. 如客户端需要哪个数据包，只需要把编号发送给服务器或其他客户端.</p>
+<h2 id="与其他p2pcore交互"><a href="#与其他p2pcore交互" class="headerlink" title="与其他p2pcore交互"></a>与其他p2pcore交互</h2><p>这部分是体现RsPlayer直播客户端中p2p的部分，RsPlayer的p2pcore模块需要分析哪些数据需要从super peer得到，哪些数据需要从其他p2pcore处得到。</p>
+<p>p2pcore建立和其他p2pcore的连接以后，需要查询其他p2pcore上有哪些数据包，其他p2pcore把其拥有的数据包信息发送过来以后，RsPlayer经过分析，决定需要从其接收哪些数据包，然后把需要的数据包信息发送给其他p2pcore, 其他p2pcore根据其请求的数据包编号发送相应的媒体数据包.</p>
+<h1 id="0x3-多媒体解码模块"><a href="#0x3-多媒体解码模块" class="headerlink" title="0x3 多媒体解码模块"></a>0x3 多媒体解码模块</h1><p>p2pcore模块中的接收线程接收网络码流放到buffer中，ffmpeg中的解码线程从buffer中取出码流并解码输出.<br><img src="/2017/06/17/design-rsplayer/buffer_manager.png" alt="buffer_manager"></p>
+<h2 id="ffmpeg介绍"><a href="#ffmpeg介绍" class="headerlink" title="ffmpeg介绍"></a>ffmpeg介绍</h2><p>ffmpeg是一套开源的音视频处理库，包括文件格式处理库libavformat, 音视频编解码库libavcodec等，，目前各大视频网站提供的应用程序中都集成了ffmpeg.</p>
+<h2 id="p2pcore模块与ffmpeg模块的交互"><a href="#p2pcore模块与ffmpeg模块的交互" class="headerlink" title="p2pcore模块与ffmpeg模块的交互"></a>p2pcore模块与ffmpeg模块的交互</h2><p>修改ffmpeg中libavformat的代码，在ffmpeg中添加buffer protocol的输入接口，通过调用buffer protocol的输入接口，把外部读取buffer的函数指针作为参数传入到ffmpeg中，ffmpeg的解码线程需要数据的时候就调用这个函数指针，从而读取到需要的码流数据.</p>
+<p>ffmpeg中添加buffer protocol的输入接口代码如下.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/* buffer protocol */</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">buff_open</span><span class="params">(URLContext *h, <span class="keyword">const</span> <span class="keyword">char</span> *filename, <span class="keyword">int</span> flags)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">int</span> fd;</div><div class="line">	<span class="keyword">char</span> *context = <span class="built_in">strstr</span>(filename,<span class="string">"context"</span>);</div><div class="line">	av_strstart(filename, <span class="string">"buff:"</span>, &amp;filename);</div><div class="line"></div><div class="line">	fd = atoi(filename);</div><div class="line">	h-&gt;priv_data = (<span class="keyword">void</span> *) (<span class="keyword">intptr_t</span>) fd;</div><div class="line"></div><div class="line">	av_strstart(context, <span class="string">"context:"</span>, &amp;context);</div><div class="line">	h-&gt;priv_data2 = (<span class="keyword">void</span> *) (atoi(context));</div><div class="line"></div><div class="line">	h-&gt;is_streamed = <span class="number">1</span>;</div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">typedef</span> <span class="title">int</span> <span class="params">(*read_callback_fcn)</span><span class="params">(<span class="keyword">void</span>* param, <span class="keyword">unsigned</span> <span class="keyword">char</span> *buf, <span class="keyword">int</span> size)</span></span>;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">buff_read</span><span class="params">(URLContext *h, <span class="keyword">unsigned</span> <span class="keyword">char</span> *buf, <span class="keyword">int</span> size)</span></span></div><div class="line">&#123;</div><div class="line">	read_callback_fcn read_callback = (read_callback_fcn ) h-&gt;priv_data;</div><div class="line">	<span class="keyword">return</span> read_callback(h-&gt;priv_data2, buf, size);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">buff_write</span><span class="params">(URLContext *h, <span class="keyword">unsigned</span> <span class="keyword">char</span> *buf, <span class="keyword">int</span> size)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line">URLProtocol buff_protocol = &#123;</div><div class="line">	<span class="string">"buff"</span>,</div><div class="line">	buff_open,</div><div class="line">	buff_read,</div><div class="line">	buff_write,</div><div class="line">	<span class="literal">NULL</span>,</div><div class="line">	<span class="literal">NULL</span>,</div><div class="line">	<span class="literal">NULL</span>,</div><div class="line">	<span class="literal">NULL</span>,</div><div class="line">	<span class="literal">NULL</span>,</div><div class="line">	file_get_handle</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>如何调用这个buffer protocol呢，我们的播放采用ffplay的流程，把按如下所示生成的mediafeeder_str作为ffplay的参数即可，mediafeeder_context是下面提到的类mediadatafeeder的对象指针，mediafeeder_handle是下面提到的类mediadatafeeder成员函数readdata()指针. ffplay先解析mediafeeder_str的内容，根据buff关键字匹配到buffer protocol的输入接口, buffer protocol的输入接口然后来调用mediadatafeeder::readdata().<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">sprintf</span>(mediafeeder_str,<span class="string">"buff:%dcontext:%d\0"</span>,mediafeeder_handle, mediafeeder_context);</div></pre></td></tr></table></figure></p>
+<p>前面提到ffmpeg解码的时候会调用buffer protocol中的buff_read()函数，然后再调用p2pcore中的mediadatafeeder::readdata ()函数. 然后再调用livebuffermgr::getblock()读取到码流.</p>
+<p>下面是在p2pcore中实现buffer读取的函数.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">int</span> mediadatafeeder::readdata(<span class="keyword">void</span>* param, <span class="keyword">unsigned</span> <span class="keyword">char</span>* buffer, <span class="keyword">int</span> size)</div><div class="line">&#123;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>p2pcore中的buffer管理如下.<br>getblock()接口供上面的readdata函数调用, 相当于ffmpeg线程中调用该函数.<br>putblock()会被p2pcore中的网络接收线程调用.</p>
+<p>由于livebuffermgr的getblock()和putblock()会被不同的线程调用，所以里面的buffer数据访问需要加锁以避免多线程之间的数据访问冲突.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> livebuffermgr::getblock(<span class="keyword">int</span> blockID, <span class="keyword">int</span> blockSize, <span class="keyword">unsigned</span> <span class="keyword">char</span>* data)</div><div class="line">&#123;</div><div class="line">&#125;</div><div class="line"><span class="keyword">void</span> livebuffermgr::putblock(<span class="keyword">int</span> blockID, <span class="keyword">int</span> blockSize, <span class="keyword">unsigned</span> <span class="keyword">char</span>*  data)</div><div class="line">&#123;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="0x4-在Android平台上的实现"><a href="#0x4-在Android平台上的实现" class="headerlink" title="0x4 在Android平台上的实现"></a>0x4 在Android平台上的实现</h1><p>在Android平台上实现RsPlayer客户端的话，p2pcore和ffmpeg都封装成相应的so库, 需要设置Android NDK开发环境, 采用Android Studio来开发.</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/10/optimize-jpeg-decoder-on-multicore-cpu/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -603,7 +757,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">12</span>
+                <span class="site-state-item-count">13</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -616,7 +770,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">8</span>
+                <span class="site-state-item-count">9</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

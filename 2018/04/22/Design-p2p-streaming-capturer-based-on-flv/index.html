@@ -77,7 +77,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="graphics vulkan," />
+  <meta name="keywords" content="p2p streaming," />
 
 
 
@@ -93,24 +93,23 @@
 
 
 
-<meta name="description" content="0x1 Vulkan简介Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能. 对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能. Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码. Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作. 下面介绍一下如何在Windows下编译和测试V">
-<meta name="keywords" content="graphics vulkan">
+<meta name="description" content="0x1     Introductionstreaming capturer用于接收client端发送过来的媒体数据，client端类似于目前市面上的直播客户端，通过RTMP/RTSP协议把数据发送给streaming capturer。streaming capturer对接收到的数据进行解包，如果需要可以进行transcoding，然后把数据发送给后续的模块进行处理，这些模块可以把数据发送给其">
+<meta name="keywords" content="p2p streaming">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Try vulkan on windows">
-<meta property="og:url" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/index.html">
+<meta property="og:title" content="Design p2p streaming capturer based on flv">
+<meta property="og:url" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1 Vulkan简介Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能. 对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能. Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码. Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作. 下面介绍一下如何在Windows下编译和测试V">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/vulkan_hardware_capability_viewer.png">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/stardust_demo.png">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/stardust_demo_gpu-z.png">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/vulkan_example.png">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/vulkan_on_windows.png">
-<meta property="og:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/vulkan_on_android.png">
-<meta property="og:updated_time" content="2017-07-08T01:16:43.842Z">
+<meta property="og:description" content="0x1     Introductionstreaming capturer用于接收client端发送过来的媒体数据，client端类似于目前市面上的直播客户端，通过RTMP/RTSP协议把数据发送给streaming capturer。streaming capturer对接收到的数据进行解包，如果需要可以进行transcoding，然后把数据发送给后续的模块进行处理，这些模块可以把数据发送给其">
+<meta property="og:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/architecture.png">
+<meta property="og:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_header.png">
+<meta property="og:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_file_body.png">
+<meta property="og:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_tag.png">
+<meta property="og:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/sequence.png">
+<meta property="og:updated_time" content="2018-06-12T01:04:25.792Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Try vulkan on windows">
-<meta name="twitter:description" content="0x1 Vulkan简介Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能. 对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能. Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码. Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作. 下面介绍一下如何在Windows下编译和测试V">
-<meta name="twitter:image" content="http://yoursite.com/2017/07/01/try-vulkan-on-windows/vulkan_hardware_capability_viewer.png">
+<meta name="twitter:title" content="Design p2p streaming capturer based on flv">
+<meta name="twitter:description" content="0x1     Introductionstreaming capturer用于接收client端发送过来的媒体数据，client端类似于目前市面上的直播客户端，通过RTMP/RTSP协议把数据发送给streaming capturer。streaming capturer对接收到的数据进行解包，如果需要可以进行transcoding，然后把数据发送给后续的模块进行处理，这些模块可以把数据发送给其">
+<meta name="twitter:image" content="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/architecture.png">
 
 
 
@@ -138,13 +137,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2017/07/01/try-vulkan-on-windows/"/>
+  <link rel="canonical" href="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/"/>
 
 
 
 
 
-  <title>Try vulkan on windows | Kevin Wen's Blog</title>
+  <title>Design p2p streaming capturer based on flv | Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -264,7 +263,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/07/01/try-vulkan-on-windows/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Kevin Wen">
@@ -281,7 +280,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Try vulkan on windows</h1>
+          <h1 class="post-title" itemprop="name headline">Design p2p streaming capturer based on flv</h1>
         
 
         <div class="post-meta">
@@ -293,8 +292,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-07-01T23:21:36+09:00">
-                2017-07-01
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-22T09:36:10+09:00">
+                2018-04-22
               </time>
             
 
@@ -311,7 +310,7 @@
 
           
           
-             <span id="/2017/07/01/try-vulkan-on-windows/" class="leancloud_visitors" data-flag-title="Try vulkan on windows">
+             <span id="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/" class="leancloud_visitors" data-flag-title="Design p2p streaming capturer based on flv">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -339,42 +338,15 @@
       
 
       
-        <h1 id="0x1-Vulkan简介"><a href="#0x1-Vulkan简介" class="headerlink" title="0x1 Vulkan简介"></a>0x1 Vulkan简介</h1><p>Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能.</p>
-<p>对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能.</p>
-<p>Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码.</p>
-<p>Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作.</p>
-<p>下面介绍一下如何在Windows下编译和测试Vulkan，显卡是Intel HD Graphics 520.</p>
-<h1 id="0x2-安装支持Vulkan的graphics驱动"><a href="#0x2-安装支持Vulkan的graphics驱动" class="headerlink" title="0x2 安装支持Vulkan的graphics驱动"></a>0x2 安装支持Vulkan的graphics驱动</h1><p>下载并安装最新的graphics驱动</p>
-<p><a href="https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip" target="_blank" rel="external">https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip</a></p>
-<h1 id="0x3-安装Lunarg-Vulkan-SDK"><a href="#0x3-安装Lunarg-Vulkan-SDK" class="headerlink" title="0x3 安装Lunarg Vulkan SDK"></a>0x3 安装Lunarg Vulkan SDK</h1><p>下载地址如下</p>
-<p><a href="https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe" target="_blank" rel="external">https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe</a></p>
-<h1 id="0x4-安装Vulkan-Hardware-Capability-Viewer"><a href="#0x4-安装Vulkan-Hardware-Capability-Viewer" class="headerlink" title="0x4 安装Vulkan Hardware Capability Viewer"></a>0x4 安装Vulkan Hardware Capability Viewer</h1><p>用于查看系统中vulkan支持信息</p>
-<p>可执行程序如下</p>
-<p><a href="http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip" target="_blank" rel="external">http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip</a></p>
-<p>代码如下</p>
-<p><a href="https://github.com/SaschaWillems/VulkanCapsViewer" target="_blank" rel="external">https://github.com/SaschaWillems/VulkanCapsViewer</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_hardware_capability_viewer.png" alt="vulkan1"></p>
-<h1 id="0x5-编译运行Vulkan-demo"><a href="#0x5-编译运行Vulkan-demo" class="headerlink" title="0x5 编译运行Vulkan demo"></a>0x5 编译运行Vulkan demo</h1><p>代码如下</p>
-<p><a href="https://github.com/GameTechDev/stardust_vulkan" target="_blank" rel="external">https://github.com/GameTechDev/stardust_vulkan</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo.png" alt="vulkan2"></p>
-<p>下载gpu-z，查看gpu使用情况</p>
-<p><a href="https://www.techpowerup.com/download/techpowerup-gpu-z/" target="_blank" rel="external">https://www.techpowerup.com/download/techpowerup-gpu-z/</a></p>
-<p>从gpu-z的使用情况可知，gpu一直很忙，说明vulkan已经工作</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo_gpu-z.png" alt="vulkan3"></p>
-<h1 id="0x6-编译运行Vulkan-example"><a href="#0x6-编译运行Vulkan-example" class="headerlink" title="0x6 编译运行Vulkan example"></a>0x6 编译运行Vulkan example</h1><p>测试代码如下</p>
-<p><a href="https://github.com/SaschaWillems/Vulkan" target="_blank" rel="external">https://github.com/SaschaWillems/Vulkan</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_example.png" alt="vulkan4"></p>
-<h1 id="0x7-Vulkan-Architecture-on-Windows"><a href="#0x7-Vulkan-Architecture-on-Windows" class="headerlink" title="0x7 Vulkan Architecture on Windows"></a>0x7 Vulkan Architecture on Windows</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_windows.png" alt="vulkan5"></p>
-<p>vulkan-1.dll, The Vulkan loader.</p>
-<p>ig9icd64.dll/igc64.dll/igvk64.dll, Intel vulkan driver.</p>
-<h1 id="0x8-Vulkan-Architecture-on-Android"><a href="#0x8-Vulkan-Architecture-on-Android" class="headerlink" title="0x8 Vulkan Architecture on Android"></a>0x8 Vulkan Architecture on Android</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_android.png" alt="vulkan6"></p>
-<p>libvulkan.so</p>
-<p>Android vulkan HAL library, this library will load IHV’s vulkan library in /system/lib/hw automatically, application will load this library then map vulkan api call to IHV’s vulkan driver library.</p>
-<p>vulkan.xxx.so</p>
-<p>IHV’s vulkan driver library, it supports SPIR-V shader input, and implements vulkan API, will trigger GPU HW to do acutal graphics processing.</p>
+        <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1     Introduction"></a>0x1     Introduction</h1><p>streaming capturer用于接收client端发送过来的媒体数据，client端类似于目前市面上的直播客户端，通过RTMP/RTSP协议把数据发送给streaming capturer。streaming capturer对接收到的数据进行解包，如果需要可以进行transcoding，然后把数据发送给后续的模块进行处理，这些模块可以把数据发送给其他服务器提供流媒体服务。下面介绍的p2p streaming capturer是把接收到和转码后的数据打包成P2P协议包，这些P2P协议包被发送给种子节点p2p seed node，p2p seed node提供p2p streaming的种子节点功能。播放器先连接到这个p2p seed node，获取播放所需要的媒体数据，而且后面进来的播放器可以从前面的播放器中得到部分播放数据，不需要都从p2p seed node处获取数据，从而显著地降低流媒体服务器的带宽负担。<br>Adobe FLV格式是一种流媒体格式，p2p streaming capturer接收到client发送过来的数据流以后，打包成FLV格式, 然后在FLV的基础上打包成P2P数据包的格式。</p>
+<p>下面是系统架构图。<br><img src="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/architecture.png" alt="architecture"></p>
+<h1 id="0x2-flv数据格式"><a href="#0x2-flv数据格式" class="headerlink" title="0x2   flv数据格式"></a>0x2   flv数据格式</h1><p>下面简单介绍一下FLV数据格式。</p>
+<h2 id="0x21-The-flv-header"><a href="#0x21-The-flv-header" class="headerlink" title="0x21  The flv header"></a>0x21  The flv header</h2><p><img src="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_header.png" alt="flv_header"></p>
+<h2 id="0x22-The-flv-file-body"><a href="#0x22-The-flv-file-body" class="headerlink" title="0x22  The flv file body"></a>0x22  The flv file body</h2><p><img src="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_file_body.png" alt="flv_file_body"></p>
+<h2 id="0x23-flv-tag"><a href="#0x23-flv-tag" class="headerlink" title="0x23  flv tag"></a>0x23  flv tag</h2><p><img src="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/flv_tag.png" alt="flv_tag"></p>
+<h1 id="0x3-基于flv的p2p-streaming-capturer的设计"><a href="#0x3-基于flv的p2p-streaming-capturer的设计" class="headerlink" title="0x3  基于flv的p2p streaming capturer的设计"></a>0x3  基于flv的p2p streaming capturer的设计</h1><p>流程图如下，</p>
+<p><img src="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/sequence.png" alt="sequence"></p>
+<p>左边是p2p streaming capturer, 它与p2p seed node进行交互，p2p streaming capturer接收client发送的RTMP/RTSP数据包，经过解包/转码以后生成FLV数据，这个时候需要把FLV header和类似SPS/PPS之类的头数据保存起来，p2p streaming capturer还需要实现内部缓存buffer, 把打包好的FLV数据缓存起来，为了后面打包成P2P数据包发送给p2p seed node。<br>p2p streaming capturer连接上p2p seed node以后，先发送注册(Register)信息，然后发送媒体类型(MediaType)信息，MediaType包括SPS/PPS等信息，然后开始把前面缓存起来的数据按固定大小(16384)打包成P2P格式，然后发送给p2p seed node.<br>p2p seed node在p2p streaming capturer连接上来以后，需要把相关信息发送给tracker server，这样相当于tracker server增加了一个节目源。<br>播放器player可以连接到p2p seed node来得到播放数据。对于直播来说，由于player刚连接到p2p seed node的时候获取的数据并不是关键帧，这个时候不能立即播放，需要等待下一个关键帧的到来。为了减少播放等待时候，可以在p2p seed node上实现gop cache的功能，把最近一个关键帧开始的数据都保存到gop cache中，等播放器连接上来的时候，把gop cache中的数据发送给播放器，这样播放器就不需要等待。当有新的关键帧到来的时候，需要把gop cache中的数据清空，然后保存当前关键帧开始的数据。</p>
 
       
     </div>
@@ -404,7 +376,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/graphics-vulkan/" rel="tag"># graphics vulkan</a>
+            <a href="/tags/p2p-streaming/" rel="tag"># p2p streaming</a>
           
         </div>
       
@@ -417,8 +389,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/06/17/design-rsplayer/" rel="next" title="P2P直播客户端RsPlayer的设计">
-                <i class="fa fa-chevron-left"></i> P2P直播客户端RsPlayer的设计
+              <a href="/2018/04/15/Implement-yuv2rgb-gpu-filter/" rel="next" title="Implement yuv2rgb gpu filter">
+                <i class="fa fa-chevron-left"></i> Implement yuv2rgb gpu filter
               </a>
             
           </div>
@@ -426,10 +398,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/07/08/Timer-support-in-event-driven-network-framework/" rel="prev" title="Timer support in event driven network framework">
-                Timer support in event driven network framework <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -549,7 +517,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Vulkan简介"><span class="nav-number">1.</span> <span class="nav-text">0x1 Vulkan简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-安装支持Vulkan的graphics驱动"><span class="nav-number">2.</span> <span class="nav-text">0x2 安装支持Vulkan的graphics驱动</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-安装Lunarg-Vulkan-SDK"><span class="nav-number">3.</span> <span class="nav-text">0x3 安装Lunarg Vulkan SDK</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-安装Vulkan-Hardware-Capability-Viewer"><span class="nav-number">4.</span> <span class="nav-text">0x4 安装Vulkan Hardware Capability Viewer</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-编译运行Vulkan-demo"><span class="nav-number">5.</span> <span class="nav-text">0x5 编译运行Vulkan demo</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x6-编译运行Vulkan-example"><span class="nav-number">6.</span> <span class="nav-text">0x6 编译运行Vulkan example</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x7-Vulkan-Architecture-on-Windows"><span class="nav-number">7.</span> <span class="nav-text">0x7 Vulkan Architecture on Windows</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x8-Vulkan-Architecture-on-Android"><span class="nav-number">8.</span> <span class="nav-text">0x8 Vulkan Architecture on Android</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Introduction"><span class="nav-number">1.</span> <span class="nav-text">0x1     Introduction</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-flv数据格式"><span class="nav-number">2.</span> <span class="nav-text">0x2   flv数据格式</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x21-The-flv-header"><span class="nav-number">2.1.</span> <span class="nav-text">0x21  The flv header</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x22-The-flv-file-body"><span class="nav-number">2.2.</span> <span class="nav-text">0x22  The flv file body</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x23-flv-tag"><span class="nav-number">2.3.</span> <span class="nav-text">0x23  flv tag</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-基于flv的p2p-streaming-capturer的设计"><span class="nav-number">3.</span> <span class="nav-text">0x3  基于flv的p2p streaming capturer的设计</span></a></li></ol></div>
             
 
           </div>
