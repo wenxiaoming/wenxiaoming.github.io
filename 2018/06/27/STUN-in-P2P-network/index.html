@@ -77,7 +77,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="video," />
+  <meta name="keywords" content="p2p server," />
 
 
 
@@ -93,24 +93,20 @@
 
 
 
-<meta name="description" content="0x1    系统架构ijkplayer是由b站开源的播放器项目，底层基于ffmpeg, 支持Android和iOS。下面我们来简单介绍一下Android上的实现。Android上的系统架构图如下。下面分别对各个模块进行介绍。ijkplayer-example是app的实现，主要是ui逻辑的实现，包括activity的实现，ui控件的组织，窗口的定制，数据的存储。ijkplayer-example">
-<meta name="keywords" content="video">
+<meta name="description" content="0x1 STUN简介STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考RFC3489，升级版协议是RFC5389和RFC7350。 STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiat">
+<meta name="keywords" content="p2p server">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ijkplayer介绍">
-<meta property="og:url" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/index.html">
+<meta property="og:title" content="STUN in P2P network">
+<meta property="og:url" content="http://yoursite.com/2018/06/27/STUN-in-P2P-network/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
-<meta property="og:description" content="0x1    系统架构ijkplayer是由b站开源的播放器项目，底层基于ffmpeg, 支持Android和iOS。下面我们来简单介绍一下Android上的实现。Android上的系统架构图如下。下面分别对各个模块进行介绍。ijkplayer-example是app的实现，主要是ui逻辑的实现，包括activity的实现，ui控件的组织，窗口的定制，数据的存储。ijkplayer-example">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/architecture.png">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/mediaplayer.png">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/render.png">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/jni.png">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/setsurface.png">
-<meta property="og:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/display.png">
-<meta property="og:updated_time" content="2018-03-20T00:36:09.763Z">
+<meta property="og:description" content="0x1 STUN简介STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考RFC3489，升级版协议是RFC5389和RFC7350。 STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiat">
+<meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/6/63/STUN_Algorithm3.svg">
+<meta property="og:image" content="http://yoursite.com/2018/06/27/STUN-in-P2P-network/stun.png">
+<meta property="og:updated_time" content="2018-07-01T13:29:34.465Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="ijkplayer介绍">
-<meta name="twitter:description" content="0x1    系统架构ijkplayer是由b站开源的播放器项目，底层基于ffmpeg, 支持Android和iOS。下面我们来简单介绍一下Android上的实现。Android上的系统架构图如下。下面分别对各个模块进行介绍。ijkplayer-example是app的实现，主要是ui逻辑的实现，包括activity的实现，ui控件的组织，窗口的定制，数据的存储。ijkplayer-example">
-<meta name="twitter:image" content="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/architecture.png">
+<meta name="twitter:title" content="STUN in P2P network">
+<meta name="twitter:description" content="0x1 STUN简介STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考RFC3489，升级版协议是RFC5389和RFC7350。 STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiat">
+<meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/6/63/STUN_Algorithm3.svg">
 
 
 
@@ -138,13 +134,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/"/>
+  <link rel="canonical" href="http://yoursite.com/2018/06/27/STUN-in-P2P-network/"/>
 
 
 
 
 
-  <title>ijkplayer介绍 | Kevin Wen's Blog</title>
+  <title>STUN in P2P network | Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -264,7 +260,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/27/STUN-in-P2P-network/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Kevin Wen">
@@ -281,7 +277,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">ijkplayer介绍</h1>
+          <h1 class="post-title" itemprop="name headline">STUN in P2P network</h1>
         
 
         <div class="post-meta">
@@ -293,8 +289,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-03-19T22:12:28+09:00">
-                2018-03-19
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-27T09:22:15+09:00">
+                2018-06-27
               </time>
             
 
@@ -311,7 +307,7 @@
 
           
           
-             <span id="/2018/03/19/analysis-of-ijkplayer/" class="leancloud_visitors" data-flag-title="ijkplayer介绍">
+             <span id="/2018/06/27/STUN-in-P2P-network/" class="leancloud_visitors" data-flag-title="STUN in P2P network">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -339,12 +335,31 @@
       
 
       
-        <h1 id="0x1-系统架构"><a href="#0x1-系统架构" class="headerlink" title="0x1    系统架构"></a>0x1    系统架构</h1><p>ijkplayer是由b站开源的播放器项目，底层基于ffmpeg, 支持Android和iOS。下面我们来简单介绍一下Android上的实现。<br>Android上的系统架构图如下。<br><img src="/2018/03/19/analysis-of-ijkplayer/architecture.png" alt="architecture"><br>下面分别对各个模块进行介绍。<br>ijkplayer-example是app的实现，主要是ui逻辑的实现，包括activity的实现，ui控件的组织，窗口的定制，数据的存储。<br>ijkplayer-example通过调用ijkmediaplayer，android mediaplayer， google exoplayer这三种mediaplayer来实现媒体播放。<br>ijkplayer-java是对底层实现的ijkmediaplayer和android mediaplayer的java封装，对ijkmediaplayer的封装是通过调用底层jni对应的java接口，对android mediaplayer的封装是调用android系统实现的默认mediaplayer接口。<br>ijkplayer-exo是对google exoplayer的封装，除了android默认的播放器之外，ExoPlayer是Google提供的在android平台上的另外一种播放器。<br>libijkplayer提供了ijkmediaplayer的jni实现ijkplayer_jni.c，然后调用封装过的ffplayer.c, 再调用底层实现的解码库libijkffmpeg和显示库libijksdl。<br>libijkffmpeg实现了媒体文件的demux, decode等功能。<br>libijksdl实现对解码后的数据进行显示。</p>
-<h1 id="0x2-Java层关键模块分析"><a href="#0x2-Java层关键模块分析" class="headerlink" title="0x2   Java层关键模块分析"></a>0x2   Java层关键模块分析</h1><h2 id="0x21-三种不同的mediaplayer实现"><a href="#0x21-三种不同的mediaplayer实现" class="headerlink" title="0x21 三种不同的mediaplayer实现."></a>0x21 三种不同的mediaplayer实现.</h2><p>这三种mediaplayer的类图如下图所示。<br><img src="/2018/03/19/analysis-of-ijkplayer/mediaplayer.png" alt="mediaplayers"><br>AndroidMediaPlayer是对Andoid默认播放器的封装。<br>IjkMediaPlayer是基于ffmpeg的播放器实现。<br>IjkExoMediaPlayer是基于Goodle开源的ExoPlayer的封装。</p>
-<h2 id="0x22-设置不同的Render"><a href="#0x22-设置不同的Render" class="headerlink" title="0x22    设置不同的Render"></a>0x22    设置不同的Render</h2><p>不同Render的类图如下图所示。<br><img src="/2018/03/19/analysis-of-ijkplayer/render.png" alt="renders"><br>SurfaceRenderView是基于SurfaceView的显示实现。<br>TextureRenderView是基于TextureView的显示实现。<br>上述两种显示实现方式都实现了接口IRenderView。</p>
-<h2 id="0x23-IjkMediaPlayer的JNI接口"><a href="#0x23-IjkMediaPlayer的JNI接口" class="headerlink" title="0x23    IjkMediaPlayer的JNI接口"></a>0x23    IjkMediaPlayer的JNI接口</h2><p>详细的JNI接口如下图所示。<br> <img src="/2018/03/19/analysis-of-ijkplayer/jni.png" alt="jni"><br>这些JNI接口提供了播放器的基本接口，包括播放准备(_setDataSource, _setVideoSurface, setVolume，_prepareAsync), 播放控制(_start, _stop, seekTo，_release， _reset)等功能。</p>
-<h1 id="0x3-关键流程"><a href="#0x3-关键流程" class="headerlink" title="0x3    关键流程"></a>0x3    关键流程</h1><h2 id="0x31-设置surface"><a href="#0x31-设置surface" class="headerlink" title="0x31    设置surface"></a>0x31    设置surface</h2><p>设置surface的流程图如下图所示。<br><img src="/2018/03/19/analysis-of-ijkplayer/setsurface.png" alt="setsurface"><br>从上面的流程图可知，通过接口_setVideoSurface(), 把UI层的Surface对象(可以理解为显示窗口)设置给SDL显示对象，作为其显示窗口(native_window), 这样SDL有需要显示的内容可以直接在这个显示窗口上显示输出即可。</p>
-<h2 id="0x32-显示流程"><a href="#0x32-显示流程" class="headerlink" title="0x32    显示流程"></a>0x32    显示流程</h2><p>显示的流程图如下图所示。<br><img src="/2018/03/19/analysis-of-ijkplayer/display.png" alt="display"><br>下面对上面的流程图简单说明。<br>解码线程ffp_video_thread解码完成以后，调用接口queue_picture把需要显示的buffer往SDL模块发送。<br>然后调用func_fill_frame()填充显示buffer, 这个时候需要判断是通过ffmpeg还是mediacodec实现的解码。<br>如果是ffmpeg实现的话则调用ijksdl_vout_overlay_ffmpeg.c中的函数func_fill_frame()。<br>否则调用ijksdl_vout_overlay_android_mediacodec.c中的func_fill_frame()。<br>然后显示线程video_refresh_thread就可以开始显示了。如果是GPU支持的格式则调用GPU进行输出，这个时候调用的是IJK_EGL_display，否则调用ANativeWindow_lock和ANativeWindow_unlockAndPost进行输出。</p>
+        <h1 id="0x1-STUN简介"><a href="#0x1-STUN简介" class="headerlink" title="0x1 STUN简介"></a>0x1 STUN简介</h1><p>STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考<br><a href="https://datatracker.ietf.org/doc/rfc3489/" target="_blank" rel="external">RFC3489</a>，升级版协议是<a href="https://tools.ietf.org/html/rfc5389" target="_blank" rel="external">RFC5389</a>和<a href="https://tools.ietf.org/html/rfc7350" target="_blank" rel="external">RFC7350</a>。</p>
+<p>STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiated<br>connections for SIP [SIP-OUTBOUND], and NAT Behavior Discovery [BEHAVE-NAT]。</p>
+<h1 id="0x2-NAT检测"><a href="#0x2-NAT检测" class="headerlink" title="0x2 NAT检测"></a>0x2 NAT检测</h1><p>RFC3489中将NAT的实现分为四大类：<br>1.Full Cone NAT （完全锥形NAT）<br>2.Restricted Cone NAT （限制锥形NAT ，可以理解为IP限制，Port不限制）<br>3.Port Restricted Cone NAT （端口限制锥形NAT，IP+Port 限制）<br>4.Symmetric NAT （对称NAT）<br>其中完全最上层的完全锥形NAT的穿透性最好，而最下层的对称形NAT需要借助TURN服务器进行数据转发，两个client之间不能进行Peer to Peer的通信。</p>
+<p>NAT类型检测过程如下<br><img src="https://upload.wikimedia.org/wikipedia/commons/6/63/STUN_Algorithm3.svg" alt="nat_check"></p>
+<p>如上图所示，一旦路经到达红色节点时，Peer to Peer的连接是没有可能性的，需要借助服务器进行转发。一旦通过黄色或是绿色的节点，Peer to Peer的连接是可以成功的。</p>
+<p>下面介绍STUN是如何判断NAT的类型的。<br>内容来自<a href="https://www.jianshu.com/p/84e8c78ca61d" target="_blank" rel="external">ICE协议下NAT穿越的实现</a></p>
+<p>假设B是客户端，C是STUN服务器，C有两个IP分别为IP1和IP2（至于为什么要两个IP，接着往下看）：</p>
+<p>STEP1.判断客户端是否在NAT后：</p>
+<p>B向C的IP1的pot1端口发送一个UDP包。C收到这个包后，会把它收到包的源IP和port写到UDP包中，然后把此包通过IP1和port1发还给B。这个IP和port也就是NAT的外网 IP和port（如果你不理解，那么请你去看我的BLOG里面的NAT的原理和分类），也就是说你在STEP1中就得到了NAT的外网IP。</p>
+<p>熟悉NAT工作原理的朋友可以知道，C返回给B的这个UDP包B一定收到。如果在你的应用中，向一个STUN服务器发送数据包后，你没有收到STUN的任何回应包，那只有两种可能：1、STUN服务器不存在，或者你弄错了port。2、你的NAT拒绝一切UDP包从外部向内部通过。</p>
+<p>当B收到此UDP后，把此UDP中的IP和自己的IP做比较，如果是一样的，就说明自己是在公网，下步NAT将去探测防火墙类型，我不想多说。如果不一样，说明有NAT的存在，系统进行STEP2的操作。</p>
+<p>STEP2.判断是否处于Full Cone Nat下：</p>
+<p>B向C的IP1发送一个UDP包，请求C通过另外一个IP2和PORT（不同与SETP1的IP1）向B返回一个UDP数据包（现在知道为什么C要有两个IP了吧，虽然还不理解为什么，呵呵）。</p>
+<p>我们来分析一下，如果B收到了这个数据包，那说明什么？说明NAT来着不拒，不对数据包进行任何过滤，这也就是STUN标准中的full cone NAT。遗憾的是，Full Cone Nat太少了，这也意味着你能收到这个数据包的可能性不大。如果没收到，那么系统进行STEP3的操作。</p>
+<p>STEP3.判断是否处于对称NAT下：</p>
+<p>B向C的IP2的port2发送一个数据包，C收到数据包后，把它收到包的源IP和port写到UDP包中，然后通过自己的IP2和port2把此包发还给B。</p>
+<p>和step1一样，B肯定能收到这个回应UDP包。此包中的port是我们最关心的数据，下面我们来分析：</p>
+<p>如果这个port和step1中的port一样，那么可以肯定这个NAT是个CONE NAT，否则是对称NAT。道理很简单：根据对称NAT的规则，当目的地址的IP和port有任何一个改变，那么NAT都会重新分配一个port使用，而在step3中，和step1对应，我们改变了IP和port。因此，如果是对称NAT,那这两个port肯定是不同的。</p>
+<p>如果在你的应用中，到此步的时候PORT是不同的，那么这个它就是处在一个对称NAT下了。如果相同，那么只剩下了restrict cone 和port restrict cone。系统用step4探测是是那一种。</p>
+<p>STEP4.判断是处于Restrict Cone NAT还是Port Restrict NAT之下：</p>
+<p>B向C的IP2的一个端口PD发送一个数据请求包，要求C用IP2和不同于PD的port返回一个数据包给B。</p>
+<p>我们来分析结果：如果B收到了，那也就意味着只要IP相同，即使port不同，NAT也允许UDP包通过。显然这是Restrict Cone NAT。如果没收到，没别的好说，Port Restrict NAT.</p>
+<h1 id="0x3-StunServer实现分析"><a href="#0x3-StunServer实现分析" class="headerlink" title="0x3 StunServer实现分析"></a>0x3 StunServer实现分析</h1><p>STUN协议是一个客户机/服务器协议。StunServer可能和其他服务器(如web server, turn server）集成在一起。而stun client也可以在p2p的客户端中实现。<br>在核心的STUN协议中，只有一种称为“Binding”的方法。STUN客户端使用Binding来创建和发现NAT映射。当STUN服务器收到STUN Binding时，它会记录请求来着哪个公网IP和端口，此公网IP和端口会发生给STUN客户端，这样收到STUN Binding响应的客户端会根据这些信息判断NAT的类型。<br><img src="/2018/06/27/STUN-in-P2P-network/stun.png" alt="stun"></p>
+<h1 id="0x4-StunServer测试"><a href="#0x4-StunServer测试" class="headerlink" title="0x4 StunServer测试"></a>0x4 StunServer测试</h1><p>测试结果如下，<br>kevin@ubuntu:~/Kevin/nat/stunserver$ ./stunclient 68.xxx.xxx.xxx 3478<br>Binding test: success<br>Local address: 192.168.40.200:47045<br>Mapped address: 116.xxx.xxx.xxx:56077</p>
+<p>其中68.xxx.xxx.xxx是运行StunServer服务器的公网IP地址。<br>返回给Stun客户端的信息中包括了Stun客户端的公网IP为116.xxx.xxx.xxx，和内网地址(192.168.40.200)不一致，说明位于NAT之后。至于是哪种NAT类型，需要参考前面的流程进行多次测试。</p>
 
       
     </div>
@@ -374,7 +389,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/video/" rel="tag"># video</a>
+            <a href="/tags/p2p-server/" rel="tag"># p2p server</a>
           
         </div>
       
@@ -387,8 +402,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/03/13/how-renderscript-supports-parallel-compution/" rel="next" title="How renderscript supports parallel compution">
-                <i class="fa fa-chevron-left"></i> How renderscript supports parallel compution
+              <a href="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/" rel="next" title="Design p2p streaming capturer based on flv">
+                <i class="fa fa-chevron-left"></i> Design p2p streaming capturer based on flv
               </a>
             
           </div>
@@ -396,10 +411,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/03/25/douyin-streaming-analysis/" rel="prev" title="douyin streaming analysis">
-                douyin streaming analysis <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -519,7 +530,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-系统架构"><span class="nav-number">1.</span> <span class="nav-text">0x1    系统架构</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Java层关键模块分析"><span class="nav-number">2.</span> <span class="nav-text">0x2   Java层关键模块分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x21-三种不同的mediaplayer实现"><span class="nav-number">2.1.</span> <span class="nav-text">0x21 三种不同的mediaplayer实现.</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x22-设置不同的Render"><span class="nav-number">2.2.</span> <span class="nav-text">0x22    设置不同的Render</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x23-IjkMediaPlayer的JNI接口"><span class="nav-number">2.3.</span> <span class="nav-text">0x23    IjkMediaPlayer的JNI接口</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-关键流程"><span class="nav-number">3.</span> <span class="nav-text">0x3    关键流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-设置surface"><span class="nav-number">3.1.</span> <span class="nav-text">0x31    设置surface</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x32-显示流程"><span class="nav-number">3.2.</span> <span class="nav-text">0x32    显示流程</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-STUN简介"><span class="nav-number">1.</span> <span class="nav-text">0x1 STUN简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-NAT检测"><span class="nav-number">2.</span> <span class="nav-text">0x2 NAT检测</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-StunServer实现分析"><span class="nav-number">3.</span> <span class="nav-text">0x3 StunServer实现分析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-StunServer测试"><span class="nav-number">4.</span> <span class="nav-text">0x4 StunServer测试</span></a></li></ol></div>
             
 
           </div>

@@ -254,6 +254,153 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/27/STUN-in-P2P-network/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/06/27/STUN-in-P2P-network/" itemprop="url">STUN in P2P network</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-27T09:22:15+09:00">
+                2018-06-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/06/27/STUN-in-P2P-network/" class="leancloud_visitors" data-flag-title="STUN in P2P network">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-STUN简介"><a href="#0x1-STUN简介" class="headerlink" title="0x1 STUN简介"></a>0x1 STUN简介</h1><p>STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考<br><a href="https://datatracker.ietf.org/doc/rfc3489/" target="_blank" rel="external">RFC3489</a>，升级版协议是<a href="https://tools.ietf.org/html/rfc5389" target="_blank" rel="external">RFC5389</a>和<a href="https://tools.ietf.org/html/rfc7350" target="_blank" rel="external">RFC7350</a>。</p>
+<p>STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiated<br>connections for SIP [SIP-OUTBOUND], and NAT Behavior Discovery [BEHAVE-NAT]。</p>
+<h1 id="0x2-NAT检测"><a href="#0x2-NAT检测" class="headerlink" title="0x2 NAT检测"></a>0x2 NAT检测</h1><p>RFC3489中将NAT的实现分为四大类：<br>1.Full Cone NAT （完全锥形NAT）<br>2.Restricted Cone NAT （限制锥形NAT ，可以理解为IP限制，Port不限制）<br>3.Port Restricted Cone NAT （端口限制锥形NAT，IP+Port 限制）<br>4.Symmetric NAT （对称NAT）<br>其中完全最上层的完全锥形NAT的穿透性最好，而最下层的对称形NAT需要借助TURN服务器进行数据转发，两个client之间不能进行Peer to Peer的通信。</p>
+<p>NAT类型检测过程如下<br><img src="https://upload.wikimedia.org/wikipedia/commons/6/63/STUN_Algorithm3.svg" alt="nat_check"></p>
+<p>如上图所示，一旦路经到达红色节点时，Peer to Peer的连接是没有可能性的，需要借助服务器进行转发。一旦通过黄色或是绿色的节点，Peer to Peer的连接是可以成功的。</p>
+<p>下面介绍STUN是如何判断NAT的类型的。<br>内容来自<a href="https://www.jianshu.com/p/84e8c78ca61d" target="_blank" rel="external">ICE协议下NAT穿越的实现</a></p>
+<p>假设B是客户端，C是STUN服务器，C有两个IP分别为IP1和IP2（至于为什么要两个IP，接着往下看）：</p>
+<p>STEP1.判断客户端是否在NAT后：</p>
+<p>B向C的IP1的pot1端口发送一个UDP包。C收到这个包后，会把它收到包的源IP和port写到UDP包中，然后把此包通过IP1和port1发还给B。这个IP和port也就是NAT的外网 IP和port（如果你不理解，那么请你去看我的BLOG里面的NAT的原理和分类），也就是说你在STEP1中就得到了NAT的外网IP。</p>
+<p>熟悉NAT工作原理的朋友可以知道，C返回给B的这个UDP包B一定收到。如果在你的应用中，向一个STUN服务器发送数据包后，你没有收到STUN的任何回应包，那只有两种可能：1、STUN服务器不存在，或者你弄错了port。2、你的NAT拒绝一切UDP包从外部向内部通过。</p>
+<p>当B收到此UDP后，把此UDP中的IP和自己的IP做比较，如果是一样的，就说明自己是在公网，下步NAT将去探测防火墙类型，我不想多说。如果不一样，说明有NAT的存在，系统进行STEP2的操作。</p>
+<p>STEP2.判断是否处于Full Cone Nat下：</p>
+<p>B向C的IP1发送一个UDP包，请求C通过另外一个IP2和PORT（不同与SETP1的IP1）向B返回一个UDP数据包（现在知道为什么C要有两个IP了吧，虽然还不理解为什么，呵呵）。</p>
+<p>我们来分析一下，如果B收到了这个数据包，那说明什么？说明NAT来着不拒，不对数据包进行任何过滤，这也就是STUN标准中的full cone NAT。遗憾的是，Full Cone Nat太少了，这也意味着你能收到这个数据包的可能性不大。如果没收到，那么系统进行STEP3的操作。</p>
+<p>STEP3.判断是否处于对称NAT下：</p>
+<p>B向C的IP2的port2发送一个数据包，C收到数据包后，把它收到包的源IP和port写到UDP包中，然后通过自己的IP2和port2把此包发还给B。</p>
+<p>和step1一样，B肯定能收到这个回应UDP包。此包中的port是我们最关心的数据，下面我们来分析：</p>
+<p>如果这个port和step1中的port一样，那么可以肯定这个NAT是个CONE NAT，否则是对称NAT。道理很简单：根据对称NAT的规则，当目的地址的IP和port有任何一个改变，那么NAT都会重新分配一个port使用，而在step3中，和step1对应，我们改变了IP和port。因此，如果是对称NAT,那这两个port肯定是不同的。</p>
+<p>如果在你的应用中，到此步的时候PORT是不同的，那么这个它就是处在一个对称NAT下了。如果相同，那么只剩下了restrict cone 和port restrict cone。系统用step4探测是是那一种。</p>
+<p>STEP4.判断是处于Restrict Cone NAT还是Port Restrict NAT之下：</p>
+<p>B向C的IP2的一个端口PD发送一个数据请求包，要求C用IP2和不同于PD的port返回一个数据包给B。</p>
+<p>我们来分析结果：如果B收到了，那也就意味着只要IP相同，即使port不同，NAT也允许UDP包通过。显然这是Restrict Cone NAT。如果没收到，没别的好说，Port Restrict NAT.</p>
+<h1 id="0x3-StunServer实现分析"><a href="#0x3-StunServer实现分析" class="headerlink" title="0x3 StunServer实现分析"></a>0x3 StunServer实现分析</h1><p>STUN协议是一个客户机/服务器协议。StunServer可能和其他服务器(如web server, turn server）集成在一起。而stun client也可以在p2p的客户端中实现。<br>在核心的STUN协议中，只有一种称为“Binding”的方法。STUN客户端使用Binding来创建和发现NAT映射。当STUN服务器收到STUN Binding时，它会记录请求来着哪个公网IP和端口，此公网IP和端口会发生给STUN客户端，这样收到STUN Binding响应的客户端会根据这些信息判断NAT的类型。<br><img src="/2018/06/27/STUN-in-P2P-network/stun.png" alt="stun"></p>
+<h1 id="0x4-StunServer测试"><a href="#0x4-StunServer测试" class="headerlink" title="0x4 StunServer测试"></a>0x4 StunServer测试</h1><p>测试结果如下，<br>kevin@ubuntu:~/Kevin/nat/stunserver$ ./stunclient 68.xxx.xxx.xxx 3478<br>Binding test: success<br>Local address: 192.168.40.200:47045<br>Mapped address: 116.xxx.xxx.xxx:56077</p>
+<p>其中68.xxx.xxx.xxx是运行StunServer服务器的公网IP地址。<br>返回给Stun客户端的信息中包括了Stun客户端的公网IP为116.xxx.xxx.xxx，和内网地址(192.168.40.200)不一致，说明位于NAT之后。至于是哪种NAT类型，需要参考前面的流程进行多次测试。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1480,164 +1627,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/07/01/try-vulkan-on-windows/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/07/01/try-vulkan-on-windows/" itemprop="url">Try vulkan on windows</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-07-01T23:21:36+09:00">
-                2017-07-01
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2017/07/01/try-vulkan-on-windows/" class="leancloud_visitors" data-flag-title="Try vulkan on windows">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Vulkan简介"><a href="#0x1-Vulkan简介" class="headerlink" title="0x1 Vulkan简介"></a>0x1 Vulkan简介</h1><p>Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能.</p>
-<p>对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能.</p>
-<p>Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码.</p>
-<p>Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作.</p>
-<p>下面介绍一下如何在Windows下编译和测试Vulkan，显卡是Intel HD Graphics 520.</p>
-<h1 id="0x2-安装支持Vulkan的graphics驱动"><a href="#0x2-安装支持Vulkan的graphics驱动" class="headerlink" title="0x2 安装支持Vulkan的graphics驱动"></a>0x2 安装支持Vulkan的graphics驱动</h1><p>下载并安装最新的graphics驱动</p>
-<p><a href="https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip" target="_blank" rel="external">https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip</a></p>
-<h1 id="0x3-安装Lunarg-Vulkan-SDK"><a href="#0x3-安装Lunarg-Vulkan-SDK" class="headerlink" title="0x3 安装Lunarg Vulkan SDK"></a>0x3 安装Lunarg Vulkan SDK</h1><p>下载地址如下</p>
-<p><a href="https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe" target="_blank" rel="external">https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe</a></p>
-<h1 id="0x4-安装Vulkan-Hardware-Capability-Viewer"><a href="#0x4-安装Vulkan-Hardware-Capability-Viewer" class="headerlink" title="0x4 安装Vulkan Hardware Capability Viewer"></a>0x4 安装Vulkan Hardware Capability Viewer</h1><p>用于查看系统中vulkan支持信息</p>
-<p>可执行程序如下</p>
-<p><a href="http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip" target="_blank" rel="external">http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip</a></p>
-<p>代码如下</p>
-<p><a href="https://github.com/SaschaWillems/VulkanCapsViewer" target="_blank" rel="external">https://github.com/SaschaWillems/VulkanCapsViewer</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_hardware_capability_viewer.png" alt="vulkan1"></p>
-<h1 id="0x5-编译运行Vulkan-demo"><a href="#0x5-编译运行Vulkan-demo" class="headerlink" title="0x5 编译运行Vulkan demo"></a>0x5 编译运行Vulkan demo</h1><p>代码如下</p>
-<p><a href="https://github.com/GameTechDev/stardust_vulkan" target="_blank" rel="external">https://github.com/GameTechDev/stardust_vulkan</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo.png" alt="vulkan2"></p>
-<p>下载gpu-z，查看gpu使用情况</p>
-<p><a href="https://www.techpowerup.com/download/techpowerup-gpu-z/" target="_blank" rel="external">https://www.techpowerup.com/download/techpowerup-gpu-z/</a></p>
-<p>从gpu-z的使用情况可知，gpu一直很忙，说明vulkan已经工作</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo_gpu-z.png" alt="vulkan3"></p>
-<h1 id="0x6-编译运行Vulkan-example"><a href="#0x6-编译运行Vulkan-example" class="headerlink" title="0x6 编译运行Vulkan example"></a>0x6 编译运行Vulkan example</h1><p>测试代码如下</p>
-<p><a href="https://github.com/SaschaWillems/Vulkan" target="_blank" rel="external">https://github.com/SaschaWillems/Vulkan</a></p>
-<p>运行效果如下</p>
-<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_example.png" alt="vulkan4"></p>
-<h1 id="0x7-Vulkan-Architecture-on-Windows"><a href="#0x7-Vulkan-Architecture-on-Windows" class="headerlink" title="0x7 Vulkan Architecture on Windows"></a>0x7 Vulkan Architecture on Windows</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_windows.png" alt="vulkan5"></p>
-<p>vulkan-1.dll, The Vulkan loader.</p>
-<p>ig9icd64.dll/igc64.dll/igvk64.dll, Intel vulkan driver.</p>
-<h1 id="0x8-Vulkan-Architecture-on-Android"><a href="#0x8-Vulkan-Architecture-on-Android" class="headerlink" title="0x8 Vulkan Architecture on Android"></a>0x8 Vulkan Architecture on Android</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_android.png" alt="vulkan6"></p>
-<p>libvulkan.so</p>
-<p>Android vulkan HAL library, this library will load IHV’s vulkan library in /system/lib/hw automatically, application will load this library then map vulkan api call to IHV’s vulkan driver library.</p>
-<p>vulkan.xxx.so</p>
-<p>IHV’s vulkan driver library, it supports SPIR-V shader input, and implements vulkan API, will trigger GPU HW to do acutal graphics processing.</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1687,7 +1676,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-count">14</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1700,7 +1689,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-count">10</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
