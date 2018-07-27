@@ -1,0 +1,805 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="tensorflow," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="Here I list some callstack of tensorflow which is collected through gdb. 0x1 Session::Run()1234567891011(gdb) bt #0 tensorflow::DirectSession::Run (this=0x55a688ed3660, run_options=..., inputs=std::ve">
+<meta name="keywords" content="tensorflow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="check the execution of tensorflow with gdb">
+<meta property="og:url" content="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="Here I list some callstack of tensorflow which is collected through gdb. 0x1 Session::Run()1234567891011(gdb) bt #0 tensorflow::DirectSession::Run (this=0x55a688ed3660, run_options=..., inputs=std::ve">
+<meta property="og:image" content="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/producer.jpg">
+<meta property="og:image" content="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/consumer.jpg">
+<meta property="og:updated_time" content="2018-07-27T00:39:46.819Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="check the execution of tensorflow with gdb">
+<meta name="twitter:description" content="Here I list some callstack of tensorflow which is collected through gdb. 0x1 Session::Run()1234567891011(gdb) bt #0 tensorflow::DirectSession::Run (this=0x55a688ed3660, run_options=..., inputs=std::ve">
+<meta name="twitter:image" content="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/producer.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/"/>
+
+
+
+
+
+  <title>check the execution of tensorflow with gdb | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">check the execution of tensorflow with gdb</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-29T09:03:29+09:00">
+                2018-04-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/" class="leancloud_visitors" data-flag-title="check the execution of tensorflow with gdb">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Here I list some callstack of tensorflow which is collected through gdb.</p>
+<h1 id="0x1-Session-Run"><a href="#0x1-Session-Run" class="headerlink" title="0x1 Session::Run()"></a>0x1 Session::Run()</h1><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">(gdb) bt </div><div class="line">#0 tensorflow::DirectSession::Run (this=0x55a688ed3660, run_options=..., inputs=std::vector of length 3, capacity 3 = &#123;...&#125;,   output_names=std::vector of length 0, capacity 0, target_nodes=std::vector of length 1, capacity 1 = &#123;...&#125;, outputs=0x7f375da478e0,   run_metadata=0x7f375da47930) at tensorflow/core/common_runtime/direct_session.cc:439 </div><div class="line">#1 0x00007f3784cea307 in TF_Run_Helper (session=0x55a688ed3660, handle=0x0, run_options=0x0,   input_pairs=std::vector of length 3, capacity 3 = &#123;...&#125;, output_tensor_names=std::vector of length 0, capacity 0,   c_outputs=0x7f375da47d00, target_oper_names=std::vector of length 1, capacity 1 = &#123;...&#125;, run_metadata=0x0, status=0x7f37200d5e80)  at tensorflow/c/c_api.cc:680 </div><div class="line">#2 0x00007f3784cea874 in TF_Run (s=0x55a688ed2af0, run_options=0x0, c_input_names=0x7f375da47c60, c_inputs=0x7f375da47cb0, ninputs=3,   c_output_names=0x7f375da48060, c_outputs=0x7f375da47d00, noutputs=0, c_target_oper_names=0x7f375da480b0, ntargets=1, run_metadata=0x0,   status=0x7f37200d5e80) at tensorflow/c/c_api.cc:735 </div><div class="line">#3 0x00007f37847382dd in tensorflow::TF_Run_wrapper_helper (session=0x55a688ed2af0, handle=0x0, run_options=0x0, feed_dict=0x7f3762b029d8,   output_names=..., target_nodes=..., out_status=0x7f37200d5e80, out_values=0x7f375da48100, run_outputs=0x0)  at tensorflow/python/client/tf_session_helper.cc:96 </div><div class="line">#4 0x00007f3784738936 in tensorflow::TF_Run_wrapper (session=0x55a688ed2af0, run_options=0x0, feed_dict=0x7f3762b029d8, output_names=...,   target_nodes=..., out_status=0x7f37200d5e80, out_values=0x7f375da48100, run_outputs=0x0)  at tensorflow/python/client/tf_session_helper.cc:149 </div><div class="line">#5 0x00007f37846bf7e4 in _wrap_TF_Run (args=0x7f376350cdb0) at bazel-out/k8-py3-dbg/bin/tensorflow/python/pywrap_tensorflow_internal.cc:15067 </div><div class="line">#6 0x000055a68528b2a1 in _PyCFunction_FastCallDict () </div><div class="line">#7 0x000055a68531e0a0 in call_function () </div><div class="line">#8 0x000055a68533f62a in _PyEval_EvalFrameDefault () </div><div class="line">#9 0x000055a685318c78 in PyEval_EvalCodeEx ()</div></pre></td></tr></table></figure>
+<h1 id="0x2-OpKernel-Compute"><a href="#0x2-OpKernel-Compute" class="headerlink" title="0x2 OpKernel::Compute()"></a>0x2 OpKernel::Compute()</h1><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#0 0x00007f377fe7ee70 in tensorflow::OpKernelContext::input(int)@plt ()from /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so</div><div class="line">#1 0x00007f378001d8dd in tensorflow::HandleFromInput (ctx=0x7f3724169150, input=0) at tensorflow/core/framework/resource_mgr.cc:279</div><div class="line">#2 0x00007f37859298b8 in tensorflow::QueueOpKernel::ComputeAsync(tensorflow::OpKernelContext*, std::function&lt;void ()&gt;) (this=0x7f37200cbfb0, ctx=0x7f3724169150, callback=...) at tensorflow/core/kernels/queue_ops.cc:37</div><div class="line">#3 0x00007f378482cab8 in tensorflow::Device::ComputeAsync(tensorflow::AsyncOpKernel*, tensorflow::OpKernelContext*, std::function&lt;void ()&gt;)(this=0x55a688ee3260, op_kernel=0x7f37200cbfb0, context=0x7f3724169150, done=...) at ./tensorflow/core/common_runtime/device.h:89</div><div class="line">#4 0x00007f37806b1b6e in tensorflow::(anonymous namespace)::ExecutorState::Process (this=0x7f37200d3440, tagged_node=..., scheduled_usec=0)at tensorflow/core/common_runtime/executor.cc:1647</div><div class="line">#5 0x00007f37806c01a7 in std::_Mem_fn_base&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long), true&gt;::operator()&lt;tensorflow::(anonymous namespace)::ExecutorState::TaggedNode&amp;, long long&amp;, void&gt; (this=0x7f37240337a0, __object=0x7f37200d3440) at /usr/include/c++/5/functional:600</div><div class="line">#6 0x00007f37806bfc62 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::__call&lt;void, 0ul, 1ul, 2ul&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;, std::_Index_tuple&lt;0ul, 1ul, 2ul&gt;) (this=0x7f37240337a0, __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;) at /usr/include/c++/5/functional:1074</div><div class="line">#7 0x00007f37806bda06 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::operator()&lt;, void&gt;(void) (this=0x7f37240337a0) at /usr/include/c++/5/functional:1133</div><div class="line">#8 0x00007f37806bb2ac in std::_Function_handler&lt;void(), std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt; &gt;::_M_invoke(const std::_Any_data &amp;) (__functor=...)at /usr/include/c++/5/functional:1871</div><div class="line">#9 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x7f372407f320) at /usr/include/c++/5/functional:2267</div><div class="line">#10 0x00007f3780197b9e in tensorflow::thread::EigenEnvironment::ExecuteTask (this=0x55a688ed3c58, t=...)at tensorflow/core/lib/core/threadpool.cc:81</div><div class="line">#11 0x00007f378019a65c in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (this=0x55a688ed3c50, thread_id=1) at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:232</div><div class="line">#12 0x00007f3780198aae in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;::operator()() const ()at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:65</div><div class="line">#13 0x00007f378019bc7c in std::_Function_handler&lt;void (), Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...)at /usr/include/c++/5/functional:1871</div><div class="line">#14 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x55a688ed3050) at /usr/include/c++/5/functional:2267</div><div class="line">#15 0x00007f3780197907 in tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;::operator()() const (__closure=0x55a688ed3050) at tensorflow/core/lib/core/threadpool.cc:56</div><div class="line">#16 0x00007f37801998d8 in std::_Function_handler&lt;void (), tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...) at /usr/include/c++/5/functional:1871</div><div class="line">#17 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x55a688f199b8) at /usr/include/c++/5/functional:2267</div><div class="line">#18 0x00007f37801dcf38 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::_M_invoke&lt;&gt;(std::_Index_tuple&lt;&gt;) (this=0x55a688f199b8)at /usr/include/c++/5/functional:1531</div><div class="line">#19 0x00007f37801dcea1 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::operator()() (this=0x55a688f199b8)at /usr/include/c++/5/functional:1520</div><div class="line">#20 0x00007f37801dce40 in std::thread::_Impl&lt;std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt; &gt;::_M_run() (this=0x55a688f199a0)at /usr/include/c++/5/thread:115</div><div class="line">#21 0x00007f377ed4fc80 in ?? () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6</div><div class="line">#22 0x00007f3796f746ba in start_thread (arg=0x7f3760247700) at pthread_create.c:333#23 0x00007f3796caa3dd in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109</div></pre></td></tr></table></figure>
+<h1 id="0x3-Producer-of-tenforflow"><a href="#0x3-Producer-of-tenforflow" class="headerlink" title="0x3 Producer of tenforflow"></a>0x3 Producer of tenforflow</h1><p>It is trigged by test.py to send command to tenforflow native code.<br><img src="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/producer.jpg" alt="producer"></p>
+<h1 id="0x4-Consumer-of-tenforflow"><a href="#0x4-Consumer-of-tenforflow" class="headerlink" title="0x4 Consumer of tenforflow"></a>0x4 Consumer of tenforflow</h1><p>Tensorflow’s thread pull task from the queue then execute it<br><img src="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/consumer.jpg" alt="consumer"></p>
+<h1 id="0x5-gdb-debug-of-convolutional-network-py"><a href="#0x5-gdb-debug-of-convolutional-network-py" class="headerlink" title="0x5 gdb debug of convolutional_network.py"></a>0x5 gdb debug of convolutional_network.py</h1><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#<span class="number">0</span> <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">#<span class="number">1</span> <span class="number">0x00007f90ab73bb73</span> in tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e28fa0</span>, context=<span class="number">0x7f9083774840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">311</span> </div><div class="line">#<span class="number">2</span> <span class="number">0x00007f90a3ee091b</span> in tensorflow::ThreadPoolDevice::Compute (  <span class="keyword">this</span>=<span class="number">0x5569092d1f30</span>, op_kernel=<span class="number">0x556909e28fa0</span>, context=<span class="number">0x7f9083774840</span>)  at tensorflow/core/common_runtime/threadpool_device.cc:<span class="number">59</span> </div><div class="line">#<span class="number">3</span> <span class="number">0x00007f90a3e7bc0a</span> in tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::Process (<span class="keyword">this</span>=<span class="number">0x556909f04770</span>, tagged_node=..., scheduled_usec=<span class="number">0</span>)  at tensorflow/core/common_runtime/executor.cc:<span class="number">1652</span> </div><div class="line">#<span class="number">4</span> <span class="number">0x00007f90a3e8a1a7</span> in <span class="built_in">std</span>::_Mem_fn_base&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span>), <span class="literal">true</span>&gt;::<span class="keyword">operator</span>()&lt;tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode&amp;, <span class="keyword">long</span> <span class="keyword">long</span>&amp;, <span class="keyword">void</span>&gt; (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>,   __object=<span class="number">0x556909f04770</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">600</span> </div><div class="line">#<span class="number">5</span> <span class="number">0x00007f90a3e89c62</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::__call&lt;<span class="keyword">void</span>, <span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;, <span class="built_in">std</span>::_Index_tuple&lt;<span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;) (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>,  ---Type &lt;<span class="keyword">return</span>&gt; to <span class="keyword">continue</span>, <span class="keyword">or</span> q &lt;<span class="keyword">return</span>&gt; to quit---  __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1074</span> </div><div class="line">#<span class="number">6</span> <span class="number">0x00007f90a3e87a06</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::<span class="keyword">operator</span>()&lt;, <span class="keyword">void</span>&gt;(<span class="keyword">void</span>) (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1133</span> </div><div class="line">#<span class="number">7</span> <span class="number">0x00007f90a3e852ac</span> in <span class="built_in">std</span>::_Function_handler&lt;<span class="keyword">void</span>(), <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt; &gt;::_M_invoke(<span class="keyword">const</span> <span class="built_in">std</span>::_Any_data &amp;) (__functor=...)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1871</span> </div><div class="line">#<span class="number">8</span> <span class="number">0x00007f90a3749984</span> in <span class="built_in">std</span>::function&lt;<span class="keyword">void</span> ()&gt;::<span class="keyword">operator</span>()() <span class="keyword">const</span> (  <span class="keyword">this</span>=<span class="number">0x7f904c6c5d40</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">2267</span> #<span class="number">9</span> <span class="number">0x00007f90a3961b9e</span> in tensorflow::thread::EigenEnvironment::ExecuteTask (  <span class="keyword">this</span>=<span class="number">0x5569091d82c8</span>, t=...) at tensorflow/core/lib/core/threadpool.cc:<span class="number">81</span> </div><div class="line">#<span class="number">10</span> <span class="number">0x00007f90a396465c</span> in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (<span class="keyword">this</span>=<span class="number">0x5569091d82c0</span>, thread_id=<span class="number">1</span>)  at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:<span class="number">232</span> </div><div class="line">#<span class="number">11</span> <span class="number">0x00007f90a3962aae</span> in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(<span class="keyword">int</span>, <span class="keyword">bool</span>, tensorflow::thread::EigenEnvironment)::&#123;lambda()#<span class="number">1</span>&#125;::<span class="keyword">operator</span>()() <span class="keyword">const</span> ()  at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:<span class="number">65</span></div></pre></td></tr></table></figure>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">(gdb) c Continuing. </div><div class="line">[Switching to Thread <span class="number">0x7f9083775700</span> (LWP <span class="number">3586</span>)]   </div><div class="line">Thread <span class="number">13</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">(gdb) n </div><div class="line">Single stepping until <span class="built_in">exit</span> from function _ZN10tensorflow29ConvBackpropComputeDimensionsENS_11StringPieceEiRKNS_11TensorShapeES3_S3_RKSt6vectorIiSaIiEENS_7PaddingENS_12TensorFormatEPNS_22ConvBackpropDimensionsE@plt, which has no line number information. [Switching to Thread <span class="number">0x7f90819b9700</span> (LWP <span class="number">3587</span>)]   Thread <span class="number">14</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">(gdb)  </div><div class="line">Single stepping until <span class="built_in">exit</span> from function _ZN10tensorflow29ConvBackpropComputeDimensionsENS_11StringPieceEiRKNS_11TensorShapeES3_S3_RKSt6vectorIiSaIiEENS_7PaddingENS_12TensorFormatEPNS_22ConvBackpropDimensionsE@plt, which has no line number information. tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=<span class="number">32656</span>,   input_shape=..., filter_shape=..., out_backprop_shape=...,   strides=<span class="built_in">std</span>::<span class="built_in">vector</span> of length <span class="number">4</span>, capacity <span class="number">4</span> = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=<span class="number">0x7f90819b8240</span>) at tensorflow/core/kernels/conv_grad_ops.cc:<span class="number">156</span> <span class="number">156</span>  ConvBackpropDimensions* dims) &#123; (gdb) n [Switching to Thread <span class="number">0x7f9083775700</span> (LWP <span class="number">3586</span>)]   Thread <span class="number">13</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, tensorflow::ConvBackpropComputeDimensions  (label=..., num_spatial_dims=<span class="number">2</span>, input_shape=..., filter_shape=...,   out_backprop_shape=...,   strides=<span class="built_in">std</span>::<span class="built_in">vector</span> of length <span class="number">4</span>, capacity <span class="number">4</span> = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=<span class="number">0x7f9083774240</span>) at tensorflow/core/kernels/conv_grad_ops.cc:<span class="number">160</span> <span class="number">160</span>  one_dilations, strides, padding, data_format, dims);</div></pre></td></tr></table></figure>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">(gdb)</div><div class="line">#<span class="number">0</span> <span class="built_in">std</span>::<span class="keyword">operator</span>==&lt;tensorflow::Status::State, <span class="built_in">std</span>::default_delete&lt;tensorflow::Status::State&gt; &gt;(<span class="built_in">std</span>::<span class="built_in">unique_ptr</span>&lt;tensorflow::Status::State, <span class="built_in">std</span>::default_delete&lt;tensorflow::Status::State&gt; &gt; <span class="keyword">const</span>&amp;, <span class="keyword">decltype</span>(<span class="literal">nullptr</span>)) (  __x=<span class="built_in">std</span>::<span class="built_in">unique_ptr</span>&lt;tensorflow::Status::State&gt; containing <span class="number">0x0</span>)  at /usr/include/c++/<span class="number">5</span>/bits/<span class="built_in">unique_ptr</span>.h:<span class="number">631</span> </div><div class="line">#<span class="number">1</span> <span class="number">0x00007f90a7e9e41d</span> in tensorflow::Status::ok (<span class="keyword">this</span>=<span class="number">0x7f90819b8150</span>)  at ./tensorflow/core/lib/core/status.h:<span class="number">53</span> </div><div class="line">#<span class="number">2</span> <span class="number">0x00007f90ab73bb86</span> in tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">311</span> </div><div class="line">#<span class="number">3</span> <span class="number">0x00007f90a3ee091b</span> in tensorflow::ThreadPoolDevice::Compute (  <span class="keyword">this</span>=<span class="number">0x5569092d1f30</span>, op_kernel=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/common_runtime/threadpool_device.cc:<span class="number">59</span> </div><div class="line">#<span class="number">4</span> <span class="number">0x00007f90a3e7bc0a</span> in tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::Process (<span class="keyword">this</span>=<span class="number">0x55690a0f5150</span>, tagged_node=..., scheduled_usec=<span class="number">0</span>)  at tensorflow/core/common_runtime/executor.cc:<span class="number">1652</span> </div><div class="line">#<span class="number">5</span> <span class="number">0x00007f90a3e8a1a7</span> in <span class="built_in">std</span>::_Mem_fn_base&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span>), <span class="literal">true</span>&gt;::<span class="keyword">operator</span>()&lt;tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode&amp;, <span class="keyword">long</span> <span class="keyword">long</span>&amp;, <span class="keyword">void</span>&gt; (<span class="keyword">this</span>=<span class="number">0x7f90508b25b0</span>,   __object=<span class="number">0x55690a0f5150</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">600</span> </div><div class="line">#<span class="number">6</span> <span class="number">0x00007f90a3e89c62</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::__call&lt;<span class="keyword">void</span>, <span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;, <span class="built_in">std</span>::_Index_tuple&lt;<span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;) (<span class="keyword">this</span>=<span class="number">0x7f90508b25b0</span>,   __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1074</span> ---Type &lt;<span class="keyword">return</span>&gt; to <span class="keyword">continue</span>, <span class="keyword">or</span> q &lt;<span class="keyword">return</span>&gt; to quit---   </div><div class="line">(gdb) n </div><div class="line">tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">317</span> <span class="number">317</span>  Tensor* in_backprop = <span class="literal">nullptr</span>;</div><div class="line">(gdb) <span class="built_in">list</span></div><div class="line"> <span class="number">312</span>  ConvBackpropComputeDimensions( <span class="number">313</span>  <span class="string">"Conv2DCustomBackpropInput"</span>, <span class="comment">/*num_spatial_dims=*/</span><span class="number">2</span>, <span class="number">314</span>  input_shape, filter.shape(), out_backprop.shape(), <span class="number">315</span>  strides_, padding_, data_format_, &amp;dims)); <span class="number">316</span>  <span class="number">317</span>  Tensor* in_backprop = <span class="literal">nullptr</span>; <span class="number">318</span>  OP_REQUIRES_OK(context, <span class="number">319</span>  context-&gt;allocate_output(<span class="number">0</span>, input_shape, &amp;in_backprop)); <span class="number">320</span>  <span class="number">321</span> <span class="comment">// TODO(andydavis) Consider moving code shared with </span></div><div class="line">(gdb) n</div><div class="line"><span class="number">318</span>  OP_REQUIRES_OK(context, </div><div class="line">(gdb)</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">Thread info</div><div class="line">(gdb) info threads</div><div class="line">  Id Target Id Frame   </div><div class="line">  1 Thread 0x7f90bab09700 (LWP 3530) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  2 Thread 0x7f90b6a6a700 (LWP 3531) "python" 0x00007f90ba6f387f in __libc_recv (fd=4, buf=0x7f90b6a7afc8, n=4, flags=0)  at ../sysdeps/unix/sysv/linux/x86_64/recv.c:28  </div><div class="line">  3 Thread 0x7f908fc55700 (LWP 3560) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  4 Thread 0x7f908f454700 (LWP 3561) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  5 Thread 0x7f908ec53700 (LWP 3562) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  6 Thread 0x7f908e452700 (LWP 3563) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  7 Thread 0x7f908693b700 (LWP 3578) "python" 0x00007f90ba6f2827 in futex_abstimed_wait_cancelable (private=0, abstime=0x0, expected=0,   futex_word=0x7f9068013280)  at ../sysdeps/unix/sysv/linux/futex-internal.h:205 </div><div class="line">  8 Thread 0x7f9085f7a700 (LWP 3581) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  9 Thread 0x7f9085779700 (LWP 3582) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  10 Thread 0x7f9084f78700 (LWP 3583) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  11 Thread 0x7f9084777700 (LWP 3584) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  12 Thread 0x7f9083f76700 (LWP 3585) "python" tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=2, input_shape=...,   filter_shape=..., out_backprop_shape=...,   strides=std::vector of length 4, capacity 4 = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,  ---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---  dims=0x7f9083f75240) at tensorflow/core/kernels/conv_grad_ops.cc:160  </div><div class="line">  13 Thread 0x7f9083775700 (LWP 3586) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185 * </div><div class="line">  14 Thread 0x7f90819b9700 (LWP 3587) "python" tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=2, input_shape=...,   filter_shape=..., out_backprop_shape=...,   strides=std::vector of length 4, capacity 4 = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=0x7f90819b8240) at tensorflow/core/kernels/conv_grad_ops.cc:160  </div><div class="line">  15 Thread 0x7f90811b8700 (LWP 3588) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  16 Thread 0x7f90809b7700 (LWP 3589) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  17 Thread 0x7f907dde7700 (LWP 3590) "python" 0x00007f90ba6f2827 in futex_abstimed_wait_cancelable (private=0, abstime=0x0, expected=0,   futex_word=0x7f9038001380)  at ../sysdeps/unix/sysv/linux/futex-internal.h:205</div></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/tensorflow/" rel="tag"># tensorflow</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/04/22/Design-p2p-streaming-capturer-based-on-flv/" rel="next" title="Design p2p streaming capturer based on flv">
+                <i class="fa fa-chevron-left"></i> Design p2p streaming capturer based on flv
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/06/27/STUN-in-P2P-network/" rel="prev" title="STUN in P2P network">
+                STUN in P2P network <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">17</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Session-Run"><span class="nav-number">1.</span> <span class="nav-text">0x1 Session::Run()</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-OpKernel-Compute"><span class="nav-number">2.</span> <span class="nav-text">0x2 OpKernel::Compute()</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-Producer-of-tenforflow"><span class="nav-number">3.</span> <span class="nav-text">0x3 Producer of tenforflow</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Consumer-of-tenforflow"><span class="nav-number">4.</span> <span class="nav-text">0x4 Consumer of tenforflow</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-gdb-debug-of-convolutional-network-py"><span class="nav-number">5.</span> <span class="nav-text">0x5 gdb debug of convolutional_network.py</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
