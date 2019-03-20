@@ -254,6 +254,148 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/13/how-renderscript-supports-parallel-compution/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/03/13/how-renderscript-supports-parallel-compution/" itemprop="url">How renderscript supports parallel compution</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-03-13T20:47:43+09:00">
+                2018-03-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/03/13/how-renderscript-supports-parallel-compution/" class="leancloud_visitors" data-flag-title="How renderscript supports parallel compution">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Architecture"><a href="#0x1-Architecture" class="headerlink" title="0x1 Architecture"></a>0x1 Architecture</h1><p>RenderScript is a framework for running computationally intensive tasks at high performance on Android. It is similar to OpenCL which is cross platform spec for parallel computation. RenderScript is primarily oriented for use with data-parallel computation. The RenderScript runtime will parallelize work across all processors available on a device, such as multi-core CPUs, GPUs, or DSPs. RenderScript is especially useful for applications performing image processing, computational photography, or computer vision. <a href="https://developer.android.com/guide/topics/renderscript/compute.html" target="_blank" rel="external">Android’s doc</a></p>
+<p>Here is the architecture of RenderScript.<br><img src="/2018/03/13/how-renderscript-supports-parallel-compution/architecture.png" alt="architecture"></p>
+<p>RS Wrapper acts as the wrapper layer for RenderScript, provides the RenderScript api mapping and resource management.<br>cpu ref is the software implementation of RenderScript on CPU.<br>gpu rs is the hardware implementation of RenderScript on GPU.<br>slang/llvm provides the front and backend compiler support for RenderScript’s C99-derived language.</p>
+<p>In this article, we will discuss how software RenderScript is suported on multi-core CPU.</p>
+<h1 id="0x2-Software-Implementation"><a href="#0x2-Software-Implementation" class="headerlink" title="0x2 Software Implementation"></a>0x2 Software Implementation</h1><p><img src="/2018/03/13/how-renderscript-supports-parallel-compution/cpu_rs.png" alt="cpu_rs"></p>
+<h2 id="0x21-Create-Threads"><a href="#0x21-Create-Threads" class="headerlink" title="0x21 Create Threads"></a>0x21 Create Threads</h2><p>Create threads for parallel computing based on cpu core’s number<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">bool</span> RsdCpuReferenceImpl::init(<span class="keyword">uint32_t</span> version_major, <span class="keyword">uint32_t</span> version_minor,</div><div class="line">                               <span class="keyword">sym_lookup_t</span> lfn, <span class="keyword">script_lookup_t</span> slfn) &#123;</div><div class="line">    … …</div><div class="line">    GetCpuInfo();</div><div class="line"></div><div class="line">    <span class="keyword">int</span> cpu = sysconf(_SC_NPROCESSORS_CONF);</div><div class="line">    <span class="keyword">if</span>(mRSC-&gt;props.mDebugMaxThreads) &#123;</div><div class="line">        cpu = mRSC-&gt;props.mDebugMaxThreads;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">if</span> (cpu &lt; <span class="number">2</span>) &#123;</div><div class="line">        mWorkers.mCount = <span class="number">0</span>;</div><div class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">// Subtract one from the cpu count because we also use the command thread as a worker.</span></div><div class="line">    mWorkers.mCount = (<span class="keyword">uint32_t</span>)(cpu - <span class="number">1</span>);</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (<span class="keyword">uint32_t</span> ct=<span class="number">0</span>; ct &lt; mWorkers.mCount; ct++) &#123;</div><div class="line">        status = pthread_create(&amp;mWorkers.mThreadId[ct], &amp;threadAttr, helperThreadProc, <span class="keyword">this</span>);</div><div class="line">        <span class="keyword">if</span> (status) &#123;</div><div class="line">            mWorkers.mCount = ct;</div><div class="line">            ALOGE(<span class="string">"Created fewer than expected number of RS threads."</span>);</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div></pre></td></tr></table></figure></p>
+<h2 id="0x22-Thread-implementation"><a href="#0x22-Thread-implementation" class="headerlink" title="0x22 Thread implementation"></a>0x22 Thread implementation</h2><p>Here is the thread’s source code.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> * RsdCpuReferenceImpl::helperThreadProc(<span class="keyword">void</span> *vrsc) &#123;</div><div class="line">    RsdCpuReferenceImpl *dc = (RsdCpuReferenceImpl *)vrsc;</div><div class="line"></div><div class="line">    <span class="keyword">uint32_t</span> idx = __sync_fetch_and_add(&amp;dc-&gt;mWorkers.mLaunchCount, <span class="number">1</span>);</div><div class="line"></div><div class="line">    dc-&gt;mWorkers.mLaunchSignals[idx].init();</div><div class="line">    dc-&gt;mWorkers.mNativeThreadId[idx] = gettid();</div><div class="line"></div><div class="line">    <span class="built_in">memset</span>(&amp;dc-&gt;mTlsStruct, <span class="number">0</span>, <span class="keyword">sizeof</span>(dc-&gt;mTlsStruct));</div><div class="line">    <span class="keyword">int</span> status = pthread_setspecific(gThreadTLSKey, &amp;dc-&gt;mTlsStruct);</div><div class="line">    <span class="keyword">if</span> (status) &#123;</div><div class="line">        ALOGE(<span class="string">"pthread_setspecific %i"</span>, status);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">while</span> (!dc-&gt;mExit) &#123;</div><div class="line">        dc-&gt;mWorkers.mLaunchSignals[idx].wait();</div><div class="line">        <span class="keyword">if</span> (dc-&gt;mWorkers.mLaunchCallback) &#123;</div><div class="line">           <span class="comment">// idx +1 is used because the calling thread is always worker 0.</span></div><div class="line">           dc-&gt;mWorkers.mLaunchCallback(dc-&gt;mWorkers.mLaunchData, idx+<span class="number">1</span>);</div><div class="line">        &#125;</div><div class="line">        __sync_fetch_and_sub(&amp;dc-&gt;mWorkers.mRunningCount, <span class="number">1</span>);</div><div class="line">        dc-&gt;mWorkers.mCompleteSignal.<span class="built_in">set</span>();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> <span class="literal">nullptr</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>dc-&gt;mWorkers.mLaunchSignals[idx].wait() is used to wait for the task to be processed.</p>
+<p>dc-&gt;mWorkers.mLaunchCallback will call the actual processing routine.</p>
+<p>dc-&gt;mWorkers.mCompleteSignal.set() is used to indicate the processing is complete.</p>
+<h2 id="0x23-Launch-Thread"><a href="#0x23-Launch-Thread" class="headerlink" title="0x23 Launch Thread"></a>0x23 Launch Thread</h2><p>dc-&gt;mWorkers.mLaunchSignals[idx].wait() is signed in RsdCpuReferenceImpl::launchThreads().</p>
+<p>And in RsdCpuReferenceImpl::launchThreads(), we can see mWorkers.mCompleteSignal.wait() is used to wait for the finish of the executing threads.</p>
+<p>And the ‘WorkerCallback_t cbk’ is passed in to do the actual processing.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> RsdCpuReferenceImpl::launchThreads(WorkerCallback_t cbk, <span class="keyword">void</span> *data) &#123;</div><div class="line">    mWorkers.mLaunchData = data;</div><div class="line">    mWorkers.mLaunchCallback = cbk;</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (<span class="keyword">uint32_t</span> ct = <span class="number">0</span>; ct &lt; mWorkers.mCount; ct++) &#123;</div><div class="line">        mWorkers.mLaunchSignals[ct].<span class="built_in">set</span>();</div><div class="line">    &#125;</div><div class="line">    <span class="comment">// We use the calling thread as one of the workers so we can start without</span></div><div class="line">    <span class="comment">// the delay of the thread wakeup.</span></div><div class="line">    <span class="keyword">if</span> (mWorkers.mLaunchCallback) &#123;</div><div class="line">        mWorkers.mLaunchCallback(mWorkers.mLaunchData, <span class="number">0</span>);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">while</span> (__sync_fetch_and_or(&amp;mWorkers.mRunningCount, <span class="number">0</span>) != <span class="number">0</span>) &#123;</div><div class="line">        mWorkers.mCompleteSignal.wait();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>Here is the code about how launchThreads is used.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">Line <span class="number">767</span>:             launchThreads(walk_3d_reduce, mtls);</div><div class="line">Line <span class="number">770</span>:             launchThreads(walk_2d_reduce, mtls);</div><div class="line">Line <span class="number">773</span>:             launchThreads(walk_1d_reduce, mtls);</div><div class="line">Line <span class="number">851</span>:             launchThreads(walk_general_foreach, mtls);</div><div class="line">Line <span class="number">873</span>:             launchThreads(walk_2d_foreach, mtls);</div><div class="line">Line <span class="number">895</span>:             launchThreads(walk_1d_foreach, mtls);</div></pre></td></tr></table></figure></p>
+<h2 id="0x24-Thread-Execution"><a href="#0x24-Thread-Execution" class="headerlink" title="0x24 Thread Execution"></a>0x24 Thread Execution</h2><p>Each thread setups the task according to the current mSliceNum,<br>Then it setups yStart and yEnd, then executes kernel from yStart to yEnd.<br>The kernel is set in RsdCpuScriptIntrinsic::invokeForEach()<br>or RsdCpuScriptImpl::forEachKernelSetup.</p>
+<p>RsdCpuScriptIntrinsic::invokeForEach() is used to setup kernel for Intrinsic.</p>
+<p>RsdCpuScriptImpl::forEachKernelSetup() is used to setup user defined kernel in *.rs files.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">walk_2d_foreach</span><span class="params">(<span class="keyword">void</span> *usr, <span class="keyword">uint32_t</span> idx)</span> </span>&#123;</div><div class="line">    MTLaunchStructForEach *mtls = (MTLaunchStructForEach *)usr;</div><div class="line">    RsExpandKernelDriverInfo fep = mtls-&gt;fep;</div><div class="line">    fep.lid = idx;</div><div class="line">    ForEachFunc_t fn = mtls-&gt;kernel;</div><div class="line"></div><div class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</div><div class="line">        <span class="keyword">uint32_t</span> slice  = (<span class="keyword">uint32_t</span>)__sync_fetch_and_add(&amp;mtls-&gt;mSliceNum, <span class="number">1</span>);</div><div class="line">        <span class="keyword">uint32_t</span> yStart = mtls-&gt;start.y + slice * mtls-&gt;mSliceSize;</div><div class="line">        <span class="keyword">uint32_t</span> yEnd   = yStart + mtls-&gt;mSliceSize;</div><div class="line"></div><div class="line">        yEnd = rsMin(yEnd, mtls-&gt;end.y);</div><div class="line"></div><div class="line">        <span class="keyword">if</span> (yEnd &lt;= yStart) &#123;</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        <span class="keyword">for</span> (fep.current.y = yStart; fep.current.y &lt; yEnd; fep.current.y++) &#123;</div><div class="line">            FepPtrSetup(mtls, &amp;fep, mtls-&gt;start.x, fep.current.y);</div><div class="line"></div><div class="line">            fn(&amp;fep, mtls-&gt;start.x, mtls-&gt;end.x, fep.outStride[<span class="number">0</span>]);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x25-Kernel-implementation"><a href="#0x25-Kernel-implementation" class="headerlink" title="0x25 Kernel implementation"></a>0x25 Kernel implementation</h2><p>Let’s use IntrinsicBlur as the example, in its kernel function kernelU1(), it will produce output pixel from xstart to xend.<br>the algorithm is based on Gaussian Weights which are initialized in ComputeGaussianWeights().</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> RsdCpuScriptIntrinsicBlur::kernelU1(<span class="keyword">const</span> RsExpandKernelDriverInfo *info,</div><div class="line">                                         <span class="keyword">uint32_t</span> xstart, <span class="keyword">uint32_t</span> xend,</div><div class="line">                                         <span class="keyword">uint32_t</span> outstep) &#123;</div><div class="line">    <span class="keyword">float</span> buf[<span class="number">4</span> * <span class="number">2048</span>];</div><div class="line">    RsdCpuScriptIntrinsicBlur *cp = (RsdCpuScriptIntrinsicBlur *)info-&gt;usr;</div><div class="line">    <span class="keyword">if</span> (!cp-&gt;mAlloc.get()) &#123;</div><div class="line">        ALOGE(<span class="string">"Blur executed without input, skipping"</span>);</div><div class="line">        <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">const</span> uchar *pin = (<span class="keyword">const</span> uchar *)cp-&gt;mAlloc-&gt;mHal.drvState.lod[<span class="number">0</span>].mallocPtr;</div><div class="line">    <span class="keyword">const</span> <span class="keyword">size_t</span> stride = cp-&gt;mAlloc-&gt;mHal.drvState.lod[<span class="number">0</span>].stride;</div><div class="line"></div><div class="line">    uchar *out = (uchar *)info-&gt;outPtr[<span class="number">0</span>];</div><div class="line">    <span class="keyword">uint32_t</span> x1 = xstart;</div><div class="line">    <span class="keyword">uint32_t</span> x2 = xend;</div><div class="line"></div><div class="line">    <span class="keyword">float</span> *fout = (<span class="keyword">float</span> *)buf;</div><div class="line">    <span class="keyword">int</span> y = info-&gt;current.y;</div><div class="line">    <span class="keyword">if</span> ((y &gt; cp-&gt;mIradius) &amp;&amp; (y &lt; ((<span class="keyword">int</span>)info-&gt;dim.y - cp-&gt;mIradius <span class="number">-1</span>))) &#123;</div><div class="line">        <span class="keyword">const</span> uchar *pi = pin + (y - cp-&gt;mIradius) * stride;</div><div class="line">        OneVFU1(fout, pi, stride, cp-&gt;mFp, cp-&gt;mIradius * <span class="number">2</span> + <span class="number">1</span>, <span class="number">0</span>, info-&gt;dim.x);</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">        x1 = <span class="number">0</span>;</div><div class="line">        <span class="keyword">while</span>(info-&gt;dim.x &gt; x1) &#123;</div><div class="line">            OneVU1(info, fout, x1, y, pin, stride, cp-&gt;mFp, cp-&gt;mIradius);</div><div class="line">            fout++;</div><div class="line">            x1++;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    x1 = xstart;</div><div class="line">    <span class="keyword">while</span> ((x1 &lt; x2) &amp;&amp;</div><div class="line">           ((x1 &lt; (<span class="keyword">uint32_t</span>)cp-&gt;mIradius) || (((<span class="keyword">uintptr_t</span>)out) &amp; <span class="number">0x3</span>))) &#123;</div><div class="line">        OneHU1(info, out, x1, buf, cp-&gt;mFp, cp-&gt;mIradius);</div><div class="line">        out++;</div><div class="line">        x1++;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">while</span>(x2 &gt; x1) &#123;</div><div class="line">        OneHU1(info, out, x1, buf, cp-&gt;mFp, cp-&gt;mIradius);</div><div class="line">        out++;</div><div class="line">        x1++;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/02/25/Analysis-of-SwiftShader/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1344,7 +1486,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">17</span>
+                <span class="site-state-item-count">18</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1399,7 +1541,7 @@
         <div class="copyright" >
   
   &copy; 
-  <span itemprop="copyrightYear">2018</span>
+  <span itemprop="copyrightYear">2019</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
