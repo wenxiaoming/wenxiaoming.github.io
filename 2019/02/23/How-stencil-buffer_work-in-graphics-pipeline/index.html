@@ -100,17 +100,17 @@
 <meta property="og:url" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
 <meta property="og:description" content="0x1 总体介绍Stencil Test的使用可以看出两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。 下图是Stencil Test在在post fragment pipeline中的位置。 0x2 从GPU硬件的角度理解Stencil test下面介">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/post_shader_fragment_pipeline.png">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/v3d_system_block.png">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle1.png">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle2.png">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle1_triangle2.png">
-<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/drawing_with_stencil_buffer.png">
-<meta property="og:updated_time" content="2019-06-22T14:28:00.684Z">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/v3d_system_block.png">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1.png">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle2.png">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1_triangle2.png">
+<meta property="og:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/drawing_with_stencil_buffer.png">
+<meta property="og:updated_time" content="2019-06-22T14:34:59.133Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="How stencil buffer work in graphics pipeline">
 <meta name="twitter:description" content="0x1 总体介绍Stencil Test的使用可以看出两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。 下图是Stencil Test在在post fragment pipeline中的位置。 0x2 从GPU硬件的角度理解Stencil test下面介">
-<meta name="twitter:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/post_shader_fragment_pipeline.png">
+<meta name="twitter:image" content="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png">
 
 
 
@@ -340,13 +340,13 @@
 
       
         <h1 id="0x1-总体介绍"><a href="#0x1-总体介绍" class="headerlink" title="0x1 总体介绍"></a>0x1 总体介绍</h1><p>Stencil Test的使用可以看出两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。</p>
-<p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
+<p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
 <h1 id="0x2-从GPU硬件的角度理解Stencil-test"><a href="#0x2-从GPU硬件的角度理解Stencil-test" class="headerlink" title="0x2 从GPU硬件的角度理解Stencil test"></a>0x2 从GPU硬件的角度理解Stencil test</h1><p>下面介绍Stencil test是如何在gpu hardware pipeline中执行的。</p>
 <p>下图是broadcom <a href="https://docs.broadcom.com/docs-and-downloads/docs/support/videocore/VideoCoreIV-AG100-R.pdf" target="_blank" rel="external">v3d</a> system block图。</p>
 <p>v3d是tile buffer rendering的gpu，其渲染分成两个阶段，第一阶段是计算出每个tile中有哪些triangle需要绘制，第二阶段是遍历所有的tile，对每个tile执行真正的绘制工作。</p>
 <p>如下图所示，stencil buffer是gpu hardware中tile buffer的一部分，这是gpu硬件中单独的一块buffer，用来保存当前渲染过程中使用到的stencil值。</p>
 <p>在每个tile的绘制过程中，都需要根据tile坐标取得stencil buffer中对应的stencil mask, 然后执行stencil test, 执行完了以后，如果必要，还需要更新stencil buffer中对应的stencil值。</p>
-<p><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/v3d_system_block.png" alt="v3d system block"></p>
+<p><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/v3d_system_block.png" alt="v3d system block"></p>
 <h1 id="0x3-Stencil-test测试程序"><a href="#0x3-Stencil-test测试程序" class="headerlink" title="0x3 Stencil test测试程序"></a>0x3 Stencil test测试程序</h1><p>这个Stencil test测试程序分成两步操作。</p>
 <p>第一步只是生成stencil buffer的内容，该过程不输出color，只更新stencil buffer的内容。</p>
 <p>更新stencil buffer的策略通过下面的api来控制。<br>glStencilOp(GL_KEEP, GL_INCR, GL_INCR);</p>
@@ -360,10 +360,10 @@
 <p>这个控制相应的位符合stencil buffer中条件的代码如下所示，也就是说stencil buffer相应的位的值需要为0x02，也就是说这个点绘制过两次（triangle1和triangle2都绘制过）。</p>
 <p>glStencilFunc(GL_NOTEQUAL, 0, 0xf8 | 0x02);</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">glDisable(GL_DEPTH_TEST);</div><div class="line"></div><div class="line">glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);</div><div class="line"></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData2);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor2);</div><div class="line"></div><div class="line"><span class="comment">// draw the area with blue color</span></div><div class="line">glColorMask(GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);</div><div class="line">glStencilFunc(GL_NOTEQUAL, <span class="number">0</span>, <span class="number">0xf8</span> | <span class="number">0x02</span>);</div><div class="line">  </div><div class="line">glDrawArrays(GL_TRIANGLE_STRIP, <span class="number">0</span>, <span class="number">4</span>);</div></pre></td></tr></table></figure>
-<h1 id="0x4-程序运行效果"><a href="#0x4-程序运行效果" class="headerlink" title="0x4 程序运行效果"></a>0x4 程序运行效果</h1><p>triangle1单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle1.png" alt="draw_triangle1"></p>
-<p>triangle2单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle2.png" alt="draw_triangle2"></p>
-<p>triangle1和triangle2同时绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/draw_triangle1_triangle2.png" alt="draw_triangle1_triangle2"></p>
-<p>triangle1和triangle2同时绘制但不更新color buffer, 然后根据stencil buffer绘制triangle1和triangle2相交区域的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/How-Stencil-buffer_work-in-Graphics-pipeline/drawing_with_stencil_buffer.png" alt="drawing_with_stencil_buffer"></p>
+<h1 id="0x4-程序运行效果"><a href="#0x4-程序运行效果" class="headerlink" title="0x4 程序运行效果"></a>0x4 程序运行效果</h1><p>triangle1单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1.png" alt="draw_triangle1"></p>
+<p>triangle2单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle2.png" alt="draw_triangle2"></p>
+<p>triangle1和triangle2同时绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1_triangle2.png" alt="draw_triangle1_triangle2"></p>
+<p>triangle1和triangle2同时绘制但不更新color buffer, 然后根据stencil buffer绘制triangle1和triangle2相交区域的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/drawing_with_stencil_buffer.png" alt="drawing_with_stencil_buffer"></p>
 
       
     </div>
