@@ -95,7 +95,7 @@
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Kevin Wen&#39;s Blog">
-<meta property="og:url" content="http://yoursite.com/archives/2016/07/index.html">
+<meta property="og:url" content="http://yoursite.com/page/3/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kevin Wen&#39;s Blog">
@@ -126,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/archives/2016/07/"/>
+  <link rel="canonical" href="http://yoursite.com/page/3/"/>
 
 
 
 
 
-  <title>归档 | Kevin Wen's Blog</title>
+  <title>Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -158,7 +158,9 @@
     
   
 
-  <div class="container sidebar-position-left  page-archive  ">
+  <div class="container sidebar-position-left 
+   page-home 
+ ">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -241,66 +243,153 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
+  <section id="posts" class="posts-expand">
+    
+      
 
-  <section id="posts" class="posts-collapse">
-    <span class="archive-move-on"></span>
+  
 
-    <span class="archive-page-counter">
-      
-      
-      
-        
-      
-      嗯..! 目前共计 21 篇日志。 继续努力。
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2016/07/16/analysis-of-rtsp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
     </span>
 
     
+      <header class="post-header">
 
-      
-      
-      
-
-      
         
-        <div class="collection-title">
-          <h2 class="archive-year motion-element" id="archive-year-2016">2016</h2>
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2016/07/16/analysis-of-rtsp/" itemprop="url">analysis of rtsp</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-07-16T20:48:20+09:00">
+                2016-07-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2016/07/16/analysis-of-rtsp/" class="leancloud_visitors" data-flag-title="analysis of rtsp">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
         </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
       
       
 
       
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
         
-            <a class="post-title-link" href="/2016/07/16/analysis-of-rtsp/" itemprop="url">
-              
-                <span itemprop="name">analysis of rtsp</span>
-              
-            </a>
+          
+            <h1 id="0x01-RTSP和RTMP简介"><a href="#0x01-RTSP和RTMP简介" class="headerlink" title="0x01     RTSP和RTMP简介"></a>0x01     RTSP和RTMP简介</h1><p>RTSP协议是流媒体协议，通过在播放器和服务端交互建立连接以后，服务器在不同的通道通过UDP把音频/视频数据发送给播放器。<br>RTSP协议传输的数据格式一般为TS,MP4。因为音视频是分别通过不同的UDP通道传输的，所以在服务端需要把ts/mp4文件做demux，然后再传输。我们可以采用live555,vlc,ffmpeg等作为rtsp服务器。</p>
+<p>而RTMP协议则是通过一个TCP通道把音视频数据从服务端发送到播放器，RTMP协议传输的一般为flv格式数据。开源的RTMP服务器有red5,nginx-rtmp-module,srs。red5是java实现的服务器，nginx-rtmp-module是基于web服务器nginx开发的rtmp流媒体服务器，而srs的实现基于st(state-threads)的单线程多协程服务器。</p>
+<h1 id="0x02-RTSP交互过程"><a href="#0x02-RTSP交互过程" class="headerlink" title="0x02  RTSP交互过程"></a>0x02  RTSP交互过程</h1><p>RTSP服务端和RTSP客户端的交互过程如下。<br>C表示RTSP客户端，S表示RTSP服务端</p>
+<h2 id="0x21-OPTION"><a href="#0x21-OPTION" class="headerlink" title="0x21 OPTION"></a>0x21 OPTION</h2><p>C-&gt;S: OPTION request         //C询问S有哪些方法可用<br>S-&gt;C: OPTION response        //S回应提供的所有可用方法</p>
+<h2 id="0x22-DESCRIBE"><a href="#0x22-DESCRIBE" class="headerlink" title="0x22 DESCRIBE"></a>0x22 DESCRIBE</h2><p>C-&gt;S: DESCRIBE request       //C要求得到S提供的媒体初始化描述信息<br>S-&gt;C: DESCRIBE response      //S回应媒体初始化描述信息(SDP)</p>
+<h2 id="0x23-SETUP"><a href="#0x23-SETUP" class="headerlink" title="0x23 SETUP"></a>0x23 SETUP</h2><p>C-&gt;S: SETUP request          //C请求S建立会话<br>S-&gt;C: SETUP response         //S建立会话，返回会话相关信息</p>
+<h2 id="0x24-PLAY"><a href="#0x24-PLAY" class="headerlink" title="0x24 PLAY"></a>0x24 PLAY</h2><p>C-&gt;S: PLAY request          //C请求播放<br>S-&gt;C: PLAY response         //S回应请求<br>S-&gt;C:                       //RTP发送流媒体数据</p>
+<h2 id="0x25-TEARDOWN"><a href="#0x25-TEARDOWN" class="headerlink" title="0x25 TEARDOWN"></a>0x25 TEARDOWN</h2><p>C-&gt;S: TEARDOWN request      //C请求关闭会话<br>S-&gt;C: TEARDOWN response     //S回应请求</p>
+<h1 id="0x03-抓包分析"><a href="#0x03-抓包分析" class="headerlink" title="0x03  抓包分析"></a>0x03  抓包分析</h1><p>RTSP服务端和客户端的整体交互过程如下。<br><img src="/2016/07/16/analysis-of-rtsp/rtsp_sequence.png" alt="rtsp_sequence"></p>
+<h2 id="0x31-OPTION"><a href="#0x31-OPTION" class="headerlink" title="0x31 OPTION"></a>0x31 OPTION</h2><p>客户端询问服务器有哪些方法可用。<br><img src="/2016/07/16/analysis-of-rtsp/options_c_s.png" alt="options_c_s"><br>服务器返回可以使用的方法。<br>DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE,GET_PARAMETER\r\n<br><img src="/2016/07/16/analysis-of-rtsp/options_s_c.png" alt="options_s_c"></p>
+<h2 id="0x32-DESCRIBE"><a href="#0x32-DESCRIBE" class="headerlink" title="0x32 DESCRIBE"></a>0x32 DESCRIBE</h2><p>客户端请求服务端发送SDP，服务端发送SDP给客户端。<br>如下所示，SDP中包括H264的sps和pps信息。<br><img src="/2016/07/16/analysis-of-rtsp/describe.png" alt="describe"></p>
+<h2 id="0x33-SETUP"><a href="#0x33-SETUP" class="headerlink" title="0x33 SETUP"></a>0x33 SETUP</h2><p>客户端请求建立Audio和Video的UDP连接。</p>
+<p>下面的Request请求建立Video的UDP连接。<br>Request: SETUP rtsp://192.168.40.1:8554/1/trackID=0 RTSP/1.0\r\n</p>
+<p>下面的Request请求建立Audio的UDP连接。<br>Request: SETUP rtsp://192.168.40.1:8554/1/trackID=1 RTSP/1.0\r\n</p>
+<p><img src="/2016/07/16/analysis-of-rtsp/setup.png" alt="setup"></p>
+<h2 id="0x34-PLAY"><a href="#0x34-PLAY" class="headerlink" title="0x34 PLAY"></a>0x34 PLAY</h2><p>客户端请求服务端开始提供流媒体服务，开始发送音视频数据到客户端。<br>如下所示，Payload type为DynamicRTP-Type-96 (96)的RTP包发送的是Video数据，Payload type为MPEG-I/II Audio (14)的RTP包发送的是Audio数据。<br><img src="/2016/07/16/analysis-of-rtsp/play.png" alt="play"></p>
+<h2 id="0x35-RTCP包"><a href="#0x35-RTCP包" class="headerlink" title="0x35 RTCP包"></a>0x35 RTCP包</h2><p>在开始传输音视频RTP包以后，RTCP用来提供客户端和服务端之间的传输反馈。服务端发送给客户端的RTCP包是Sender Report，客户端发送给服务端的RTCP包是Receiver Report。<br><img src="/2016/07/16/analysis-of-rtsp/rtcp.png" alt="rtcp"></p>
+
+          
         
-      </h2>
+      
+    </div>
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2016-07-16T20:48:20+09:00"
-              content="2016-07-16" >
-          07-16
-        </time>
-      </div>
+    <div>
+      
+    </div>
 
-    </header>
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
   </article>
 
 
-
     
-
   </section>
 
   
+  <nav class="pagination">
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span>
+  </nav>
 
 
 
@@ -489,12 +578,10 @@
   
 
   
-  
-    <script type="text/javascript" id="motion.page.archive">
-      $('.archive-year').velocity('transition.slideLeftIn');
-    </script>
-  
+    <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
 
+  
 
   
 
