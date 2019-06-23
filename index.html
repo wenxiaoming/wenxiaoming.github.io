@@ -333,8 +333,10 @@
       
         
           
-            <h1 id="0x1-总体介绍"><a href="#0x1-总体介绍" class="headerlink" title="0x1 总体介绍"></a>0x1 总体介绍</h1><p>Stencil Test的使用可以看出两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。</p>
-<p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
+            <h1 id="0x1-总体介绍"><a href="#0x1-总体介绍" class="headerlink" title="0x1 总体介绍"></a>0x1 总体介绍</h1><p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
+<p>Stencil Test的作用可以把绘制限定在特定的区域，这点和scissor test类似，但是stencil test支持不规则的区域，而scissor test做不到这一点。</p>
+<p>Stencil Test是通过stencil buffer中记录的模板信息来完成的，stencil buffer中保存着每个位置的fragment对应的mask值，当graphics pipeline执行stencil test的时候，把通过api设定的模板参考值与相应位置的fragment对应的mask值进行比较，如果不符合条件则被丢弃，反之则进行绘制。</p>
+<p>Stencil Test的使用可以看成两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。</p>
 <h1 id="0x2-从GPU硬件的角度理解Stencil-test"><a href="#0x2-从GPU硬件的角度理解Stencil-test" class="headerlink" title="0x2 从GPU硬件的角度理解Stencil test"></a>0x2 从GPU硬件的角度理解Stencil test</h1><p>下面介绍Stencil test是如何在gpu hardware pipeline中执行的。</p>
 <p>下图是broadcom <a href="https://docs.broadcom.com/docs-and-downloads/docs/support/videocore/VideoCoreIV-AG100-R.pdf" target="_blank" rel="external">v3d</a> system block图。</p>
 <p>v3d是tile buffer rendering的gpu，其渲染分成两个阶段，第一阶段是计算出每个tile中有哪些triangle需要绘制，第二阶段是遍历所有的tile，对每个tile执行真正的绘制工作。</p>
