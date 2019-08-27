@@ -1,0 +1,833 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="video codec," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="0x1 解码流程介绍解码流程说明如下 0x11 tile_group_obu   对tile group的每个tile调用decode_tile()进行解码，直至tile group中包括的tile都解码完成. 1234567for ( TileNum = tg_start; TileNum &amp;lt;= tg_end; TileNum++ ) &amp;#123;    tileRow = TileNum">
+<meta name="keywords" content="video codec">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AV1-syntax-explanation">
+<meta property="og:url" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="0x1 解码流程介绍解码流程说明如下 0x11 tile_group_obu   对tile group的每个tile调用decode_tile()进行解码，直至tile group中包括的tile都解码完成. 1234567for ( TileNum = tg_start; TileNum &amp;lt;= tg_end; TileNum++ ) &amp;#123;    tileRow = TileNum">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/av1%20syntax%20description.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/super_block.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/split_.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/mode.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/uv_mode.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/motion_vector.png">
+<meta property="og:updated_time" content="2019-08-27T14:55:35.618Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AV1-syntax-explanation">
+<meta name="twitter:description" content="0x1 解码流程介绍解码流程说明如下 0x11 tile_group_obu   对tile group的每个tile调用decode_tile()进行解码，直至tile group中包括的tile都解码完成. 1234567for ( TileNum = tg_start; TileNum &amp;lt;= tg_end; TileNum++ ) &amp;#123;    tileRow = TileNum">
+<meta name="twitter:image" content="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/av1%20syntax%20description.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/"/>
+
+
+
+
+
+  <title>AV1-syntax-explanation | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/16/AV1-syntaxs-explanation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">AV1-syntax-explanation</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-16T17:00:10+09:00">
+                2019-03-16
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/16/AV1-syntaxs-explanation/" class="leancloud_visitors" data-flag-title="AV1-syntax-explanation">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="0x1-解码流程介绍"><a href="#0x1-解码流程介绍" class="headerlink" title="0x1 解码流程介绍"></a>0x1 解码流程介绍</h1><p><img src="/2019/03/16/AV1-syntaxs-explanation/av1 syntax description.png" alt=""><br>解码流程说明如下</p>
+<h2 id="0x11-tile-group-obu"><a href="#0x11-tile-group-obu" class="headerlink" title="0x11 tile_group_obu"></a>0x11 tile_group_obu</h2><p>   对tile group的每个tile调用decode_tile()进行解码，直至tile group中包括的tile都解码完成.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> ( TileNum = tg_start; TileNum &lt;= tg_end; TileNum++ ) &#123;</div><div class="line">    tileRow = TileNum / TileCols</div><div class="line">    tileCol = TileNum % TileCols</div><div class="line">    ......</div><div class="line">    decode_tile( )</div><div class="line">    exit_symbol( )</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x12-decode-tile"><a href="#0x12-decode-tile" class="headerlink" title="0x12 decode_tile"></a>0x12 decode_tile</h2><p>   对tile中包含的每个partition进行解码。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> ( r = MiRowStart; r &lt; MiRowEnd; r += sbSize4 ) &#123;</div><div class="line">    <span class="keyword">for</span> ( c = MiColStart; c &lt; MiColEnd; c += sbSize4 ) &#123;</div><div class="line">        ......</div><div class="line">        decode_partition( r, c, sbSize )</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x13-decode-partition"><a href="#0x13-decode-partition" class="headerlink" title="0x13 decode_partition"></a>0x13 decode_partition</h2><p>   每个partition的解码过程就是对一个super block(super block的定义参考0x2)进行解码的过程.<br>   根据partition类型对进一步split, 不能split的类型调用decode_block().</p>
+<pre><code>partition类型的定义如下
+
+| Partition index | Type of partition  |
+|:-------:|:------------- |
+| 0 |PARTITION_NONE|
+| 1 |PARTITION_HORZ|
+| 2 |PARTITION_VERT|
+| 3 |PARTITION_SPLIT|
+| 4 |PARTITION_HORZ_A|
+| 5 |PARTITION_HORZ_B|
+| 6 |PARTITION_VERT_A|
+| 7 |PARTITION_VERT_B|
+| 8 |PARTITION_HORZ_4|
+| 9 |PARTITION_VERT_4|
+</code></pre><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ( partition == PARTITION_NONE ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line"><span class="keyword">if</span> ( hasRows )</div><div class="line">    decode_block( r + halfBlock4x4, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    <span class="keyword">if</span> ( hasCols )</div><div class="line">       decode_block( r, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_SPLIT ) &#123;</div><div class="line">    decode_partition( r, c, subSize )</div><div class="line">    decode_partition( r, c + halfBlock4x4, subSize )</div><div class="line">    decode_partition( r + halfBlock4x4, c, subSize )</div><div class="line">    decode_partition( r + halfBlock4x4, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_A ) &#123;</div><div class="line">    decode_block( r, c, splitSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_B ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c + halfBlock4x4, splitSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT_A ) &#123;</div><div class="line">    decode_block( r, c, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, splitSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT_B ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c + halfBlock4x4, splitSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_4 ) &#123;</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">0</span>, c, subSize )</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">1</span>, c, subSize )</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">2</span>, c, subSize )</div><div class="line">    <span class="keyword">if</span> ( r + quarterBlock4x4 * <span class="number">3</span> &lt; MiRows )</div><div class="line">        decode_block( r + quarterBlock4x4 * <span class="number">3</span>, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> &#123; <span class="comment">//PARTITION_VERT_4</span></div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">0</span>, subSize )</div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">1</span>, subSize )</div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">2</span>, subSize )</div><div class="line">    <span class="keyword">if</span> ( c + quarterBlock4x4 * <span class="number">3</span> &lt; MiCols )</div><div class="line">        decode_block( r, c + quarterBlock4x4 * <span class="number">3</span>, subSize )</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x14-decode-block"><a href="#0x14-decode-block" class="headerlink" title="0x14 decode_block"></a>0x14 decode_block</h2><p>   对一个block进行解码，进一步调用residual对残差进行解码.</p>
+<h2 id="0x15-transform-tree"><a href="#0x15-transform-tree" class="headerlink" title="0x15 transform_tree"></a>0x15 transform_tree</h2><p>   对不同size的transform块进行解码，它是一个递归函数，递归退出函数是transform_block.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line">transform_tree( startX, startY, w, h ) &#123; Type</div><div class="line">    maxX = MiCols * MI_SIZE</div><div class="line">    maxY = MiRows * MI_SIZE</div><div class="line">    <span class="keyword">if</span> ( startX &gt;= maxX || startY &gt;= maxY ) &#123;</div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    row = startY &gt;&gt; MI_SIZE_LOG2</div><div class="line">    col = startX &gt;&gt; MI_SIZE_LOG2</div><div class="line">    lumaTxSz = InterTxSizes[ row ][ col ]</div><div class="line">    lumaW = Tx_Width[ lumaTxSz ]</div><div class="line">    lumaH = Tx_Height[ lumaTxSz ]</div><div class="line">    <span class="keyword">if</span> ( w &lt;= lumaW &amp;&amp; h &lt;= lumaH ) &#123;</div><div class="line">        txSz = find_tx_size( w, h )</div><div class="line">        transform_block( <span class="number">0</span>, startX, startY, txSz, <span class="number">0</span>, <span class="number">0</span> )</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">        <span class="keyword">if</span> ( w &gt; h ) &#123;</div><div class="line">            transform_tree( startX, startY, w/<span class="number">2</span>, h )</div><div class="line">            transform_tree( startX + w / <span class="number">2</span>, startY, w/<span class="number">2</span>, h )</div><div class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> ( w &lt; h ) &#123;</div><div class="line">            transform_tree( startX, startY, w, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX, startY + h/<span class="number">2</span>, w, h/<span class="number">2</span> )</div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">            transform_tree( startX, startY, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX + w/<span class="number">2</span>, startY, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX, startY + h/<span class="number">2</span>, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX + w/<span class="number">2</span>, startY + h/<span class="number">2</span>, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x16-Reconstruct中包括具体的反量化，反dct-重建像素和loop-filter等过程"><a href="#0x16-Reconstruct中包括具体的反量化，反dct-重建像素和loop-filter等过程" class="headerlink" title="0x16 Reconstruct中包括具体的反量化，反dct,重建像素和loop filter等过程."></a>0x16 Reconstruct中包括具体的反量化，反dct,重建像素和loop filter等过程.</h2><h1 id="0x2-super-block"><a href="#0x2-super-block" class="headerlink" title="0x2 super block"></a>0x2 super block</h1><p><img src="/2019/03/16/AV1-syntaxs-explanation/super_block.png" alt=""></p>
+<p>Superblock的定义如下<br>The top level of the block quadtree within a tile. All superblocks within a frame are the same size and are square. The<br>superblocks may be 128x128 luma samples or 64x64 luma samples. A superblock may contain 1 or 2 or 4 mode info<br>blocks, or may be bisected in each direction to create 4 sub-blocks, which may themselves be further subpartitioned,<br>forming the block quadtree.</p>
+<p>通过在sequence_header_obu中的use_128x128_superblock来控制superblock的大小是128x128还是64x64.<br>sequence_header_obu( ) {<br>    ……<br>    use_128x128_superblock f(1)<br>    ……<br>}</p>
+<p>use_128x128_superblock的定义如下<br>when equal to 1, indicates that superblocks contain 128x128 luma samples. When equal to 0,<br>it indicates that superblocks contain 64x64 luma samples.</p>
+<h1 id="0x3-split划分"><a href="#0x3-split划分" class="headerlink" title="0x3 split划分"></a>0x3 split划分</h1><p>下图显示了super block(64x64)的split状态, 从图中可以看到，64x64的block会被split到32x32，再进一步split到16x16.</p>
+<p><img src="/2019/03/16/AV1-syntaxs-explanation/split_.png" alt=""></p>
+<h1 id="0x4-Intra-Y-mode"><a href="#0x4-Intra-Y-mode" class="headerlink" title="0x4 Intra Y mode"></a>0x4 Intra Y mode</h1><p>下图显示了Intra Prediction中Y分量的mode，不同的颜色代码不同的mode.</p>
+<p><img src="/2019/03/16/AV1-syntaxs-explanation/mode.png" alt=""></p>
+<h1 id="0x5-Intra-UV-mode"><a href="#0x5-Intra-UV-mode" class="headerlink" title="0x5 Intra UV mode"></a>0x5 Intra UV mode</h1><p>下图显示了Intra Prediction中UV分量的mode，不同的颜色代码不同的mode，其中显示数字的块表示该mode为chroma from luma prediction, 其中显示的数字表示chroma需要从哪个位置的luma预测.</p>
+<p><img src="/2019/03/16/AV1-syntaxs-explanation/uv_mode.png" alt=""></p>
+<h1 id="0x6-Motion-vector"><a href="#0x6-Motion-vector" class="headerlink" title="0x6 Motion vector"></a>0x6 Motion vector</h1><p>下图显示了Inter frame帧间预测的运动向量.</p>
+<p><img src="/2019/03/16/AV1-syntaxs-explanation/motion_vector.png" alt=""></p>
+<h1 id="0x7-Reference"><a href="#0x7-Reference" class="headerlink" title="0x7 Reference"></a>0x7 Reference</h1><p><a href="https://people.xiph.org/~mbebenita/analyzer/" target="_blank" rel="external">AV1 analyzer</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/video-codec/" rel="tag"># video codec</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/09/Synchronization-in-Vulkan/" rel="next" title="Synchronization-in-Vulkan">
+                <i class="fa fa-chevron-left"></i> Synchronization-in-Vulkan
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">24</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-解码流程介绍"><span class="nav-number">1.</span> <span class="nav-text">0x1 解码流程介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x11-tile-group-obu"><span class="nav-number">1.1.</span> <span class="nav-text">0x11 tile_group_obu</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x12-decode-tile"><span class="nav-number">1.2.</span> <span class="nav-text">0x12 decode_tile</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x13-decode-partition"><span class="nav-number">1.3.</span> <span class="nav-text">0x13 decode_partition</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x14-decode-block"><span class="nav-number">1.4.</span> <span class="nav-text">0x14 decode_block</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x15-transform-tree"><span class="nav-number">1.5.</span> <span class="nav-text">0x15 transform_tree</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x16-Reconstruct中包括具体的反量化，反dct-重建像素和loop-filter等过程"><span class="nav-number">1.6.</span> <span class="nav-text">0x16 Reconstruct中包括具体的反量化，反dct,重建像素和loop filter等过程.</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-super-block"><span class="nav-number">2.</span> <span class="nav-text">0x2 super block</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-split划分"><span class="nav-number">3.</span> <span class="nav-text">0x3 split划分</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Intra-Y-mode"><span class="nav-number">4.</span> <span class="nav-text">0x4 Intra Y mode</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-Intra-UV-mode"><span class="nav-number">5.</span> <span class="nav-text">0x5 Intra UV mode</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x6-Motion-vector"><span class="nav-number">6.</span> <span class="nav-text">0x6 Motion vector</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x7-Reference"><span class="nav-number">7.</span> <span class="nav-text">0x7 Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
