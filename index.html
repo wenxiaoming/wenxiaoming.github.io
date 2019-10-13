@@ -254,6 +254,308 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/30/Buffer sharing in Weston/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/30/Buffer sharing in Weston/" itemprop="url">Buffer sharing in Weston</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-30T19:30:00+09:00">
+                2019-03-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/30/Buffer sharing in Weston/" class="leancloud_visitors" data-flag-title="Buffer sharing in Weston">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Weston简介"><a href="#0x1-Weston简介" class="headerlink" title="0x1 Weston简介"></a>0x1 Weston简介</h1><h2 id="0x11-X系统"><a href="#0x11-X系统" class="headerlink" title="0x11 X系统"></a>0x11 X系统</h2><p>X即X11、X Window System，是用于在类UNIX的操作系统上的位图显示的窗口系统，提供了GUI环境的基本框架，可以在显示设备上绘制、移动窗口，通过鼠标、键盘、触摸屏与用户交互. X Server是X显示服务的一种开源实现，其系统结构如下图所示<br><img src="/2019/03/30/Buffer sharing in Weston/x-architecture.png" alt=""></p>
+<h2 id="0x12-Wayland系统"><a href="#0x12-Wayland系统" class="headerlink" title="0x12 Wayland系统"></a>0x12 Wayland系统</h2><p>Wayland是一个显示服务协议，服务端为Wayland Compositor，服务端把把X系统中的X Server和Compositor合二为一，作为类Unix操作系统上更现代、简洁的窗口系统，旨在替换X系统。Weston是Wayland Compositor的参考实现。下面是Wayland官网文档给出的架构简图.<br><img src="/2019/03/30/Buffer sharing in Weston/wayland-architecture.png" alt=""></p>
+<p>Wayland协议为Client/Server模式，客户端为图形应用程序，发送绘制命令，请求在各自输出缓冲区的显示，服务器为Compositor，控制各个客户端输出缓冲区的合成和显示。</p>
+<p>Wayland参考实现Weston包括两层协议。</p>
+<p>一个为底层IPC协议。采用Linux Domain Socket实现的IPC，这部分采用手动写的C语言实现。</p>
+<p>另一个是上层消息协议。这部分采用libffi来实现，从规定格式的XML文件中自动生成，可以灵活地动态扩展或者用于错误验证。处理客户端和Weston之间的上层交互流程，以实现窗口系统的基本功能。</p>
+<p>Wayland参考实现包括两部分，libwayland-client和libwayland-server，其架构简图如下所示。<br><img src="/2019/03/30/Buffer sharing in Weston/Wayland_protocol_architecture.svg" alt=""></p>
+<h1 id="0x2-Buffer管理"><a href="#0x2-Buffer管理" class="headerlink" title="0x2 Buffer管理"></a>0x2 Buffer管理</h1><p>在Weston的实现中，客户端先把内容绘制到一个buffer中，然后weston把多个客户端绘制的buffer通过compositor模块合成在一起。这里面涉及到buffer在各个模块之间的传递，从性能的角度考虑，我们很自然地想到如何避免memory copy的问题。下来我们来看一下如何实现zero memory copy的。</p>
+<p>Weston中的buffer用wl_buffer对象来描述。这个buffer需要在客户端和Compositor之间共享。目前有两种buffer的管理模式。</p>
+<ol>
+<li>wl_shm<br>这种方式是通过共享内存的方式来实现客户端和Compositor之间的共享，通过这种方式分配的内存是物理不连续的，这种方式一般用于采用软件绘制的情况，当buffer在客户端绘制完成以后，Compositor得到通知开始合成的时候，需要通过glTexImage2D()函数把buffer作为纹理上传到GPU中，这样的话性能是会受到影响的，因为纹理上传一般是比较耗时的操作。</li>
+<li><p>wl_drm<br>这种方式通过Wayland EGL中的相关机制来保证，客户端通过wayland-egl.h的相关接口EGLSurface来创建GPU的输出buffer，然后客户端开始绘制，绘制完成以后，客户端的GPU输出buffer通过eglCreateImageKHR()接口创建EGLImage，这个EGLImage可以直接作为Compositor的输入纹理来使用，不需要额外的拷贝工作。</p>
+<p>开源的mesa drm实现定义了drm Wayland扩展, 这个时候客户端和Compositor之间可以共享drm (GEM) buffers。</p>
+<p>下面介绍一下基于KMS BO buffer type的mesa wl_drm共享流程<br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_1.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_2.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_3.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_4.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_5.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_6.png" alt=""></p>
+</li>
+</ol>
+<h1 id="0x3-与Android上图形系统的比较"><a href="#0x3-与Android上图形系统的比较" class="headerlink" title="0x3 与Android上图形系统的比较"></a>0x3 与Android上图形系统的比较</h1><ol>
+<li><p>Buffer的分配<br>Android上的buffer是在服务端（SurfaceFlinger）分配的，然后通过ION机制实现buffer的共享。<br>而Wayland系统中buffer是在客户端分配的，通过底层EGL驱动提供的buffer共享管理机制，再配合IPC机制实现客户端和服务端之间的buffer共享。</p>
+</li>
+<li><p>Window管理器的实现<br>Android上有单独的WMS(Window Manager Service)模块来做窗口管理的工作。而Wayland系统中在Weston中实现了窗口管理的工作，也就是是窗口管理和合成是在同一个进程中完成的。</p>
+</li>
+<li><p>Android on Wayland<br>把Android上的SurfaceFlinger作为一个Wayland Client，然后参与Weston的合成。架构图如下<br><img src="/2019/03/30/Buffer sharing in Weston/AndroidOnWayland.png" alt=""></p>
+<p>上图的架构有点类似于把X Server作为一个Wayland Client，如下图所示<br><img src="/2019/03/30/Buffer sharing in Weston/xwayland.png" alt=""></p>
+</li>
+</ol>
+<h1 id="0x4-Run-Weston-on-Ubuntu"><a href="#0x4-Run-Weston-on-Ubuntu" class="headerlink" title="0x4 Run Weston on Ubuntu"></a>0x4 Run Weston on Ubuntu</h1><p>   把Wayland protocol和Weston相关实现porting到Ubuntu上，Weston加载X11-backend，也就是说Weston作为X Server的一个Client，把Weston的合成输出在接入到Ubuntu的X Server系统中来输出。</p>
+<p>   绘制和合成流程如下图所示<br>   <img src="/2019/03/30/Buffer sharing in Weston/Draw &amp; Composition.png" alt=""></p>
+<p>   测试效果如下图所示<br>   <img src="/2019/03/30/Buffer sharing in Weston/demo.png" alt=""></p>
+<h1 id="0x5-参考"><a href="#0x5-参考" class="headerlink" title="0x5 参考"></a>0x5 参考</h1><p><a href="https://wayland.freedesktop.org/architecture.html" target="_blank" rel="external">Wayland architecture</a><br><a href="https://events.static.linuxfound.org/sites/events/files/slides/als2015_wayland_weston_v2.pdf" target="_blank" rel="external">Wayland/Weston Renderer</a><br><a href="https://at.projects.genivi.org/wiki/display/DIRO/Android+display+subsystem+as+a+wayland+client" target="_blank" rel="external">Android display subsystem as a wayland client</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/How escher support physically based render/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/23/How escher support physically based render/" itemprop="url">How escher support physically based render</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-23T12:00:00+09:00">
+                2019-03-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/23/How escher support physically based render/" class="leancloud_visitors" data-flag-title="How escher support physically based render">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-物理渲染和光栅化渲染"><a href="#0x1-物理渲染和光栅化渲染" class="headerlink" title="0x1 物理渲染和光栅化渲染"></a>0x1 物理渲染和光栅化渲染</h1><h2 id="0x21-传统光栅化渲染器的特点"><a href="#0x21-传统光栅化渲染器的特点" class="headerlink" title="0x21 传统光栅化渲染器的特点"></a>0x21 传统光栅化渲染器的特点</h2><p>光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL和Vulkan，已经Apple的Metal等。应用程序可以基于这些渲染API开发出酷炫的3D效果。但是这种光栅化的缺点也很明显，那就是无法完全模拟真实场景下的光线传播，导致绘制效果失真。</p>
+<p>下图说明了光栅化渲染器的流水线。</p>
+<p><img src="/2019/03/23/How escher support physically based render/pipeline.png" alt=""></p>
+<p>现代GPU中vertex shader和fragment shader一般是逻辑的概念，当时比较早的GPU是采用两种独立的硬件单元(不是Unified Shader)来实现的，如ARM Mali-400就是这种架构，这种架构的缺点是vertex shader和fragment shader的负载没办法平衡，极端情况下会出现其中一种硬件Shader满负荷运行，另外一种硬件Shader空闲的情况。后来的架构一般是基于通用可编程计算单元实现这些功能。也就是我们常说的Unified Shader架构。如树莓派中的Soc VideoCore采用了BroadCom V3D GPU, 其中的Unified Shader中采用QPU这种通用可编程计算单元来实现。</p>
+<p>移动GPU相对桌面GPU的架构也有差别，因为移动平台上对带宽及功耗的要求都比较高。<br>桌面GPU一般采用IMR(Immediate Mode Rendering)架构, 这种架构需要同时对该次渲染的全部物体进行处理，需要频繁访问系统帧缓存（位于系统内存里），故对带宽要求较高。</p>
+<p>移动GPU一般采用TBR架构(Tile Based Rendering)。TBR架构包括两个阶段Tiling和Binning。Tiling阶段把整个画面分成小块，然后计算每个小块中有哪些三角形需要处理。Binning阶段每次只对一个小块中包括的三角形进行处理，这种方式避免了对帧缓存（位于系统内存里）的频繁读写和修改，因为这些小块中的三角形的渲染是在GPU上的高速缓存里进行，所以能节约带宽，同时也减少了功耗。</p>
+<p>Imagination在TBR架构的基础上又提出了TBDR(Tile Based Deferred Rendering), 在执行shading之前加入HSR(Hidded Surface Remove), 这个模块利用vertex shader/rasterization之后的fragment的深度值来优化掉不必要的计算。</p>
+<h2 id="0x22-物理渲染器的特点"><a href="#0x22-物理渲染器的特点" class="headerlink" title="0x22 物理渲染器的特点"></a>0x22 物理渲染器的特点</h2><p>物理渲染器PBR(Physically Based Rendering),也称光线跟踪器(Ray tracer)。采用该算法渲染的结果看起来更真实，因为它基于物理参数的方法来编写材质，而且考虑了光线的发射和折射，材质对光线的吸收等。</p>
+<p>光线跟踪算法描述如下，沿着到达视点的光线的反方向跟踪，经过屏幕上每一个象素，找出与视线相交的物体表面点，并继续跟踪，找出影响点光强的所有光源，从而算出点上精确的光线强度。这种算法计算量极大，一般用于离线渲染。</p>
+<p>一个典型的物理渲染器包括如下模块。<br>相机<br>光线-对象相交测试<br>光照分布/光线传播<br>递归光线跟踪机制</p>
+<p>考虑到PBR的计算量太大，只适合离线渲染，后来基于全局光照Global Illuslaton技术的来实现实时PBR，因为考虑到了速度的提升，在渲染质量上会有损失。</p>
+<p>早期Ray tracing的硬件有德国萨尔兰大学计算机图形小组在2005年的SIGGRAPH上展示了第一个实时光线追踪加速硬件——RPU（Ray Processing Unit），最近有NVIDIA在GPU硬件中加入了Ray tracing。</p>
+<p>下图是采用Blender中的cycles物理渲染器渲染的坦克效果图，如果完全用CPU来计算，速度很慢，大概需要几十分钟。<br><img src="/2019/03/23/How escher support physically based render/tank.png" alt=""></p>
+<h1 id="0x2-Escher是如何做到物理渲染的？"><a href="#0x2-Escher是如何做到物理渲染的？" class="headerlink" title="0x2 Escher是如何做到物理渲染的？"></a>0x2 Escher是如何做到物理渲染的？</h1><p>Escher是Google下一代操作系统Fuchsia上内置的基于物理的真实感渲染引擎，它和Scenic一起提供了Fuchsia上的合成及进一步特效处理功能。</p>
+<p>Escher目前看来主要采用光照和阴影技术来达到物理渲染的效果。</p>
+<p>阴影是真实感渲染的一个重要组成部分，它对增加渲染物体的表面细节，帮助观察者增加对场景的空间感，从而更好地来判断物体的位置关系以及形状等有很大的帮助。可以说没有了阴影，3D场景中的真实感和吸引力将降低。</p>
+<p>Escher中包括了如下几种阴影技术，ShadowMap、ShadowVolume等。</p>
+<p>从Escher的实现代码可知，Escher还只是实现了部分物理渲染的功能，主要是通过light和shadow来体现真实感效果，后续要支持AR/VR中更多酷炫效果的话，需要进一步开发。</p>
+<h1 id="0x03-展望"><a href="#0x03-展望" class="headerlink" title="0x03 展望"></a>0x03 展望</h1><p>随着GPU硬件中增加了Ray tracing的功能，主流API都增加了对Ray tracing的支持，未来Escher中可能会直接调用这些API(目前Escher中是调用了Vulkan，也就是说会调用Vulkan的Ray tracing支持)来加速Ray tracing的处理。</p>
+<p>下来介绍一种主流API对 ray tracing的支持</p>
+<h2 id="0x31-Directx-raytracing"><a href="#0x31-Directx-raytracing" class="headerlink" title="0x31 Directx raytracing"></a>0x31 Directx raytracing</h2><p>DirectX Raytracing在DirectX 12 API的基础上引入了下面这些概念<br><a href="https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/" target="_blank" rel="external">DirectX Raytracing</a></p>
+<p>What is DirectX Raytracing?<br>At the highest level, DirectX Raytracing (DXR) introduces four, new concepts to the DirectX 12 API:</p>
+<p>The acceleration structure is an object that represents a full 3D environment in a format optimal for traversal by the GPU.  Represented as a two-level hierarchy, the structure affords both optimized ray traversal by the GPU, as well as efficient modification by the application for dynamic objects.</p>
+<p>A new command list method, DispatchRays, which is the starting point for tracing rays into the scene.  This is how the game actually submits DXR workloads to the GPU.</p>
+<p>A set of new HLSL shader types including ray-generation, closest-hit, any-hit, and miss shaders.  These specify what the DXR workload actually does computationally.  When DispatchRays is called, the ray-generation shader runs.  Using the new TraceRay intrinsic function in HLSL, the ray generation shader causes rays to be traced into the scene.  Depending on where the ray goes in the scene, one of several hit or miss shaders may be invoked at the point of intersection.  This allows a game to assign each object its own set of shaders and textures, resulting in a unique material.</p>
+<p>The raytracing pipeline state, a companion in spirit to today’s Graphics and Compute pipeline state objects, encapsulates the raytracing shaders and other state relevant to raytracing workloads.</p>
+<h2 id="0x32-Vulkan-ray-tracing"><a href="#0x32-Vulkan-ray-tracing" class="headerlink" title="0x32 Vulkan ray tracing"></a>0x32 Vulkan ray tracing</h2><p>NVIDIA提供了Vulkan的扩展了支持ray tracing。<br><a href="https://devblogs.nvidia.com/vulkan-raytracing/" target="_blank" rel="external">Vulkan ray tracing</a></p>
+<h2 id="0x33-Metal-ray-tracing"><a href="#0x33-Metal-ray-tracing" class="headerlink" title="0x33 Metal ray tracing"></a>0x33 Metal ray tracing</h2><p>Metal提供了ray tracing的支持。<br><img src="/2019/03/23/How escher support physically based render/metal_ray_tracing.png" alt=""></p>
+<p>详细信息请参考<br><a href="https://developer.apple.com/videos/play/wwdc2018/606/" target="_blank" rel="external">Metal ray tracing</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/16/AV1-syntax-explanation/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1529,284 +1831,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/06/27/STUN-in-P2P-network/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/06/27/STUN-in-P2P-network/" itemprop="url">STUN in P2P network</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-27T09:22:15+09:00">
-                2018-06-27
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2018/06/27/STUN-in-P2P-network/" class="leancloud_visitors" data-flag-title="STUN in P2P network">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-STUN简介"><a href="#0x1-STUN简介" class="headerlink" title="0x1 STUN简介"></a>0x1 STUN简介</h1><p>STUN(Session Traversal Utilities for NAT)是一种协助穿越NAT的工具，并不独立提供穿越的解决方案。详细请参考<br><a href="https://datatracker.ietf.org/doc/rfc3489/" target="_blank" rel="external">RFC3489</a>，升级版协议是<a href="https://tools.ietf.org/html/rfc5389" target="_blank" rel="external">RFC5389</a>和<a href="https://tools.ietf.org/html/rfc7350" target="_blank" rel="external">RFC7350</a>。</p>
-<p>STUN的使用场景如下，Interactive Connectivity Establishment (ICE) [MMUSIC-ICE], Client-initiated<br>connections for SIP [SIP-OUTBOUND], and NAT Behavior Discovery [BEHAVE-NAT]。</p>
-<h1 id="0x2-NAT检测"><a href="#0x2-NAT检测" class="headerlink" title="0x2 NAT检测"></a>0x2 NAT检测</h1><p>RFC3489中将NAT的实现分为四大类：<br>1.Full Cone NAT （完全锥形NAT）<br>2.Restricted Cone NAT （限制锥形NAT ，可以理解为IP限制，Port不限制）<br>3.Port Restricted Cone NAT （端口限制锥形NAT，IP+Port 限制）<br>4.Symmetric NAT （对称NAT）<br>其中完全最上层的完全锥形NAT的穿透性最好，而最下层的对称形NAT需要借助TURN服务器进行数据转发，两个client之间不能进行Peer to Peer的通信。</p>
-<p>NAT类型检测过程如下<br><img src="https://upload.wikimedia.org/wikipedia/commons/6/63/STUN_Algorithm3.svg" alt="nat_check"></p>
-<p>如上图所示，一旦路经到达红色节点时，Peer to Peer的连接是没有可能性的，需要借助服务器进行转发。一旦通过黄色或是绿色的节点，Peer to Peer的连接是可以成功的。</p>
-<p>下面介绍STUN是如何判断NAT的类型的。<br>内容来自<a href="https://www.jianshu.com/p/84e8c78ca61d" target="_blank" rel="external">ICE协议下NAT穿越的实现</a></p>
-<p>假设B是客户端，C是STUN服务器，C有两个IP分别为IP1和IP2（至于为什么要两个IP，接着往下看）：</p>
-<p>STEP1.判断客户端是否在NAT后：</p>
-<p>B向C的IP1的pot1端口发送一个UDP包。C收到这个包后，会把它收到包的源IP和port写到UDP包中，然后把此包通过IP1和port1发还给B。这个IP和port也就是NAT的外网 IP和port（如果你不理解，那么请你去看我的BLOG里面的NAT的原理和分类），也就是说你在STEP1中就得到了NAT的外网IP。</p>
-<p>熟悉NAT工作原理的朋友可以知道，C返回给B的这个UDP包B一定收到。如果在你的应用中，向一个STUN服务器发送数据包后，你没有收到STUN的任何回应包，那只有两种可能：1、STUN服务器不存在，或者你弄错了port。2、你的NAT拒绝一切UDP包从外部向内部通过。</p>
-<p>当B收到此UDP后，把此UDP中的IP和自己的IP做比较，如果是一样的，就说明自己是在公网，下步NAT将去探测防火墙类型，我不想多说。如果不一样，说明有NAT的存在，系统进行STEP2的操作。</p>
-<p>STEP2.判断是否处于Full Cone Nat下：</p>
-<p>B向C的IP1发送一个UDP包，请求C通过另外一个IP2和PORT（不同与SETP1的IP1）向B返回一个UDP数据包（现在知道为什么C要有两个IP了吧，虽然还不理解为什么，呵呵）。</p>
-<p>我们来分析一下，如果B收到了这个数据包，那说明什么？说明NAT来着不拒，不对数据包进行任何过滤，这也就是STUN标准中的full cone NAT。遗憾的是，Full Cone Nat太少了，这也意味着你能收到这个数据包的可能性不大。如果没收到，那么系统进行STEP3的操作。</p>
-<p>STEP3.判断是否处于对称NAT下：</p>
-<p>B向C的IP2的port2发送一个数据包，C收到数据包后，把它收到包的源IP和port写到UDP包中，然后通过自己的IP2和port2把此包发还给B。</p>
-<p>和step1一样，B肯定能收到这个回应UDP包。此包中的port是我们最关心的数据，下面我们来分析：</p>
-<p>如果这个port和step1中的port一样，那么可以肯定这个NAT是个CONE NAT，否则是对称NAT。道理很简单：根据对称NAT的规则，当目的地址的IP和port有任何一个改变，那么NAT都会重新分配一个port使用，而在step3中，和step1对应，我们改变了IP和port。因此，如果是对称NAT,那这两个port肯定是不同的。</p>
-<p>如果在你的应用中，到此步的时候PORT是不同的，那么这个它就是处在一个对称NAT下了。如果相同，那么只剩下了restrict cone 和port restrict cone。系统用step4探测是是那一种。</p>
-<p>STEP4.判断是处于Restrict Cone NAT还是Port Restrict NAT之下：</p>
-<p>B向C的IP2的一个端口PD发送一个数据请求包，要求C用IP2和不同于PD的port返回一个数据包给B。</p>
-<p>我们来分析结果：如果B收到了，那也就意味着只要IP相同，即使port不同，NAT也允许UDP包通过。显然这是Restrict Cone NAT。如果没收到，没别的好说，Port Restrict NAT.</p>
-<h1 id="0x3-StunServer实现分析"><a href="#0x3-StunServer实现分析" class="headerlink" title="0x3 StunServer实现分析"></a>0x3 StunServer实现分析</h1><p>STUN协议是一个客户机/服务器协议。StunServer可能和其他服务器(如web server, turn server）集成在一起。而stun client也可以在p2p的客户端中实现。<br>在核心的STUN协议中，只有一种称为“Binding”的方法。STUN客户端使用Binding来创建和发现NAT映射。当STUN服务器收到STUN Binding时，它会记录请求来着哪个公网IP和端口，此公网IP和端口会发生给STUN客户端，这样收到STUN Binding响应的客户端会根据这些信息判断NAT的类型。<br><img src="/2018/06/27/STUN-in-P2P-network/stun.png" alt="stun"></p>
-<h1 id="0x4-StunServer测试"><a href="#0x4-StunServer测试" class="headerlink" title="0x4 StunServer测试"></a>0x4 StunServer测试</h1><p>测试结果如下，<br>kevin@ubuntu:~/Kevin/nat/stunserver$ ./stunclient 68.xxx.xxx.xxx 3478<br>Binding test: success<br>Local address: 192.168.40.200:47045<br>Mapped address: 116.xxx.xxx.xxx:56077</p>
-<p>其中68.xxx.xxx.xxx是运行StunServer服务器的公网IP地址。<br>返回给Stun客户端的信息中包括了Stun客户端的公网IP为116.xxx.xxx.xxx，和内网地址(192.168.40.200)不一致，说明位于NAT之后。至于是哪种NAT类型，需要参考前面的流程进行多次测试。</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/29/check-the-execution-of-tensorflow-with-gdb/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/" itemprop="url">check the execution of tensorflow with gdb</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-29T09:03:29+09:00">
-                2018-04-29
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/" class="leancloud_visitors" data-flag-title="check the execution of tensorflow with gdb">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>Here I list some callstack of tensorflow which is collected through gdb.</p>
-<h1 id="0x1-Session-Run"><a href="#0x1-Session-Run" class="headerlink" title="0x1 Session::Run()"></a>0x1 Session::Run()</h1><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">(gdb) bt </div><div class="line">#0 tensorflow::DirectSession::Run (this=0x55a688ed3660, run_options=..., inputs=std::vector of length 3, capacity 3 = &#123;...&#125;,   output_names=std::vector of length 0, capacity 0, target_nodes=std::vector of length 1, capacity 1 = &#123;...&#125;, outputs=0x7f375da478e0,   run_metadata=0x7f375da47930) at tensorflow/core/common_runtime/direct_session.cc:439 </div><div class="line">#1 0x00007f3784cea307 in TF_Run_Helper (session=0x55a688ed3660, handle=0x0, run_options=0x0,   input_pairs=std::vector of length 3, capacity 3 = &#123;...&#125;, output_tensor_names=std::vector of length 0, capacity 0,   c_outputs=0x7f375da47d00, target_oper_names=std::vector of length 1, capacity 1 = &#123;...&#125;, run_metadata=0x0, status=0x7f37200d5e80)  at tensorflow/c/c_api.cc:680 </div><div class="line">#2 0x00007f3784cea874 in TF_Run (s=0x55a688ed2af0, run_options=0x0, c_input_names=0x7f375da47c60, c_inputs=0x7f375da47cb0, ninputs=3,   c_output_names=0x7f375da48060, c_outputs=0x7f375da47d00, noutputs=0, c_target_oper_names=0x7f375da480b0, ntargets=1, run_metadata=0x0,   status=0x7f37200d5e80) at tensorflow/c/c_api.cc:735 </div><div class="line">#3 0x00007f37847382dd in tensorflow::TF_Run_wrapper_helper (session=0x55a688ed2af0, handle=0x0, run_options=0x0, feed_dict=0x7f3762b029d8,   output_names=..., target_nodes=..., out_status=0x7f37200d5e80, out_values=0x7f375da48100, run_outputs=0x0)  at tensorflow/python/client/tf_session_helper.cc:96 </div><div class="line">#4 0x00007f3784738936 in tensorflow::TF_Run_wrapper (session=0x55a688ed2af0, run_options=0x0, feed_dict=0x7f3762b029d8, output_names=...,   target_nodes=..., out_status=0x7f37200d5e80, out_values=0x7f375da48100, run_outputs=0x0)  at tensorflow/python/client/tf_session_helper.cc:149 </div><div class="line">#5 0x00007f37846bf7e4 in _wrap_TF_Run (args=0x7f376350cdb0) at bazel-out/k8-py3-dbg/bin/tensorflow/python/pywrap_tensorflow_internal.cc:15067 </div><div class="line">#6 0x000055a68528b2a1 in _PyCFunction_FastCallDict () </div><div class="line">#7 0x000055a68531e0a0 in call_function () </div><div class="line">#8 0x000055a68533f62a in _PyEval_EvalFrameDefault () </div><div class="line">#9 0x000055a685318c78 in PyEval_EvalCodeEx ()</div></pre></td></tr></table></figure>
-<h1 id="0x2-OpKernel-Compute"><a href="#0x2-OpKernel-Compute" class="headerlink" title="0x2 OpKernel::Compute()"></a>0x2 OpKernel::Compute()</h1><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#0 0x00007f377fe7ee70 in tensorflow::OpKernelContext::input(int)@plt ()from /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so</div><div class="line">#1 0x00007f378001d8dd in tensorflow::HandleFromInput (ctx=0x7f3724169150, input=0) at tensorflow/core/framework/resource_mgr.cc:279</div><div class="line">#2 0x00007f37859298b8 in tensorflow::QueueOpKernel::ComputeAsync(tensorflow::OpKernelContext*, std::function&lt;void ()&gt;) (this=0x7f37200cbfb0, ctx=0x7f3724169150, callback=...) at tensorflow/core/kernels/queue_ops.cc:37</div><div class="line">#3 0x00007f378482cab8 in tensorflow::Device::ComputeAsync(tensorflow::AsyncOpKernel*, tensorflow::OpKernelContext*, std::function&lt;void ()&gt;)(this=0x55a688ee3260, op_kernel=0x7f37200cbfb0, context=0x7f3724169150, done=...) at ./tensorflow/core/common_runtime/device.h:89</div><div class="line">#4 0x00007f37806b1b6e in tensorflow::(anonymous namespace)::ExecutorState::Process (this=0x7f37200d3440, tagged_node=..., scheduled_usec=0)at tensorflow/core/common_runtime/executor.cc:1647</div><div class="line">#5 0x00007f37806c01a7 in std::_Mem_fn_base&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long), true&gt;::operator()&lt;tensorflow::(anonymous namespace)::ExecutorState::TaggedNode&amp;, long long&amp;, void&gt; (this=0x7f37240337a0, __object=0x7f37200d3440) at /usr/include/c++/5/functional:600</div><div class="line">#6 0x00007f37806bfc62 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::__call&lt;void, 0ul, 1ul, 2ul&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;, std::_Index_tuple&lt;0ul, 1ul, 2ul&gt;) (this=0x7f37240337a0, __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;) at /usr/include/c++/5/functional:1074</div><div class="line">#7 0x00007f37806bda06 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::operator()&lt;, void&gt;(void) (this=0x7f37240337a0) at /usr/include/c++/5/functional:1133</div><div class="line">#8 0x00007f37806bb2ac in std::_Function_handler&lt;void(), std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt; &gt;::_M_invoke(const std::_Any_data &amp;) (__functor=...)at /usr/include/c++/5/functional:1871</div><div class="line">#9 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x7f372407f320) at /usr/include/c++/5/functional:2267</div><div class="line">#10 0x00007f3780197b9e in tensorflow::thread::EigenEnvironment::ExecuteTask (this=0x55a688ed3c58, t=...)at tensorflow/core/lib/core/threadpool.cc:81</div><div class="line">#11 0x00007f378019a65c in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (this=0x55a688ed3c50, thread_id=1) at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:232</div><div class="line">#12 0x00007f3780198aae in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;::operator()() const ()at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:65</div><div class="line">#13 0x00007f378019bc7c in std::_Function_handler&lt;void (), Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...)at /usr/include/c++/5/functional:1871</div><div class="line">#14 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x55a688ed3050) at /usr/include/c++/5/functional:2267</div><div class="line">#15 0x00007f3780197907 in tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;::operator()() const (__closure=0x55a688ed3050) at tensorflow/core/lib/core/threadpool.cc:56</div><div class="line">#16 0x00007f37801998d8 in std::_Function_handler&lt;void (), tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...) at /usr/include/c++/5/functional:1871</div><div class="line">#17 0x00007f377ff7f984 in std::function&lt;void ()&gt;::operator()() const (this=0x55a688f199b8) at /usr/include/c++/5/functional:2267</div><div class="line">#18 0x00007f37801dcf38 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::_M_invoke&lt;&gt;(std::_Index_tuple&lt;&gt;) (this=0x55a688f199b8)at /usr/include/c++/5/functional:1531</div><div class="line">#19 0x00007f37801dcea1 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::operator()() (this=0x55a688f199b8)at /usr/include/c++/5/functional:1520</div><div class="line">#20 0x00007f37801dce40 in std::thread::_Impl&lt;std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt; &gt;::_M_run() (this=0x55a688f199a0)at /usr/include/c++/5/thread:115</div><div class="line">#21 0x00007f377ed4fc80 in ?? () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6</div><div class="line">#22 0x00007f3796f746ba in start_thread (arg=0x7f3760247700) at pthread_create.c:333#23 0x00007f3796caa3dd in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109</div></pre></td></tr></table></figure>
-<h1 id="0x3-Producer-of-tenforflow"><a href="#0x3-Producer-of-tenforflow" class="headerlink" title="0x3 Producer of tenforflow"></a>0x3 Producer of tenforflow</h1><p>It is trigged by test.py to send command to tenforflow native code.<br><img src="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/producer.jpg" alt="producer"></p>
-<h1 id="0x4-Consumer-of-tenforflow"><a href="#0x4-Consumer-of-tenforflow" class="headerlink" title="0x4 Consumer of tenforflow"></a>0x4 Consumer of tenforflow</h1><p>Tensorflow’s thread pull task from the queue then execute it<br><img src="/2018/04/29/check-the-execution-of-tensorflow-with-gdb/consumer.jpg" alt="consumer"></p>
-<h1 id="0x5-gdb-debug-of-convolutional-network-py"><a href="#0x5-gdb-debug-of-convolutional-network-py" class="headerlink" title="0x5 gdb debug of convolutional_network.py"></a>0x5 gdb debug of convolutional_network.py</h1><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#<span class="number">0</span> <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">#<span class="number">1</span> <span class="number">0x00007f90ab73bb73</span> in tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e28fa0</span>, context=<span class="number">0x7f9083774840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">311</span> </div><div class="line">#<span class="number">2</span> <span class="number">0x00007f90a3ee091b</span> in tensorflow::ThreadPoolDevice::Compute (  <span class="keyword">this</span>=<span class="number">0x5569092d1f30</span>, op_kernel=<span class="number">0x556909e28fa0</span>, context=<span class="number">0x7f9083774840</span>)  at tensorflow/core/common_runtime/threadpool_device.cc:<span class="number">59</span> </div><div class="line">#<span class="number">3</span> <span class="number">0x00007f90a3e7bc0a</span> in tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::Process (<span class="keyword">this</span>=<span class="number">0x556909f04770</span>, tagged_node=..., scheduled_usec=<span class="number">0</span>)  at tensorflow/core/common_runtime/executor.cc:<span class="number">1652</span> </div><div class="line">#<span class="number">4</span> <span class="number">0x00007f90a3e8a1a7</span> in <span class="built_in">std</span>::_Mem_fn_base&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span>), <span class="literal">true</span>&gt;::<span class="keyword">operator</span>()&lt;tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode&amp;, <span class="keyword">long</span> <span class="keyword">long</span>&amp;, <span class="keyword">void</span>&gt; (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>,   __object=<span class="number">0x556909f04770</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">600</span> </div><div class="line">#<span class="number">5</span> <span class="number">0x00007f90a3e89c62</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::__call&lt;<span class="keyword">void</span>, <span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;, <span class="built_in">std</span>::_Index_tuple&lt;<span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;) (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>,  ---Type &lt;<span class="keyword">return</span>&gt; to <span class="keyword">continue</span>, <span class="keyword">or</span> q &lt;<span class="keyword">return</span>&gt; to quit---  __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1074</span> </div><div class="line">#<span class="number">6</span> <span class="number">0x00007f90a3e87a06</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::<span class="keyword">operator</span>()&lt;, <span class="keyword">void</span>&gt;(<span class="keyword">void</span>) (<span class="keyword">this</span>=<span class="number">0x7f904c695d50</span>)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1133</span> </div><div class="line">#<span class="number">7</span> <span class="number">0x00007f90a3e852ac</span> in <span class="built_in">std</span>::_Function_handler&lt;<span class="keyword">void</span>(), <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt; &gt;::_M_invoke(<span class="keyword">const</span> <span class="built_in">std</span>::_Any_data &amp;) (__functor=...)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1871</span> </div><div class="line">#<span class="number">8</span> <span class="number">0x00007f90a3749984</span> in <span class="built_in">std</span>::function&lt;<span class="keyword">void</span> ()&gt;::<span class="keyword">operator</span>()() <span class="keyword">const</span> (  <span class="keyword">this</span>=<span class="number">0x7f904c6c5d40</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">2267</span> #<span class="number">9</span> <span class="number">0x00007f90a3961b9e</span> in tensorflow::thread::EigenEnvironment::ExecuteTask (  <span class="keyword">this</span>=<span class="number">0x5569091d82c8</span>, t=...) at tensorflow/core/lib/core/threadpool.cc:<span class="number">81</span> </div><div class="line">#<span class="number">10</span> <span class="number">0x00007f90a396465c</span> in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (<span class="keyword">this</span>=<span class="number">0x5569091d82c0</span>, thread_id=<span class="number">1</span>)  at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:<span class="number">232</span> </div><div class="line">#<span class="number">11</span> <span class="number">0x00007f90a3962aae</span> in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(<span class="keyword">int</span>, <span class="keyword">bool</span>, tensorflow::thread::EigenEnvironment)::&#123;lambda()#<span class="number">1</span>&#125;::<span class="keyword">operator</span>()() <span class="keyword">const</span> ()  at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:<span class="number">65</span></div></pre></td></tr></table></figure>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">(gdb) c Continuing. </div><div class="line">[Switching to Thread <span class="number">0x7f9083775700</span> (LWP <span class="number">3586</span>)]   </div><div class="line">Thread <span class="number">13</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">(gdb) n </div><div class="line">Single stepping until <span class="built_in">exit</span> from function _ZN10tensorflow29ConvBackpropComputeDimensionsENS_11StringPieceEiRKNS_11TensorShapeES3_S3_RKSt6vectorIiSaIiEENS_7PaddingENS_12TensorFormatEPNS_22ConvBackpropDimensionsE@plt, which has no line number information. [Switching to Thread <span class="number">0x7f90819b9700</span> (LWP <span class="number">3587</span>)]   Thread <span class="number">14</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, <span class="number">0x00007f90a7e2d8f0</span> in tensorflow::ConvBackpropComputeDimensions(tensorflow::StringPiece, <span class="keyword">int</span>, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, tensorflow::TensorShape <span class="keyword">const</span>&amp;, <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="keyword">int</span>, <span class="built_in">std</span>::allocator&lt;<span class="keyword">int</span>&gt; &gt; <span class="keyword">const</span>&amp;, tensorflow::Padding, tensorflow::TensorFormat, tensorflow::ConvBackpropDimensions*)@plt ()  from /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/_pywrap_tensorflow_internal.so </div><div class="line">(gdb)  </div><div class="line">Single stepping until <span class="built_in">exit</span> from function _ZN10tensorflow29ConvBackpropComputeDimensionsENS_11StringPieceEiRKNS_11TensorShapeES3_S3_RKSt6vectorIiSaIiEENS_7PaddingENS_12TensorFormatEPNS_22ConvBackpropDimensionsE@plt, which has no line number information. tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=<span class="number">32656</span>,   input_shape=..., filter_shape=..., out_backprop_shape=...,   strides=<span class="built_in">std</span>::<span class="built_in">vector</span> of length <span class="number">4</span>, capacity <span class="number">4</span> = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=<span class="number">0x7f90819b8240</span>) at tensorflow/core/kernels/conv_grad_ops.cc:<span class="number">156</span> <span class="number">156</span>  ConvBackpropDimensions* dims) &#123; (gdb) n [Switching to Thread <span class="number">0x7f9083775700</span> (LWP <span class="number">3586</span>)]   Thread <span class="number">13</span> <span class="string">"python"</span> hit Breakpoint <span class="number">5</span>, tensorflow::ConvBackpropComputeDimensions  (label=..., num_spatial_dims=<span class="number">2</span>, input_shape=..., filter_shape=...,   out_backprop_shape=...,   strides=<span class="built_in">std</span>::<span class="built_in">vector</span> of length <span class="number">4</span>, capacity <span class="number">4</span> = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=<span class="number">0x7f9083774240</span>) at tensorflow/core/kernels/conv_grad_ops.cc:<span class="number">160</span> <span class="number">160</span>  one_dilations, strides, padding, data_format, dims);</div></pre></td></tr></table></figure>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">(gdb)</div><div class="line">#<span class="number">0</span> <span class="built_in">std</span>::<span class="keyword">operator</span>==&lt;tensorflow::Status::State, <span class="built_in">std</span>::default_delete&lt;tensorflow::Status::State&gt; &gt;(<span class="built_in">std</span>::<span class="built_in">unique_ptr</span>&lt;tensorflow::Status::State, <span class="built_in">std</span>::default_delete&lt;tensorflow::Status::State&gt; &gt; <span class="keyword">const</span>&amp;, <span class="keyword">decltype</span>(<span class="literal">nullptr</span>)) (  __x=<span class="built_in">std</span>::<span class="built_in">unique_ptr</span>&lt;tensorflow::Status::State&gt; containing <span class="number">0x0</span>)  at /usr/include/c++/<span class="number">5</span>/bits/<span class="built_in">unique_ptr</span>.h:<span class="number">631</span> </div><div class="line">#<span class="number">1</span> <span class="number">0x00007f90a7e9e41d</span> in tensorflow::Status::ok (<span class="keyword">this</span>=<span class="number">0x7f90819b8150</span>)  at ./tensorflow/core/lib/core/status.h:<span class="number">53</span> </div><div class="line">#<span class="number">2</span> <span class="number">0x00007f90ab73bb86</span> in tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">311</span> </div><div class="line">#<span class="number">3</span> <span class="number">0x00007f90a3ee091b</span> in tensorflow::ThreadPoolDevice::Compute (  <span class="keyword">this</span>=<span class="number">0x5569092d1f30</span>, op_kernel=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/common_runtime/threadpool_device.cc:<span class="number">59</span> </div><div class="line">#<span class="number">4</span> <span class="number">0x00007f90a3e7bc0a</span> in tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::Process (<span class="keyword">this</span>=<span class="number">0x55690a0f5150</span>, tagged_node=..., scheduled_usec=<span class="number">0</span>)  at tensorflow/core/common_runtime/executor.cc:<span class="number">1652</span> </div><div class="line">#<span class="number">5</span> <span class="number">0x00007f90a3e8a1a7</span> in <span class="built_in">std</span>::_Mem_fn_base&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span>), <span class="literal">true</span>&gt;::<span class="keyword">operator</span>()&lt;tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode&amp;, <span class="keyword">long</span> <span class="keyword">long</span>&amp;, <span class="keyword">void</span>&gt; (<span class="keyword">this</span>=<span class="number">0x7f90508b25b0</span>,   __object=<span class="number">0x55690a0f5150</span>) at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">600</span> </div><div class="line">#<span class="number">6</span> <span class="number">0x00007f90a3e89c62</span> in <span class="built_in">std</span>::_Bind&lt;<span class="built_in">std</span>::_Mem_fn&lt;<span class="keyword">void</span> (tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::*)(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;(tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState*, tensorflow::(anonymous <span class="keyword">namespace</span>)::ExecutorState::TaggedNode, <span class="keyword">long</span> <span class="keyword">long</span> <span class="keyword">int</span>)&gt;::__call&lt;<span class="keyword">void</span>, <span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;, <span class="built_in">std</span>::_Index_tuple&lt;<span class="number">0u</span>l, <span class="number">1u</span>l, <span class="number">2u</span>l&gt;) (<span class="keyword">this</span>=<span class="number">0x7f90508b25b0</span>,   __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3<span class="number">.6</span>/site-packages/tensorflow/python/../libtensorflow_framework.so, CU <span class="number">0x314f884</span>, DIE <span class="number">0x31e50c1</span>&gt;)  at /usr/include/c++/<span class="number">5</span>/functional:<span class="number">1074</span> ---Type &lt;<span class="keyword">return</span>&gt; to <span class="keyword">continue</span>, <span class="keyword">or</span> q &lt;<span class="keyword">return</span>&gt; to quit---   </div><div class="line">(gdb) n </div><div class="line">tensorflow::Conv2DCustomBackpropInputOp&lt;Eigen::ThreadPoolDevice, <span class="keyword">float</span>&gt;::Compute (<span class="keyword">this</span>=<span class="number">0x556909e5c730</span>, context=<span class="number">0x7f90819b8840</span>)  at tensorflow/core/kernels/conv_grad_input_ops.cc:<span class="number">317</span> <span class="number">317</span>  Tensor* in_backprop = <span class="literal">nullptr</span>;</div><div class="line">(gdb) <span class="built_in">list</span></div><div class="line"> <span class="number">312</span>  ConvBackpropComputeDimensions( <span class="number">313</span>  <span class="string">"Conv2DCustomBackpropInput"</span>, <span class="comment">/*num_spatial_dims=*/</span><span class="number">2</span>, <span class="number">314</span>  input_shape, filter.shape(), out_backprop.shape(), <span class="number">315</span>  strides_, padding_, data_format_, &amp;dims)); <span class="number">316</span>  <span class="number">317</span>  Tensor* in_backprop = <span class="literal">nullptr</span>; <span class="number">318</span>  OP_REQUIRES_OK(context, <span class="number">319</span>  context-&gt;allocate_output(<span class="number">0</span>, input_shape, &amp;in_backprop)); <span class="number">320</span>  <span class="number">321</span> <span class="comment">// TODO(andydavis) Consider moving code shared with </span></div><div class="line">(gdb) n</div><div class="line"><span class="number">318</span>  OP_REQUIRES_OK(context, </div><div class="line">(gdb)</div></pre></td></tr></table></figure>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">Thread info</div><div class="line">(gdb) info threads</div><div class="line">  Id Target Id Frame   </div><div class="line">  1 Thread 0x7f90bab09700 (LWP 3530) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  2 Thread 0x7f90b6a6a700 (LWP 3531) "python" 0x00007f90ba6f387f in __libc_recv (fd=4, buf=0x7f90b6a7afc8, n=4, flags=0)  at ../sysdeps/unix/sysv/linux/x86_64/recv.c:28  </div><div class="line">  3 Thread 0x7f908fc55700 (LWP 3560) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  4 Thread 0x7f908f454700 (LWP 3561) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  5 Thread 0x7f908ec53700 (LWP 3562) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  6 Thread 0x7f908e452700 (LWP 3563) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  7 Thread 0x7f908693b700 (LWP 3578) "python" 0x00007f90ba6f2827 in futex_abstimed_wait_cancelable (private=0, abstime=0x0, expected=0,   futex_word=0x7f9068013280)  at ../sysdeps/unix/sysv/linux/futex-internal.h:205 </div><div class="line">  8 Thread 0x7f9085f7a700 (LWP 3581) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  9 Thread 0x7f9085779700 (LWP 3582) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  10 Thread 0x7f9084f78700 (LWP 3583) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  11 Thread 0x7f9084777700 (LWP 3584) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  12 Thread 0x7f9083f76700 (LWP 3585) "python" tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=2, input_shape=...,   filter_shape=..., out_backprop_shape=...,   strides=std::vector of length 4, capacity 4 = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,  ---Type &lt;return&gt; to continue, or q &lt;return&gt; to quit---  dims=0x7f9083f75240) at tensorflow/core/kernels/conv_grad_ops.cc:160  </div><div class="line">  13 Thread 0x7f9083775700 (LWP 3586) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185 * </div><div class="line">  14 Thread 0x7f90819b9700 (LWP 3587) "python" tensorflow::ConvBackpropComputeDimensions (label=..., num_spatial_dims=2, input_shape=...,   filter_shape=..., out_backprop_shape=...,   strides=std::vector of length 4, capacity 4 = &#123;...&#125;,   padding=tensorflow::VALID, data_format=tensorflow::FORMAT_NHWC,   dims=0x7f90819b8240) at tensorflow/core/kernels/conv_grad_ops.cc:160  </div><div class="line">  15 Thread 0x7f90811b8700 (LWP 3588) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  16 Thread 0x7f90809b7700 (LWP 3589) "python" pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185  </div><div class="line">  17 Thread 0x7f907dde7700 (LWP 3590) "python" 0x00007f90ba6f2827 in futex_abstimed_wait_cancelable (private=0, abstime=0x0, expected=0,   futex_word=0x7f9038001380)  at ../sysdeps/unix/sysv/linux/futex-internal.h:205</div></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1856,7 +1880,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">24</span>
+                <span class="site-state-item-count">26</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1869,7 +1893,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-count">16</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

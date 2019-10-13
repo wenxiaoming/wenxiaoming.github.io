@@ -1,0 +1,826 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="graphics," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="0x1 物理渲染和光栅化渲染0x21 传统光栅化渲染器的特点光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL">
+<meta name="keywords" content="graphics">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How escher support physically based render">
+<meta property="og:url" content="http://yoursite.com/2019/03/23/How escher support physically based render/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="0x1 物理渲染和光栅化渲染0x21 传统光栅化渲染器的特点光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL">
+<meta property="og:image" content="http://yoursite.com/2019/03/23/How%20escher%20support%20physically%20based%20render/pipeline.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/23/How%20escher%20support%20physically%20based%20render/tank.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/23/How%20escher%20support%20physically%20based%20render/metal_ray_tracing.png">
+<meta property="og:updated_time" content="2019-10-13T10:29:05.998Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="How escher support physically based render">
+<meta name="twitter:description" content="0x1 物理渲染和光栅化渲染0x21 传统光栅化渲染器的特点光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL">
+<meta name="twitter:image" content="http://yoursite.com/2019/03/23/How%20escher%20support%20physically%20based%20render/pipeline.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/23/How escher support physically based render/"/>
+
+
+
+
+
+  <title>How escher support physically based render | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/How escher support physically based render/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">How escher support physically based render</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-23T12:00:00+09:00">
+                2019-03-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/23/How escher support physically based render/" class="leancloud_visitors" data-flag-title="How escher support physically based render">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="0x1-物理渲染和光栅化渲染"><a href="#0x1-物理渲染和光栅化渲染" class="headerlink" title="0x1 物理渲染和光栅化渲染"></a>0x1 物理渲染和光栅化渲染</h1><h2 id="0x21-传统光栅化渲染器的特点"><a href="#0x21-传统光栅化渲染器的特点" class="headerlink" title="0x21 传统光栅化渲染器的特点"></a>0x21 传统光栅化渲染器的特点</h2><p>光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL和Vulkan，已经Apple的Metal等。应用程序可以基于这些渲染API开发出酷炫的3D效果。但是这种光栅化的缺点也很明显，那就是无法完全模拟真实场景下的光线传播，导致绘制效果失真。</p>
+<p>下图说明了光栅化渲染器的流水线。</p>
+<p><img src="/2019/03/23/How escher support physically based render/pipeline.png" alt=""></p>
+<p>现代GPU中vertex shader和fragment shader一般是逻辑的概念，当时比较早的GPU是采用两种独立的硬件单元(不是Unified Shader)来实现的，如ARM Mali-400就是这种架构，这种架构的缺点是vertex shader和fragment shader的负载没办法平衡，极端情况下会出现其中一种硬件Shader满负荷运行，另外一种硬件Shader空闲的情况。后来的架构一般是基于通用可编程计算单元实现这些功能。也就是我们常说的Unified Shader架构。如树莓派中的Soc VideoCore采用了BroadCom V3D GPU, 其中的Unified Shader中采用QPU这种通用可编程计算单元来实现。</p>
+<p>移动GPU相对桌面GPU的架构也有差别，因为移动平台上对带宽及功耗的要求都比较高。<br>桌面GPU一般采用IMR(Immediate Mode Rendering)架构, 这种架构需要同时对该次渲染的全部物体进行处理，需要频繁访问系统帧缓存（位于系统内存里），故对带宽要求较高。</p>
+<p>移动GPU一般采用TBR架构(Tile Based Rendering)。TBR架构包括两个阶段Tiling和Binning。Tiling阶段把整个画面分成小块，然后计算每个小块中有哪些三角形需要处理。Binning阶段每次只对一个小块中包括的三角形进行处理，这种方式避免了对帧缓存（位于系统内存里）的频繁读写和修改，因为这些小块中的三角形的渲染是在GPU上的高速缓存里进行，所以能节约带宽，同时也减少了功耗。</p>
+<p>Imagination在TBR架构的基础上又提出了TBDR(Tile Based Deferred Rendering), 在执行shading之前加入HSR(Hidded Surface Remove), 这个模块利用vertex shader/rasterization之后的fragment的深度值来优化掉不必要的计算。</p>
+<h2 id="0x22-物理渲染器的特点"><a href="#0x22-物理渲染器的特点" class="headerlink" title="0x22 物理渲染器的特点"></a>0x22 物理渲染器的特点</h2><p>物理渲染器PBR(Physically Based Rendering),也称光线跟踪器(Ray tracer)。采用该算法渲染的结果看起来更真实，因为它基于物理参数的方法来编写材质，而且考虑了光线的发射和折射，材质对光线的吸收等。</p>
+<p>光线跟踪算法描述如下，沿着到达视点的光线的反方向跟踪，经过屏幕上每一个象素，找出与视线相交的物体表面点，并继续跟踪，找出影响点光强的所有光源，从而算出点上精确的光线强度。这种算法计算量极大，一般用于离线渲染。</p>
+<p>一个典型的物理渲染器包括如下模块。<br>相机<br>光线-对象相交测试<br>光照分布/光线传播<br>递归光线跟踪机制</p>
+<p>考虑到PBR的计算量太大，只适合离线渲染，后来基于全局光照Global Illuslaton技术的来实现实时PBR，因为考虑到了速度的提升，在渲染质量上会有损失。</p>
+<p>早期Ray tracing的硬件有德国萨尔兰大学计算机图形小组在2005年的SIGGRAPH上展示了第一个实时光线追踪加速硬件——RPU（Ray Processing Unit），最近有NVIDIA在GPU硬件中加入了Ray tracing。</p>
+<p>下图是采用Blender中的cycles物理渲染器渲染的坦克效果图，如果完全用CPU来计算，速度很慢，大概需要几十分钟。<br><img src="/2019/03/23/How escher support physically based render/tank.png" alt=""></p>
+<h1 id="0x2-Escher是如何做到物理渲染的？"><a href="#0x2-Escher是如何做到物理渲染的？" class="headerlink" title="0x2 Escher是如何做到物理渲染的？"></a>0x2 Escher是如何做到物理渲染的？</h1><p>Escher是Google下一代操作系统Fuchsia上内置的基于物理的真实感渲染引擎，它和Scenic一起提供了Fuchsia上的合成及进一步特效处理功能。</p>
+<p>Escher目前看来主要采用光照和阴影技术来达到物理渲染的效果。</p>
+<p>阴影是真实感渲染的一个重要组成部分，它对增加渲染物体的表面细节，帮助观察者增加对场景的空间感，从而更好地来判断物体的位置关系以及形状等有很大的帮助。可以说没有了阴影，3D场景中的真实感和吸引力将降低。</p>
+<p>Escher中包括了如下几种阴影技术，ShadowMap、ShadowVolume等。</p>
+<p>从Escher的实现代码可知，Escher还只是实现了部分物理渲染的功能，主要是通过light和shadow来体现真实感效果，后续要支持AR/VR中更多酷炫效果的话，需要进一步开发。</p>
+<h1 id="0x03-展望"><a href="#0x03-展望" class="headerlink" title="0x03 展望"></a>0x03 展望</h1><p>随着GPU硬件中增加了Ray tracing的功能，主流API都增加了对Ray tracing的支持，未来Escher中可能会直接调用这些API(目前Escher中是调用了Vulkan，也就是说会调用Vulkan的Ray tracing支持)来加速Ray tracing的处理。</p>
+<p>下来介绍一种主流API对 ray tracing的支持</p>
+<h2 id="0x31-Directx-raytracing"><a href="#0x31-Directx-raytracing" class="headerlink" title="0x31 Directx raytracing"></a>0x31 Directx raytracing</h2><p>DirectX Raytracing在DirectX 12 API的基础上引入了下面这些概念<br><a href="https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/" target="_blank" rel="external">DirectX Raytracing</a></p>
+<p>What is DirectX Raytracing?<br>At the highest level, DirectX Raytracing (DXR) introduces four, new concepts to the DirectX 12 API:</p>
+<p>The acceleration structure is an object that represents a full 3D environment in a format optimal for traversal by the GPU.  Represented as a two-level hierarchy, the structure affords both optimized ray traversal by the GPU, as well as efficient modification by the application for dynamic objects.</p>
+<p>A new command list method, DispatchRays, which is the starting point for tracing rays into the scene.  This is how the game actually submits DXR workloads to the GPU.</p>
+<p>A set of new HLSL shader types including ray-generation, closest-hit, any-hit, and miss shaders.  These specify what the DXR workload actually does computationally.  When DispatchRays is called, the ray-generation shader runs.  Using the new TraceRay intrinsic function in HLSL, the ray generation shader causes rays to be traced into the scene.  Depending on where the ray goes in the scene, one of several hit or miss shaders may be invoked at the point of intersection.  This allows a game to assign each object its own set of shaders and textures, resulting in a unique material.</p>
+<p>The raytracing pipeline state, a companion in spirit to today’s Graphics and Compute pipeline state objects, encapsulates the raytracing shaders and other state relevant to raytracing workloads.</p>
+<h2 id="0x32-Vulkan-ray-tracing"><a href="#0x32-Vulkan-ray-tracing" class="headerlink" title="0x32 Vulkan ray tracing"></a>0x32 Vulkan ray tracing</h2><p>NVIDIA提供了Vulkan的扩展了支持ray tracing。<br><a href="https://devblogs.nvidia.com/vulkan-raytracing/" target="_blank" rel="external">Vulkan ray tracing</a></p>
+<h2 id="0x33-Metal-ray-tracing"><a href="#0x33-Metal-ray-tracing" class="headerlink" title="0x33 Metal ray tracing"></a>0x33 Metal ray tracing</h2><p>Metal提供了ray tracing的支持。<br><img src="/2019/03/23/How escher support physically based render/metal_ray_tracing.png" alt=""></p>
+<p>详细信息请参考<br><a href="https://developer.apple.com/videos/play/wwdc2018/606/" target="_blank" rel="external">Metal ray tracing</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/graphics/" rel="tag"># graphics</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/16/AV1-syntax-explanation/" rel="next" title="AV1-syntax-explanation">
+                <i class="fa fa-chevron-left"></i> AV1-syntax-explanation
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/03/30/Buffer sharing in Weston/" rel="prev" title="Buffer sharing in Weston">
+                Buffer sharing in Weston <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">26</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-物理渲染和光栅化渲染"><span class="nav-number">1.</span> <span class="nav-text">0x1 物理渲染和光栅化渲染</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x21-传统光栅化渲染器的特点"><span class="nav-number">1.1.</span> <span class="nav-text">0x21 传统光栅化渲染器的特点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x22-物理渲染器的特点"><span class="nav-number">1.2.</span> <span class="nav-text">0x22 物理渲染器的特点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Escher是如何做到物理渲染的？"><span class="nav-number">2.</span> <span class="nav-text">0x2 Escher是如何做到物理渲染的？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x03-展望"><span class="nav-number">3.</span> <span class="nav-text">0x03 展望</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-Directx-raytracing"><span class="nav-number">3.1.</span> <span class="nav-text">0x31 Directx raytracing</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x32-Vulkan-ray-tracing"><span class="nav-number">3.2.</span> <span class="nav-text">0x32 Vulkan ray tracing</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x33-Metal-ray-tracing"><span class="nav-number">3.3.</span> <span class="nav-text">0x33 Metal ray tracing</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

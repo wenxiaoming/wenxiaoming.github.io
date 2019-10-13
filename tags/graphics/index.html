@@ -95,7 +95,7 @@
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Kevin Wen&#39;s Blog">
-<meta property="og:url" content="http://yoursite.com/tags/graphics/index.html">
+<meta property="og:url" content="http://yoursite.com/tags/Graphics/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kevin Wen&#39;s Blog">
@@ -126,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/tags/graphics/"/>
+  <link rel="canonical" href="http://yoursite.com/tags/Graphics/"/>
 
 
 
 
 
-  <title>标签: graphics | Kevin Wen's Blog</title>
+  <title>标签: Graphics | Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -244,7 +244,7 @@
 
   <div id="posts" class="posts-collapse">
     <div class="collection-title">
-      <h1>graphics<small>标签</small>
+      <h1>Graphics<small>标签</small>
       </h1>
     </div>
 
@@ -256,37 +256,9 @@
 
       <h2 class="post-title">
         
-            <a class="post-title-link" href="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/" itemprop="url">
+            <a class="post-title-link" href="/2019/03/30/Buffer sharing in Weston/" itemprop="url">
               
-                <span itemprop="name">How stencil buffer work in graphics pipeline</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2019-02-23T20:15:30+09:00"
-              content="2019-02-23" >
-          02-23
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-    
-      
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2018/03/13/how-renderscript-supports-parallel-compution/" itemprop="url">
-              
-                <span itemprop="name">How renderscript supports parallel compution</span>
+                <span itemprop="name">Buffer sharing in Weston</span>
               
             </a>
         
@@ -294,37 +266,9 @@
 
       <div class="post-meta">
         <time class="post-time" itemprop="dateCreated"
-              datetime="2018-03-13T20:47:43+09:00"
-              content="2018-03-13" >
-          03-13
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-    
-      
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2018/02/25/Analysis-of-SwiftShader/" itemprop="url">
-              
-                <span itemprop="name">Analysis of SwiftShader</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2018-02-25T20:50:24+09:00"
-              content="2018-02-25" >
-          02-25
+              datetime="2019-03-30T19:30:00+09:00"
+              content="2019-03-30" >
+          03-30
         </time>
       </div>
 
@@ -378,7 +322,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">24</span>
+                <span class="site-state-item-count">26</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -391,7 +335,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-count">16</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
@@ -622,6 +566,80 @@
     }
 
     function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
+nt(Counter) {
       var $visitors = $(".leancloud_visitors");
       var url = $visitors.attr('id').trim();
       var title = $visitors.attr('data-flag-title').trim();

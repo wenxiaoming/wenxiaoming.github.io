@@ -1,0 +1,832 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Graphics," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="0x1 Weston简介0x11 X系统X即X11、X Window System，是用于在类UNIX的操作系统上的位图显示的窗口系统，提供了GUI环境的基本框架，可以在显示设备上绘制、移动窗口，通过鼠标、键盘、触摸屏与用户交互. X Server是X显示服务的一种开源实现，其系统结构如下图所示 0x12 Wayland系统Wayland是一个显示服务协议，服务端为Wayland Composit">
+<meta name="keywords" content="Graphics">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Buffer sharing in Weston">
+<meta property="og:url" content="http://yoursite.com/2019/03/30/Buffer sharing in Weston/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="0x1 Weston简介0x11 X系统X即X11、X Window System，是用于在类UNIX的操作系统上的位图显示的窗口系统，提供了GUI环境的基本框架，可以在显示设备上绘制、移动窗口，通过鼠标、键盘、触摸屏与用户交互. X Server是X显示服务的一种开源实现，其系统结构如下图所示 0x12 Wayland系统Wayland是一个显示服务协议，服务端为Wayland Composit">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/x-architecture.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wayland-architecture.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/Wayland_protocol_architecture.svg">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_1.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_2.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_3.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_4.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_5.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/wl_kms_6.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/AndroidOnWayland.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/xwayland.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/Draw%20&%20Composition.png">
+<meta property="og:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/demo.png">
+<meta property="og:updated_time" content="2019-10-13T10:23:50.961Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Buffer sharing in Weston">
+<meta name="twitter:description" content="0x1 Weston简介0x11 X系统X即X11、X Window System，是用于在类UNIX的操作系统上的位图显示的窗口系统，提供了GUI环境的基本框架，可以在显示设备上绘制、移动窗口，通过鼠标、键盘、触摸屏与用户交互. X Server是X显示服务的一种开源实现，其系统结构如下图所示 0x12 Wayland系统Wayland是一个显示服务协议，服务端为Wayland Composit">
+<meta name="twitter:image" content="http://yoursite.com/2019/03/30/Buffer%20sharing%20in%20Weston/x-architecture.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/30/Buffer sharing in Weston/"/>
+
+
+
+
+
+  <title>Buffer sharing in Weston | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/30/Buffer sharing in Weston/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Buffer sharing in Weston</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-30T19:30:00+09:00">
+                2019-03-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/30/Buffer sharing in Weston/" class="leancloud_visitors" data-flag-title="Buffer sharing in Weston">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="0x1-Weston简介"><a href="#0x1-Weston简介" class="headerlink" title="0x1 Weston简介"></a>0x1 Weston简介</h1><h2 id="0x11-X系统"><a href="#0x11-X系统" class="headerlink" title="0x11 X系统"></a>0x11 X系统</h2><p>X即X11、X Window System，是用于在类UNIX的操作系统上的位图显示的窗口系统，提供了GUI环境的基本框架，可以在显示设备上绘制、移动窗口，通过鼠标、键盘、触摸屏与用户交互. X Server是X显示服务的一种开源实现，其系统结构如下图所示<br><img src="/2019/03/30/Buffer sharing in Weston/x-architecture.png" alt=""></p>
+<h2 id="0x12-Wayland系统"><a href="#0x12-Wayland系统" class="headerlink" title="0x12 Wayland系统"></a>0x12 Wayland系统</h2><p>Wayland是一个显示服务协议，服务端为Wayland Compositor，服务端把把X系统中的X Server和Compositor合二为一，作为类Unix操作系统上更现代、简洁的窗口系统，旨在替换X系统。Weston是Wayland Compositor的参考实现。下面是Wayland官网文档给出的架构简图.<br><img src="/2019/03/30/Buffer sharing in Weston/wayland-architecture.png" alt=""></p>
+<p>Wayland协议为Client/Server模式，客户端为图形应用程序，发送绘制命令，请求在各自输出缓冲区的显示，服务器为Compositor，控制各个客户端输出缓冲区的合成和显示。</p>
+<p>Wayland参考实现Weston包括两层协议。</p>
+<p>一个为底层IPC协议。采用Linux Domain Socket实现的IPC，这部分采用手动写的C语言实现。</p>
+<p>另一个是上层消息协议。这部分采用libffi来实现，从规定格式的XML文件中自动生成，可以灵活地动态扩展或者用于错误验证。处理客户端和Weston之间的上层交互流程，以实现窗口系统的基本功能。</p>
+<p>Wayland参考实现包括两部分，libwayland-client和libwayland-server，其架构简图如下所示。<br><img src="/2019/03/30/Buffer sharing in Weston/Wayland_protocol_architecture.svg" alt=""></p>
+<h1 id="0x2-Buffer管理"><a href="#0x2-Buffer管理" class="headerlink" title="0x2 Buffer管理"></a>0x2 Buffer管理</h1><p>在Weston的实现中，客户端先把内容绘制到一个buffer中，然后weston把多个客户端绘制的buffer通过compositor模块合成在一起。这里面涉及到buffer在各个模块之间的传递，从性能的角度考虑，我们很自然地想到如何避免memory copy的问题。下来我们来看一下如何实现zero memory copy的。</p>
+<p>Weston中的buffer用wl_buffer对象来描述。这个buffer需要在客户端和Compositor之间共享。目前有两种buffer的管理模式。</p>
+<ol>
+<li>wl_shm<br>这种方式是通过共享内存的方式来实现客户端和Compositor之间的共享，通过这种方式分配的内存是物理不连续的，这种方式一般用于采用软件绘制的情况，当buffer在客户端绘制完成以后，Compositor得到通知开始合成的时候，需要通过glTexImage2D()函数把buffer作为纹理上传到GPU中，这样的话性能是会受到影响的，因为纹理上传一般是比较耗时的操作。</li>
+<li><p>wl_drm<br>这种方式通过Wayland EGL中的相关机制来保证，客户端通过wayland-egl.h的相关接口EGLSurface来创建GPU的输出buffer，然后客户端开始绘制，绘制完成以后，客户端的GPU输出buffer通过eglCreateImageKHR()接口创建EGLImage，这个EGLImage可以直接作为Compositor的输入纹理来使用，不需要额外的拷贝工作。</p>
+<p>开源的mesa drm实现定义了drm Wayland扩展, 这个时候客户端和Compositor之间可以共享drm (GEM) buffers。</p>
+<p>下面介绍一下基于KMS BO buffer type的mesa wl_drm共享流程<br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_1.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_2.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_3.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_4.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_5.png" alt=""><br> <img src="/2019/03/30/Buffer sharing in Weston/wl_kms_6.png" alt=""></p>
+</li>
+</ol>
+<h1 id="0x3-与Android上图形系统的比较"><a href="#0x3-与Android上图形系统的比较" class="headerlink" title="0x3 与Android上图形系统的比较"></a>0x3 与Android上图形系统的比较</h1><ol>
+<li><p>Buffer的分配<br>Android上的buffer是在服务端（SurfaceFlinger）分配的，然后通过ION机制实现buffer的共享。<br>而Wayland系统中buffer是在客户端分配的，通过底层EGL驱动提供的buffer共享管理机制，再配合IPC机制实现客户端和服务端之间的buffer共享。</p>
+</li>
+<li><p>Window管理器的实现<br>Android上有单独的WMS(Window Manager Service)模块来做窗口管理的工作。而Wayland系统中在Weston中实现了窗口管理的工作，也就是是窗口管理和合成是在同一个进程中完成的。</p>
+</li>
+<li><p>Android on Wayland<br>把Android上的SurfaceFlinger作为一个Wayland Client，然后参与Weston的合成。架构图如下<br><img src="/2019/03/30/Buffer sharing in Weston/AndroidOnWayland.png" alt=""></p>
+<p>上图的架构有点类似于把X Server作为一个Wayland Client，如下图所示<br><img src="/2019/03/30/Buffer sharing in Weston/xwayland.png" alt=""></p>
+</li>
+</ol>
+<h1 id="0x4-Run-Weston-on-Ubuntu"><a href="#0x4-Run-Weston-on-Ubuntu" class="headerlink" title="0x4 Run Weston on Ubuntu"></a>0x4 Run Weston on Ubuntu</h1><p>   把Wayland protocol和Weston相关实现porting到Ubuntu上，Weston加载X11-backend，也就是说Weston作为X Server的一个Client，把Weston的合成输出在接入到Ubuntu的X Server系统中来输出。</p>
+<p>   绘制和合成流程如下图所示<br>   <img src="/2019/03/30/Buffer sharing in Weston/Draw &amp; Composition.png" alt=""></p>
+<p>   测试效果如下图所示<br>   <img src="/2019/03/30/Buffer sharing in Weston/demo.png" alt=""></p>
+<h1 id="0x5-参考"><a href="#0x5-参考" class="headerlink" title="0x5 参考"></a>0x5 参考</h1><p><a href="https://wayland.freedesktop.org/architecture.html" target="_blank" rel="external">Wayland architecture</a><br><a href="https://events.static.linuxfound.org/sites/events/files/slides/als2015_wayland_weston_v2.pdf" target="_blank" rel="external">Wayland/Weston Renderer</a><br><a href="https://at.projects.genivi.org/wiki/display/DIRO/Android+display+subsystem+as+a+wayland+client" target="_blank" rel="external">Android display subsystem as a wayland client</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Graphics/" rel="tag"># Graphics</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/23/How escher support physically based render/" rel="next" title="How escher support physically based render">
+                <i class="fa fa-chevron-left"></i> How escher support physically based render
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">26</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Weston简介"><span class="nav-number">1.</span> <span class="nav-text">0x1 Weston简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x11-X系统"><span class="nav-number">1.1.</span> <span class="nav-text">0x11 X系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x12-Wayland系统"><span class="nav-number">1.2.</span> <span class="nav-text">0x12 Wayland系统</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Buffer管理"><span class="nav-number">2.</span> <span class="nav-text">0x2 Buffer管理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-与Android上图形系统的比较"><span class="nav-number">3.</span> <span class="nav-text">0x3 与Android上图形系统的比较</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Run-Weston-on-Ubuntu"><span class="nav-number">4.</span> <span class="nav-text">0x4 Run Weston on Ubuntu</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-参考"><span class="nav-number">5.</span> <span class="nav-text">0x5 参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

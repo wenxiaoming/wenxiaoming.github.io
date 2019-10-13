@@ -254,6 +254,306 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/07/08/Timer-support-in-event-driven-network-framework/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/07/08/Timer-support-in-event-driven-network-framework/" itemprop="url">Timer support in event driven network framework</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-07-08T19:02:31+09:00">
+                2017-07-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2017/07/08/Timer-support-in-event-driven-network-framework/" class="leancloud_visitors" data-flag-title="Timer support in event driven network framework">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1 Introduction"></a>0x1 Introduction</h1><p>  Typically there is one event loop in event driven asynchronous network framework, it waits on the file descriptors to become ready then to perform specific operations, typically the event loop is executed in one thread. And such network framework also supports timer, one type of timer is to process some operation after some time, another type of timer is to process some operation at some intervals.</p>
+<p>  Next we will look into the detail timer’s support in serveral network framework.</p>
+<h1 id="0x2-Nginx’s-implementation"><a href="#0x2-Nginx’s-implementation" class="headerlink" title="0x2 Nginx’s implementation"></a>0x2 Nginx’s implementation</h1><p>  In Nginx, ngx_process_events_and_timers() will handle timer, it detects the expired timers then call its handler to do further operation.</p>
+<p>  From the following code, there is one variable ngx_timer_resolution, it is used to handle timer in two different ways. </p>
+<p>  If ngx_timer_resolution is not zero, the timeout parameter is set as -1, then it will pass to ngx_process_events(), if timeout parameter is -1, epoll_wait() will wait infinitely until some file descriptors become ready, so the timer seems not accurate at that time. And ngx_timer_resolution is configured in nginx’s configuration file.</p>
+<p>  If ngx_timer_resolution is zero, it will call ngx_event_find_timer() to get the delta time between the next expired time and current time, the next expired time is sotred in the rbtree.</p>
+<p>  In ngx_process_events_and_timers(), it will call ngx_event_expire_timers() to process the expired timers, and call the timer’handler.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">ngx_process_events_and_timers</span><span class="params">(<span class="keyword">ngx_cycle_t</span> *cycle)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">ngx_uint_t</span>  flags;</div><div class="line">    <span class="keyword">ngx_msec_t</span>  timer, delta;</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (ngx_timer_resolution) &#123;</div><div class="line">        timer = NGX_TIMER_INFINITE;</div><div class="line">        flags = <span class="number">0</span>;</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">        timer = ngx_event_find_timer();</div><div class="line">        flags = NGX_UPDATE_TIME;</div><div class="line">    &#125;</div><div class="line">    ...</div><div class="line">    delta = ngx_current_msec;</div><div class="line">    (<span class="keyword">void</span>) ngx_process_events(cycle, timer, flags);</div><div class="line">    delta = ngx_current_msec - delta;</div><div class="line">    ngx_event_process_posted(cycle, &amp;ngx_posted_accept_events);</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> (delta) &#123;</div><div class="line">        ngx_event_expire_timers();</div><div class="line">    &#125;</div><div class="line">    ngx_event_process_posted(cycle, &amp;ngx_posted_events);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> ngx_int_t <span class="title">ngx_epoll_process_events</span><span class="params">(<span class="keyword">ngx_cycle_t</span> *cycle, <span class="keyword">ngx_msec_t</span> timer, <span class="keyword">ngx_uint_t</span> flags)</span></span></div><div class="line">&#123;</div><div class="line">    ...</div><div class="line">    events = epoll_wait(ep, event_list, (<span class="keyword">int</span>) nevents, timer);</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> (flags &amp; NGX_UPDATE_TIME || ngx_event_timer_alarm) &#123;</div><div class="line">        ngx_time_update();</div><div class="line">    &#125;</div><div class="line">    ...</div><div class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; events; i++) &#123;</div><div class="line">        c = event_list[i].data.ptr;</div><div class="line">        ...</div><div class="line">        revents = event_list[i].events;</div><div class="line">        ...        </div><div class="line">        wev = c-&gt;write;</div><div class="line">        ...</div><div class="line">        <span class="keyword">if</span> (flags &amp; NGX_POST_EVENTS) &#123;</div><div class="line">                ngx_post_event(wev, &amp;ngx_posted_events);</div><div class="line"></div><div class="line">            &#125; <span class="keyword">else</span> &#123;</div><div class="line">                wev-&gt;handler(wev);</div><div class="line">        &#125;</div><div class="line">        ...</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>In ngx_epoll_process_events(), if will call ngx_time_update() to update time, and ngx_time_update() will call the system function gettimeofday(), and the system performance will be impacted if we call gettimeofday() frequently.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">ngx_time_update</span><span class="params">(<span class="keyword">void</span>)</span></span></div><div class="line">&#123;</div><div class="line">    ...</div><div class="line">    ngx_gettimeofday(&amp;tv);</div><div class="line">    ...</div><div class="line">    sec = tv.tv_sec;</div><div class="line">    msec = tv.tv_usec / <span class="number">1000</span>;</div><div class="line">    ...</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">ngx_event_expire_timers</span><span class="params">(<span class="keyword">void</span>)</span></span></div><div class="line">&#123;</div><div class="line">    ...</div><div class="line">    <span class="keyword">for</span> ( ;; ) &#123;</div><div class="line">        root = ngx_event_timer_rbtree.root;</div><div class="line">        ...</div><div class="line">        <span class="keyword">if</span> (root == sentinel) &#123;</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">        &#125;</div><div class="line">        ...</div><div class="line">        node = ngx_rbtree_min(root, sentinel);</div><div class="line">        ...</div><div class="line">        <span class="keyword">if</span> ((<span class="keyword">ngx_msec_int_t</span>) (node-&gt;key - ngx_current_msec) &gt; <span class="number">0</span>) &#123;</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">        &#125;</div><div class="line">        ev = (<span class="keyword">ngx_event_t</span> *) ((<span class="keyword">char</span> *) node - offsetof(<span class="keyword">ngx_event_t</span>, timer));</div><div class="line">        ngx_rbtree_delete(&amp;ngx_event_timer_rbtree, &amp;ev-&gt;timer);</div><div class="line">        ev-&gt;timer_set = <span class="number">0</span>;</div><div class="line">        ev-&gt;timedout = <span class="number">1</span>;</div><div class="line">        ev-&gt;handler(ev);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h1 id="0x3-Redis’s-implementation"><a href="#0x3-Redis’s-implementation" class="headerlink" title="0x3 Redis’s implementation"></a>0x3 Redis’s implementation</h1><p>Here are the functions of Redis to add/delete timer, the timer’s user can use those functions to get timer service from the event loop thread. In Redis, the serverCron() is register as the timer’s callback when calling aeCreateTimeEvent(), then serverCron() will be called at some interval to do resource and status checking of Redis Server.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">long</span> <span class="keyword">long</span> <span class="title">aeCreateTimeEvent</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">long</span> <span class="keyword">long</span> milliseconds,</span></span></div><div class="line">        aeTimeProc *proc, <span class="keyword">void</span> *clientData,</div><div class="line">        aeEventFinalizerProc *finalizerProc)</div><div class="line">&#123;</div><div class="line">    <span class="keyword">long</span> <span class="keyword">long</span> id = eventLoop-&gt;timeEventNextId++;</div><div class="line">    aeTimeEvent *te;</div><div class="line"></div><div class="line">    te = zmalloc(<span class="keyword">sizeof</span>(*te));</div><div class="line">    <span class="keyword">if</span> (te == <span class="literal">NULL</span>) <span class="keyword">return</span> AE_ERR;</div><div class="line">    te-&gt;id = id;</div><div class="line">    aeAddMillisecondsToNow(milliseconds,&amp;te-&gt;when_sec,&amp;te-&gt;when_ms);</div><div class="line">    te-&gt;timeProc = proc;</div><div class="line">    te-&gt;finalizerProc = finalizerProc;</div><div class="line">    te-&gt;clientData = clientData;</div><div class="line">    te-&gt;next = eventLoop-&gt;timeEventHead;</div><div class="line">    eventLoop-&gt;timeEventHead = te;</div><div class="line">    <span class="keyword">return</span> id;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">aeDeleteTimeEvent</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">long</span> <span class="keyword">long</span> id)</span></span></div><div class="line">&#123;</div><div class="line">    aeTimeEvent *te = eventLoop-&gt;timeEventHead;</div><div class="line">    <span class="keyword">while</span>(te) &#123;</div><div class="line">        <span class="keyword">if</span> (te-&gt;id == id) &#123;</div><div class="line">            te-&gt;id = AE_DELETED_EVENT_ID;</div><div class="line">            <span class="keyword">return</span> AE_OK;</div><div class="line">        &#125;</div><div class="line">        te = te-&gt;next;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> AE_ERR;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>Here is the code about how timer is handled in the event loop, it searches the nearnest timer in the timer list, then calculates the timout parameter for the aeApiPoll(), then aeApiPoll() will wait on the file descriptors within the timout setting, after aeApiPoll(), it uses processTimeEvents() to process the timers and call its callback of the specific timer.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">aeProcessEvents</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">int</span> flags)</span></span></div><div class="line">&#123;</div><div class="line">        ...</div><div class="line">        aeTimeEvent *shortest = <span class="literal">NULL</span>;</div><div class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">tv</span>, *<span class="title">tvp</span>;</span></div><div class="line"></div><div class="line">        <span class="keyword">if</span> (flags &amp; AE_TIME_EVENTS &amp;&amp; !(flags &amp; AE_DONT_WAIT))</div><div class="line">            shortest = aeSearchNearestTimer(eventLoop);</div><div class="line">        <span class="keyword">if</span> (shortest) &#123;</div><div class="line">            <span class="keyword">long</span> now_sec, now_ms;</div><div class="line"></div><div class="line">            aeGetTime(&amp;now_sec, &amp;now_ms);</div><div class="line">            tvp = &amp;tv;</div><div class="line"></div><div class="line">            <span class="keyword">long</span> <span class="keyword">long</span> ms =</div><div class="line">                (shortest-&gt;when_sec - now_sec)*<span class="number">1000</span> +</div><div class="line">                shortest-&gt;when_ms - now_ms;</div><div class="line"></div><div class="line">            <span class="keyword">if</span> (ms &gt; <span class="number">0</span>) &#123;</div><div class="line">                tvp-&gt;tv_sec = ms/<span class="number">1000</span>;</div><div class="line">                tvp-&gt;tv_usec = (ms % <span class="number">1000</span>)*<span class="number">1000</span>;</div><div class="line">            &#125; <span class="keyword">else</span> &#123;</div><div class="line">                tvp-&gt;tv_sec = <span class="number">0</span>;</div><div class="line">                tvp-&gt;tv_usec = <span class="number">0</span>;</div><div class="line">            &#125;</div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">            <span class="keyword">if</span> (flags &amp; AE_DONT_WAIT) &#123;</div><div class="line">                tv.tv_sec = tv.tv_usec = <span class="number">0</span>;</div><div class="line">                tvp = &amp;tv;</div><div class="line">            &#125; <span class="keyword">else</span> &#123;</div><div class="line">                tvp = <span class="literal">NULL</span>; <span class="comment">/* wait forever */</span></div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">        ...</div><div class="line">        numevents = aeApiPoll(eventLoop, tvp);</div><div class="line">        ...</div><div class="line">    &#125;</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> (flags &amp; AE_TIME_EVENTS)</div><div class="line">        processed += processTimeEvents(eventLoop);</div><div class="line">    ...</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">aeApiPoll</span><span class="params">(aeEventLoop *eventLoop, struct timeval *tvp)</span> </span>&#123;</div><div class="line">    aeApiState *state = eventLoop-&gt;apidata;</div><div class="line">    <span class="keyword">int</span> retval, numevents = <span class="number">0</span>;</div><div class="line"></div><div class="line">    retval = epoll_wait(state-&gt;epfd,state-&gt;events,eventLoop-&gt;setsize,</div><div class="line">            tvp ? (tvp-&gt;tv_sec*<span class="number">1000</span> + tvp-&gt;tv_usec/<span class="number">1000</span>) : <span class="number">-1</span>);</div><div class="line">    <span class="keyword">if</span> (retval &gt; <span class="number">0</span>) &#123;</div><div class="line">        <span class="keyword">int</span> j;</div><div class="line">        ...</div><div class="line">        numevents = retval;</div><div class="line">        <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; numevents; j++) &#123;</div><div class="line">            <span class="keyword">int</span> mask = <span class="number">0</span>;</div><div class="line">            <span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> *<span class="title">e</span> = <span class="title">state</span>-&gt;<span class="title">events</span>+<span class="title">j</span>;</span></div><div class="line">            ...</div><div class="line">            <span class="keyword">if</span> (e-&gt;events &amp; EPOLLIN) mask |= AE_READABLE;</div><div class="line">            <span class="keyword">if</span> (e-&gt;events &amp; EPOLLOUT) mask |= AE_WRITABLE;</div><div class="line">            <span class="keyword">if</span> (e-&gt;events &amp; EPOLLERR) mask |= AE_WRITABLE;</div><div class="line">            <span class="keyword">if</span> (e-&gt;events &amp; EPOLLHUP) mask |= AE_WRITABLE;</div><div class="line">            eventLoop-&gt;fired[j].fd = e-&gt;data.fd;</div><div class="line">            eventLoop-&gt;fired[j].mask = mask;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> numevents;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">processTimeEvents</span><span class="params">(aeEventLoop *eventLoop)</span> </span>&#123;</div><div class="line">    <span class="keyword">int</span> processed = <span class="number">0</span>;</div><div class="line">    aeTimeEvent *te, *prev;</div><div class="line">    <span class="keyword">long</span> <span class="keyword">long</span> maxId;</div><div class="line">    <span class="keyword">time_t</span> now = time(<span class="literal">NULL</span>);</div><div class="line">    ...</div><div class="line">    <span class="keyword">if</span> (now &lt; eventLoop-&gt;lastTime) &#123;</div><div class="line">        te = eventLoop-&gt;timeEventHead;</div><div class="line">        <span class="keyword">while</span>(te) &#123;</div><div class="line">            te-&gt;when_sec = <span class="number">0</span>;</div><div class="line">            te = te-&gt;next;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    eventLoop-&gt;lastTime = now;</div><div class="line">    ...</div><div class="line">    prev = <span class="literal">NULL</span>;</div><div class="line">    te = eventLoop-&gt;timeEventHead;</div><div class="line">    maxId = eventLoop-&gt;timeEventNextId<span class="number">-1</span>;</div><div class="line">    <span class="keyword">while</span>(te) &#123;</div><div class="line">        <span class="keyword">long</span> now_sec, now_ms;</div><div class="line">        <span class="keyword">long</span> <span class="keyword">long</span> id;</div><div class="line">        ...</div><div class="line">        aeGetTime(&amp;now_sec, &amp;now_ms);</div><div class="line">        <span class="keyword">if</span> (now_sec &gt; te-&gt;when_sec ||</div><div class="line">            (now_sec == te-&gt;when_sec &amp;&amp; now_ms &gt;= te-&gt;when_ms))</div><div class="line">        &#123;</div><div class="line">            <span class="keyword">int</span> retval;</div><div class="line"></div><div class="line">            id = te-&gt;id;</div><div class="line">            retval = te-&gt;timeProc(eventLoop, id, te-&gt;clientData);</div><div class="line">            processed++;</div><div class="line">            <span class="keyword">if</span> (retval != AE_NOMORE) &#123;</div><div class="line">                aeAddMillisecondsToNow(retval,&amp;te-&gt;when_sec,&amp;te-&gt;when_ms);</div><div class="line">            &#125; <span class="keyword">else</span> &#123;</div><div class="line">                te-&gt;id = AE_DELETED_EVENT_ID;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">        prev = te;</div><div class="line">        te = te-&gt;next;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> processed;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h1 id="0x4-Libevent’s-implementation"><a href="#0x4-Libevent’s-implementation" class="headerlink" title="0x4 Libevent’s implementation"></a>0x4 Libevent’s implementation</h1><p>libevent uses timerfd to handle timer when USING_TIMERFD is set, here is the code, it uses timerfd_create() to create timefd.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> * <span class="title">epoll_init</span><span class="params">(struct event_base *base)</span></span></div><div class="line">&#123;</div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> USING_TIMERFD</span></div><div class="line">	<span class="keyword">if</span> ((base-&gt;flags &amp; EVENT_BASE_FLAG_PRECISE_TIMER) &amp;&amp;</div><div class="line">	    base-&gt;monotonic_timer.monotonic_clock == CLOCK_MONOTONIC) &#123;</div><div class="line">		<span class="keyword">int</span> fd;</div><div class="line">		fd = epollop-&gt;timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK|TFD_CLOEXEC);</div><div class="line">		<span class="keyword">if</span> (epollop-&gt;timerfd &gt;= <span class="number">0</span>) &#123;</div><div class="line">			<span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span> <span class="title">epev</span>;</span></div><div class="line">			<span class="built_in">memset</span>(&amp;epev, <span class="number">0</span>, <span class="keyword">sizeof</span>(epev));</div><div class="line">			epev.data.fd = epollop-&gt;timerfd;</div><div class="line">			epev.events = EPOLLIN;</div><div class="line">			<span class="keyword">if</span> (epoll_ctl(epollop-&gt;epfd, EPOLL_CTL_ADD, fd, &amp;epev) &lt; <span class="number">0</span>) &#123;</div><div class="line">				event_warn(<span class="string">"epoll_ctl(timerfd)"</span>);</div><div class="line">				close(fd);</div><div class="line">				epollop-&gt;timerfd = <span class="number">-1</span>;</div><div class="line">			&#125;</div><div class="line">        &#125; </div><div class="line">        ...</div><div class="line">	&#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>Here is the code to set the timeout for timerfd, it call timerfd_settime() to set the timeout. When timeout happens, it will trigger the timerfd which is waiting on epoll_wait(), then the event loop can process the timer handler.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">epoll_dispatch</span><span class="params">(struct event_base *base, struct timeval *tv)</span></span></div><div class="line">&#123;</div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> USING_TIMERFD</span></div><div class="line">	<span class="keyword">if</span> (epollop-&gt;timerfd &gt;= <span class="number">0</span>) &#123;</div><div class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">itimerspec</span> <span class="title">is</span>;</span></div><div class="line">		is.it_interval.tv_sec = <span class="number">0</span>;</div><div class="line">		is.it_interval.tv_nsec = <span class="number">0</span>;</div><div class="line">		<span class="keyword">if</span> (tv == <span class="literal">NULL</span>) &#123;</div><div class="line">			is.it_value.tv_sec = <span class="number">0</span>;</div><div class="line">			is.it_value.tv_nsec = <span class="number">0</span>;</div><div class="line">		&#125; <span class="keyword">else</span> &#123;</div><div class="line">			<span class="keyword">if</span> (tv-&gt;tv_sec == <span class="number">0</span> &amp;&amp; tv-&gt;tv_usec == <span class="number">0</span>) &#123;</div><div class="line">				timeout = <span class="number">0</span>;</div><div class="line">			&#125;</div><div class="line">			is.it_value.tv_sec = tv-&gt;tv_sec;</div><div class="line">			is.it_value.tv_nsec = tv-&gt;tv_usec * <span class="number">1000</span>;</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		<span class="keyword">if</span> (timerfd_settime(epollop-&gt;timerfd, <span class="number">0</span>, &amp;is, <span class="literal">NULL</span>) &lt; <span class="number">0</span>) &#123;</div><div class="line">			event_warn(<span class="string">"timerfd_settime"</span>);</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">    ...</div><div class="line">    res = epoll_wait(epollop-&gt;epfd, events, epollop-&gt;nevents, timeout);</div><div class="line">    ...</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>Timerfd’s kernel implementation</p>
+<p>In Linux kernel, timerfd’s implementation uses hrtimer to support timer, the corresponding code is placed in kernel/fs/timerfd.c.</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/07/01/try-vulkan-on-windows/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/07/01/try-vulkan-on-windows/" itemprop="url">Try vulkan on windows</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-07-01T23:21:36+09:00">
+                2017-07-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2017/07/01/try-vulkan-on-windows/" class="leancloud_visitors" data-flag-title="Try vulkan on windows">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Vulkan简介"><a href="#0x1-Vulkan简介" class="headerlink" title="0x1 Vulkan简介"></a>0x1 Vulkan简介</h1><p>Vulkan是轻量级、更贴近底层硬件的接口，可使GPU驱动程序充分利用多核CPU性能.</p>
+<p>对于CPU处理是瓶颈的3D场景，采用Vulkan能提升性能.</p>
+<p>Vulkan可以节省shader编译的时间，因为Vulkan只需要处理SPIR-V中间代码.</p>
+<p>Vulkan不负责内存的管理，多线程的管理和并发访问保护，由应用程序去负责这些工作.</p>
+<p>下面介绍一下如何在Windows下编译和测试Vulkan，显卡是Intel HD Graphics 520.</p>
+<h1 id="0x2-安装支持Vulkan的graphics驱动"><a href="#0x2-安装支持Vulkan的graphics驱动" class="headerlink" title="0x2 安装支持Vulkan的graphics驱动"></a>0x2 安装支持Vulkan的graphics驱动</h1><p>下载并安装最新的graphics驱动</p>
+<p><a href="https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip" target="_blank" rel="external">https://communities.intel.com/external-link.jspa?url=https%3A%2F%2Fdownloadmirror.intel.com%2F26563%2Feng%2Fwin64_154514.4590.zip</a></p>
+<h1 id="0x3-安装Lunarg-Vulkan-SDK"><a href="#0x3-安装Lunarg-Vulkan-SDK" class="headerlink" title="0x3 安装Lunarg Vulkan SDK"></a>0x3 安装Lunarg Vulkan SDK</h1><p>下载地址如下</p>
+<p><a href="https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe" target="_blank" rel="external">https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.0.51.0/windows/VulkanSDK-1.0.51.0-Installer.exe</a></p>
+<h1 id="0x4-安装Vulkan-Hardware-Capability-Viewer"><a href="#0x4-安装Vulkan-Hardware-Capability-Viewer" class="headerlink" title="0x4 安装Vulkan Hardware Capability Viewer"></a>0x4 安装Vulkan Hardware Capability Viewer</h1><p>用于查看系统中vulkan支持信息</p>
+<p>可执行程序如下</p>
+<p><a href="http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip" target="_blank" rel="external">http://vulkan.gpuinfo.org/downloads/vulkancapsviewer_1_4_win64.zip</a></p>
+<p>代码如下</p>
+<p><a href="https://github.com/SaschaWillems/VulkanCapsViewer" target="_blank" rel="external">https://github.com/SaschaWillems/VulkanCapsViewer</a></p>
+<p>运行效果如下</p>
+<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_hardware_capability_viewer.png" alt="vulkan1"></p>
+<h1 id="0x5-编译运行Vulkan-demo"><a href="#0x5-编译运行Vulkan-demo" class="headerlink" title="0x5 编译运行Vulkan demo"></a>0x5 编译运行Vulkan demo</h1><p>代码如下</p>
+<p><a href="https://github.com/GameTechDev/stardust_vulkan" target="_blank" rel="external">https://github.com/GameTechDev/stardust_vulkan</a></p>
+<p>运行效果如下</p>
+<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo.png" alt="vulkan2"></p>
+<p>下载gpu-z，查看gpu使用情况</p>
+<p><a href="https://www.techpowerup.com/download/techpowerup-gpu-z/" target="_blank" rel="external">https://www.techpowerup.com/download/techpowerup-gpu-z/</a></p>
+<p>从gpu-z的使用情况可知，gpu一直很忙，说明vulkan已经工作</p>
+<p><img src="/2017/07/01/try-vulkan-on-windows/stardust_demo_gpu-z.png" alt="vulkan3"></p>
+<h1 id="0x6-编译运行Vulkan-example"><a href="#0x6-编译运行Vulkan-example" class="headerlink" title="0x6 编译运行Vulkan example"></a>0x6 编译运行Vulkan example</h1><p>测试代码如下</p>
+<p><a href="https://github.com/SaschaWillems/Vulkan" target="_blank" rel="external">https://github.com/SaschaWillems/Vulkan</a></p>
+<p>运行效果如下</p>
+<p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_example.png" alt="vulkan4"></p>
+<h1 id="0x7-Vulkan-Architecture-on-Windows"><a href="#0x7-Vulkan-Architecture-on-Windows" class="headerlink" title="0x7 Vulkan Architecture on Windows"></a>0x7 Vulkan Architecture on Windows</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_windows.png" alt="vulkan5"></p>
+<p>vulkan-1.dll, The Vulkan loader.</p>
+<p>ig9icd64.dll/igc64.dll/igvk64.dll, Intel vulkan driver.</p>
+<h1 id="0x8-Vulkan-Architecture-on-Android"><a href="#0x8-Vulkan-Architecture-on-Android" class="headerlink" title="0x8 Vulkan Architecture on Android"></a>0x8 Vulkan Architecture on Android</h1><p><img src="/2017/07/01/try-vulkan-on-windows/vulkan_on_android.png" alt="vulkan6"></p>
+<p>libvulkan.so</p>
+<p>Android vulkan HAL library, this library will load IHV’s vulkan library in /system/lib/hw automatically, application will load this library then map vulkan api call to IHV’s vulkan driver library.</p>
+<p>vulkan.xxx.so</p>
+<p>IHV’s vulkan driver library, it supports SPIR-V shader input, and implements vulkan API, will trigger GPU HW to do acutal graphics processing.</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/17/design-rsplayer/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -896,7 +1196,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">24</span>
+                <span class="site-state-item-count">26</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -909,7 +1209,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-count">16</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
