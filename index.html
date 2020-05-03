@@ -254,6 +254,137 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/22/Cycles in Blender/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/02/22/Cycles in Blender/" itemprop="url">Cycles in Blender</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-02-22T19:02:32+09:00">
+                2020-02-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/02/22/Cycles in Blender/" class="leancloud_visitors" data-flag-title="Cycles in Blender">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Blender简介"><a href="#0x1-Blender简介" class="headerlink" title="0x1 Blender简介"></a>0x1 Blender简介</h1><p>   Blender是一款开源的跨平台全能三维动画制作软件，提供从建模、动画、材质、渲染、到音频处理、视频剪辑等一系列动画短片制作解决方案。Blender的代码大体架构如下。<br>   <img src="/2020/02/22/Cycles in Blender/architecture.png" alt=""></p>
+<p>   如图所示，Blender内置了基于物理渲染的光线追踪渲染器Cycles， Cycles除了实现CPU处理以外，还提供了OpenCL和CUDA的GPU加速，可以大幅度提升渲染速度。<br>   Cycles具有如下特点。Pach-Tracer渲染算法，多核CPU加速渲染，CUDA和OpenCL的GPU渲染支持，多GPU支持，CPU与GPU 混合加速渲染内核。</p>
+<p>   除了Cycles以外，Blender从2.8版本开始还提供了EEVEE渲染引擎，EEVEE同样是基于物理渲染的光线追踪渲染器，其目标是提升渲染速度，因为目前Cycles的渲染速度还是比较慢的。<br>   本文会对Blender中Cycles的执行流程做进行分析，后续也会对EEVEE的执行流程做介绍。</p>
+<h1 id="0x2-Cycles中的线程模型"><a href="#0x2-Cycles中的线程模型" class="headerlink" title="0x2 Cycles中的线程模型"></a>0x2 Cycles中的线程模型</h1><p>   Cycles中的线程模型如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/thread_model.png" alt=""><br>   Cycles启动以后会创建Session线程，Session会创建一个线程池，这个线程池中的线程数量是cpu的核数。只要有需要并行处理的任务就push到线程池中的queue中，然后空闲线程从queue中取得需要处理的任务并执行。<br>   上图中左边的线程是Session线程，中间的线程TaskScheduler是线程池中其中一个线程的执行过程，线程池中其他线程的执行流程类似。<br>   上图最右边最上边的框中列出了创建线程池中线程的代码。中间的框列出了线程池中的空闲线程从队列中取出任务的过程。下面的框列出了如何把任务push到线程池的代码，注意这些push操作可以在Session中执行，也可以在线程池中的线程运行过程中执行。</p>
+<h1 id="0x3-创建Session"><a href="#0x3-创建Session" class="headerlink" title="0x3 创建Session"></a>0x3 创建Session</h1><p>   创建Session的流程图如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/start session.svg" alt=""><br>   这个过程主要是构建Scene Graph的过程，Scene Graph的结构体定义如下，其中可以看到需要渲染的数据都保存在这个结构体中，包括Camera，Film，Shader，Mesh，Light，Integrator等。</p>
+<p>   其中的sync_data过程可以理解成把数据从Blender的上层模块设置到Cycles渲染器中。这样Cycles执行光线跟踪的时候就可以用到这些设置。</p>
+<p>   数据设置好了以后就可以开始render过程，这个过程是采用光线跟踪的方式渲染出图像。<br>   这个过程中需要关注的是ShaderManager, ShaderManager管理着ShaderGraph，ShaderGraph管理着Node，并且把多个Node连接起来，组成特定操作的Pipeline.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Scene</span> &#123;</span></div><div class="line"> <span class="keyword">public</span>:</div><div class="line">  <span class="comment">/* Optional name. Is used for logging and reporting. */</span></div><div class="line">  <span class="built_in">string</span> name;</div><div class="line"></div><div class="line">  <span class="comment">/* data */</span></div><div class="line">  Camera *camera;</div><div class="line">  Camera *dicing_camera;</div><div class="line">  LookupTables *lookup_tables;</div><div class="line">  Film *film;</div><div class="line">  Background *background;</div><div class="line">  Integrator *integrator;</div><div class="line"></div><div class="line">  <span class="comment">/* data lists */</span></div><div class="line">  <span class="built_in">vector</span>&lt;Object *&gt; objects;</div><div class="line">  <span class="built_in">vector</span>&lt;Mesh *&gt; meshes;</div><div class="line">  <span class="built_in">vector</span>&lt;Shader *&gt; shaders;</div><div class="line">  <span class="built_in">vector</span>&lt;Light *&gt; lights;</div><div class="line">  <span class="built_in">vector</span>&lt;ParticleSystem *&gt; particle_systems;</div><div class="line"></div><div class="line">  <span class="comment">/* data managers */</span></div><div class="line">  ImageManager *image_manager;</div><div class="line">  LightManager *light_manager;</div><div class="line">  ShaderManager *shader_manager;</div><div class="line">  MeshManager *mesh_manager;</div><div class="line">  ObjectManager *object_manager;</div><div class="line">  ParticleSystemManager *particle_system_manager;</div><div class="line">  CurveSystemManager *curve_system_manager;</div><div class="line">  BakeManager *bake_manager;</div><div class="line"></div><div class="line">  <span class="comment">/* default shaders */</span></div><div class="line">  Shader *default_surface;</div><div class="line">  Shader *default_light;</div><div class="line">  Shader *default_background;</div><div class="line">  Shader *default_empty;</div><div class="line"></div><div class="line">  <span class="comment">/* device */</span></div><div class="line">  Device *device;</div><div class="line">  DeviceScene dscene;</div><div class="line"></div><div class="line">  <span class="comment">/* parameters */</span></div><div class="line">  SceneParams params;</div><div class="line"></div><div class="line">  <span class="comment">/* mutex must be locked manually by callers */</span></div><div class="line">  thread_mutex mutex;</div><div class="line">  ......</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
+<h1 id="0x4-光线跟踪的执行"><a href="#0x4-光线跟踪的执行" class="headerlink" title="0x4 光线跟踪的执行"></a>0x4 光线跟踪的执行</h1><p>   光线跟踪的执行流程如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/path render.svg" alt=""><br>   这个过程是一个典型的光线跟踪渲染过程，先构建BVH结构体用于后续的加速，然后把一幅图像划分成tile的形式进行渲染，每个线程只处理一个tile，当然每一个位置还需要根据设置的sample的数量进行多次处理，最后根据多次处理的结果生成每一个位置对应的最后的像素值。<br>   这里的svm指的是shader virtual machine, svm对shader的执行进行了抽象，把shader中的操作提练成一个个op的形式，通过对op执行的模拟来执行shader，这些op可以理解成是shader的IR(Intermediate Representation).</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/12/The lifecycle of opt_gemm in tvm/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1637,191 +1768,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/" itemprop="url">How vulkan benefit from multithead on cpu</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-08T12:59:57+09:00">
-                2019-02-08
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/" class="leancloud_visitors" data-flag-title="How vulkan benefit from multithead on cpu">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Vulkan-mechansim-for-multithread-cpu"><a href="#0x1-Vulkan-mechansim-for-multithread-cpu" class="headerlink" title="0x1 Vulkan mechansim for multithread cpu"></a>0x1 Vulkan mechansim for multithread cpu</h1><p>Vulkan uses command buffer to record the gpu states, then execute the command buffer. on opengl, we have only one command buffer to record the gpu states, but on vulkan, we can have several command buffers to record gpu states in parallel.</p>
-<p>If the draw task is cpu bounding, which means the loading is cpu heavy, and these tasks can be splitted into several threads to execute in parallel, then we can assign different command buffers to threads, and record the gpu states into these command buffers in parallel, after all threads are ready, we can submit these command buffers to gpu driver, then gpu driver executes it.</p>
-<p>Here is the vulkan command buffer execution models.</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/vulkan_multithread.png" alt="vulkan_multithread"></p>
-<p>Is it possible for every graphics draw pipeline can be benefit from the multithread command buffer mechansim?</p>
-<p>It is case by case.</p>
-<p>If the drawing data preparing task on cpu can’t be splited into several parallel tasks, likes it has dependency each other(one draw has to be drawed before another one), it can’t be benefited from the mulithread command buffer mechansim.</p>
-<p>Otherwise it can benefit from it.</p>
-<h1 id="0x2-Test-case-analysis"><a href="#0x2-Test-case-analysis" class="headerlink" title="0x2 Test case analysis"></a>0x2 Test case analysis</h1><p>We use <a href="https://github.com/SaschaWillems/Vulkan/blob/master/examples/multisampling/multisampling.cpp" target="_blank" rel="external">SaschaWillems’s Vulkan example</a> as the test case to check how vulkan can be benefited from multithread.</p>
-<p>This test generates command buffers in parallel using multithreaded mechansim. these generation command buffers are configured as the vulkan secondary command buffers, they are executed and submitted together with the primary buffer once all threads have finished.</p>
-<p>Here is the sequence about how it works.</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/draw_sequence.png" alt="draw_sequence"></p>
-<p>Let’s discuss the detail sequence of this test case.</p>
-<h2 id="0x21-Prepare"><a href="#0x21-Prepare" class="headerlink" title="0x21 Prepare"></a>0x21 Prepare</h2><p>It prepares the vulkan initialization, load the mesh, create the multithread for command buffer execution.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">VulkanExampleBase::prepare();</div><div class="line"><span class="comment">// Create a fence for synchronization</span></div><div class="line">VkFenceCreateInfo fenceCreateInfo = vks::initializers::fenceCreateInfo(VK_FLAGS_NONE);</div><div class="line">vkCreateFence(device, &amp;fenceCreateInfo, <span class="literal">NULL</span>, &amp;renderFence);</div><div class="line">loadMeshes();</div><div class="line">setupVertexDescriptions();</div><div class="line">setupPipelineLayout();</div><div class="line">preparePipelines();</div><div class="line">prepareMultiThreadedRenderer();</div><div class="line">updateMatrices();</div><div class="line">prepared = <span class="literal">true</span>;</div></pre></td></tr></table></figure>
-<p>Here is the code of VulkanExampleBase::prepare(), it does vulkan initialization.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">createCommandPool();</div><div class="line">setupSwapChain();</div><div class="line">createCommandBuffers();</div><div class="line">setupDepthStencil();</div><div class="line">setupRenderPass();</div><div class="line">createPipelineCache();</div><div class="line">setupFrameBuffer();</div></pre></td></tr></table></figure></p>
-<p>createCommandPool() creates command buffer through vkCreateCommandPool().</p>
-<p>setupSwapChain() creates the swapchain.</p>
-<p>createCommandBuffers() creates one command buffer for each swap chain image and reuse for rendering.</p>
-<p>setupDepthStencil() steups depth and stencil setting.</p>
-<p>setupRenderPass() create render pass through vkCreateRenderPass().</p>
-<p>createPipelineCache() create pipeline cache through vkCreatePipelineCache().</p>
-<p>setupFrameBuffer() creates frame buffers for every swap chain image through vkCreateFramebuffer().</p>
-<h2 id="0x22-Command-buffer-generation"><a href="#0x22-Command-buffer-generation" class="headerlink" title="0x22 Command buffer generation"></a>0x22 Command buffer generation</h2><p>It creates primary/secondary command buffer through vkAllocateCommandBuffers.</p>
-<p>It will create thread data for each thread, the thread’s number depends on its core’s number.</p>
-<p>For each thread, it will create a command pool for it, then create one secondary command buffer, then create command buffers for each objects.</p>
-<p>The buffer number for objcts is numObjectsPerThread, it is the number of animated objects to be rendered per thread, in this test case, the total animated objects is 512, so numObjectsPerThread is 512/numThreads, numThreads is core’s number.</p>
-<p>Then it initializes push constants for each object.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// create a primar command buffer</span></div><div class="line">VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &amp;cmdBufAllocateInfo, &amp;primaryCommandBuffer));</div><div class="line"></div><div class="line"><span class="comment">// create a secondary command buffer for rendering the star sphere</span></div><div class="line">cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;</div><div class="line">VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &amp;cmdBufAllocateInfo, &amp;secondaryCommandBuffer));</div><div class="line">......		</div><div class="line">threadData.resize(numThreads);</div><div class="line">......</div><div class="line"><span class="keyword">for</span> (<span class="keyword">uint32_t</span> i = <span class="number">0</span>; i &lt; numThreads; i++)</div><div class="line">&#123;</div><div class="line">	ThreadData *thread = &amp;threadData[i];</div><div class="line">		</div><div class="line">	<span class="comment">// create one command pool for each thread</span></div><div class="line">	VK_CHECK_RESULT(vkCreateCommandPool(device, &amp;cmdPoolInfo, <span class="literal">nullptr</span>, &amp;thread-&gt;commandPool));</div><div class="line"></div><div class="line">	<span class="comment">// one secondary command buffer per object that is updated by this thread</span></div><div class="line">	thread-&gt;commandBuffer.resize(numObjectsPerThread);</div><div class="line">	<span class="comment">// generate secondary command buffers for each thread</span></div><div class="line">	VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo =</div><div class="line">		vks::initializers::commandBufferAllocateInfo(</div><div class="line">			thread-&gt;commandPool,</div><div class="line">			VK_COMMAND_BUFFER_LEVEL_SECONDARY,</div><div class="line">			thread-&gt;commandBuffer.size());</div><div class="line">	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &amp;secondaryCmdBufAllocateInfo, thread-&gt;commandBuffer.data()));</div><div class="line"></div><div class="line">	thread-&gt;pushConstBlock.resize(numObjectsPerThread);</div><div class="line">	thread-&gt;objectData.resize(numObjectsPerThread);</div><div class="line"></div><div class="line">	<span class="keyword">for</span> (<span class="keyword">uint32_t</span> j = <span class="number">0</span>; j &lt; numObjectsPerThread; j++)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">float</span> theta = <span class="number">2.0f</span> * <span class="keyword">float</span>(M_PI) * uniformDist(rndGenerator);</div><div class="line">		<span class="keyword">float</span> phi = <span class="built_in">acos</span>(<span class="number">1.0f</span> - <span class="number">2.0f</span> * uniformDist(rndGenerator));</div><div class="line">		thread-&gt;objectData[j].pos = glm::vec3(<span class="built_in">sin</span>(phi) * <span class="built_in">cos</span>(theta), <span class="number">0.0f</span>, <span class="built_in">cos</span>(phi)) * <span class="number">35.0f</span>;</div><div class="line"></div><div class="line">		thread-&gt;objectData[j].rotation = glm::vec3(<span class="number">0.0f</span>, rnd(<span class="number">360.0f</span>), <span class="number">0.0f</span>);</div><div class="line">		thread-&gt;objectData[j].deltaT = rnd(<span class="number">1.0f</span>);</div><div class="line">		thread-&gt;objectData[j].rotationDir = (rnd(<span class="number">100.0f</span>) &lt; <span class="number">50.0f</span>) ? <span class="number">1.0f</span> : <span class="number">-1.0f</span>;</div><div class="line">		thread-&gt;objectData[j].rotationSpeed = (<span class="number">2.0f</span> + rnd(<span class="number">4.0f</span>)) * thread-&gt;objectData[j].rotationDir;</div><div class="line">		thread-&gt;objectData[j].scale = <span class="number">0.75f</span> + rnd(<span class="number">0.5f</span>);</div><div class="line"></div><div class="line">		thread-&gt;pushConstBlock[j].color = glm::vec3(rnd(<span class="number">1.0f</span>), rnd(<span class="number">1.0f</span>), rnd(<span class="number">1.0f</span>));</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x23-Draw"><a href="#0x23-Draw" class="headerlink" title="0x23 Draw"></a>0x23 Draw</h2><p>Here is the code about drawing.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">VulkanExampleBase::prepareFrame();</div><div class="line">updateCommandBuffers(frameBuffers[currentBuffer]);</div><div class="line">submitInfo.commandBufferCount = <span class="number">1</span>;</div><div class="line">submitInfo.pCommandBuffers = &amp;primaryCommandBuffer;</div><div class="line"></div><div class="line">VK_CHECK_RESULT(vkQueueSubmit(<span class="built_in">queue</span>, <span class="number">1</span>, &amp;submitInfo, renderFence));</div><div class="line"></div><div class="line"><span class="comment">// wait for fence to signal that all command buffers are ready</span></div><div class="line">VkResult fenceRes;</div><div class="line"><span class="keyword">do</span></div><div class="line">&#123;</div><div class="line">	fenceRes = vkWaitForFences(device, <span class="number">1</span>, &amp;renderFence, VK_TRUE, <span class="number">100000000</span>);</div><div class="line">&#125; <span class="keyword">while</span> (fenceRes == VK_TIMEOUT);</div><div class="line">VK_CHECK_RESULT(fenceRes);</div><div class="line">vkResetFences(device, <span class="number">1</span>, &amp;renderFence);</div><div class="line">VulkanExampleBase::submitFrame();</div></pre></td></tr></table></figure>
-<p>The main update function is updateCommandBuffers().</p>
-<p>It uses a thread pool to generate drawing command in each thread, the thread function is threadRenderCode.</p>
-<p>Firstly, it start to queue command to primary command buffer through vkBeginCommandBuffer().<br>The primary command buffer didn’t contain any rendering commands, the rendering command are stored (and retrieved) from the secondary command buffers.<br>Then it calls vkCmdBeginRenderPass() to start a new RenderPass.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Updates the secondary command buffers using a thread pool </span></div><div class="line"><span class="comment">// and puts them into the primary command buffer that's </span></div><div class="line"><span class="comment">// lat submitted to the queue for rendering</span></div><div class="line">VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();</div><div class="line">......</div><div class="line"><span class="comment">// Set target frame buffer</span></div><div class="line">VK_CHECK_RESULT(vkBeginCommandBuffer(primaryCommandBuffer, &amp;cmdBufInfo));</div><div class="line"></div><div class="line"><span class="comment">// The primary command buffer does not contain any rendering commands</span></div><div class="line"><span class="comment">// These are stored (and retrieved) from the secondary command buffers</span></div><div class="line">vkCmdBeginRenderPass(primaryCommandBuffer, &amp;renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);</div></pre></td></tr></table></figure>
-<p>Once the setup for primary command buffer is ready, it starts to config secondary command buffers.</p>
-<p>The secondary command buffer is for star background sphere rendering.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Inheritance info for the secondary command buffers</span></div><div class="line">VkCommandBufferInheritanceInfo inheritanceInfo = vks::initializers::commandBufferInheritanceInfo();</div><div class="line">inheritanceInfo.renderPass = renderPass;</div><div class="line"><span class="comment">// Secondary command buffer also use the currently active framebuffer</span></div><div class="line">inheritanceInfo.framebuffer = frameBuffer;</div><div class="line"></div><div class="line"><span class="comment">// Contains the list of secondary command buffers to be executed</span></div><div class="line"><span class="built_in">std</span>::<span class="built_in">vector</span>&lt;VkCommandBuffer&gt; commandBuffers;</div><div class="line"></div><div class="line"><span class="comment">// Secondary command buffer with star background sphere</span></div><div class="line">updateSecondaryCommandBuffer(inheritanceInfo);</div><div class="line">commandBuffers.push_back(secondaryCommandBuffer);</div></pre></td></tr></table></figure>
-<p>Now we will see how command buffer generation through multithread.</p>
-<p>Each object is executed in one thread.</p>
-<p>After secondary command buffer is ready, it executes render commands from the secondary command buffer through vkCmdExecuteCommands()</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Add a job to the thread's queue for each object to be rendered</span></div><div class="line"><span class="keyword">for</span> (<span class="keyword">uint32_t</span> t = <span class="number">0</span>; t &lt; numThreads; t++)</div><div class="line">&#123;</div><div class="line">	<span class="keyword">for</span> (<span class="keyword">uint32_t</span> i = <span class="number">0</span>; i &lt; numObjectsPerThread; i++)</div><div class="line">	&#123;</div><div class="line">		threadPool.threads[t]-&gt;addJob([=] &#123; threadRenderCode(t, i, inheritanceInfo); &#125;);</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line">		</div><div class="line">threadPool.wait();</div><div class="line"></div><div class="line"><span class="comment">// Only submit if object is within the current view frustum</span></div><div class="line"><span class="keyword">for</span> (<span class="keyword">uint32_t</span> t = <span class="number">0</span>; t &lt; numThreads; t++)</div><div class="line">&#123;</div><div class="line">	<span class="keyword">for</span> (<span class="keyword">uint32_t</span> i = <span class="number">0</span>; i &lt; numObjectsPerThread; i++)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">if</span> (threadData[t].objectData[i].visible)</div><div class="line">		&#123;</div><div class="line">			commandBuffers.push_back(threadData[t].commandBuffer[i]);</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">// Execute render commands from the secondary command buffer</span></div><div class="line">vkCmdExecuteCommands(primaryCommandBuffer, commandBuffers.size(), commandBuffers.data());</div><div class="line"></div><div class="line">vkCmdEndRenderPass(primaryCommandBuffer);</div><div class="line"></div><div class="line">VK_CHECK_RESULT(vkEndCommandBuffer(primaryCommandBuffer));</div></pre></td></tr></table></figure>
-<h2 id="0x24-Multithread-comand-buffer-generation"><a href="#0x24-Multithread-comand-buffer-generation" class="headerlink" title="0x24 Multithread comand buffer generation"></a>0x24 Multithread comand buffer generation</h2><p>Let’s see how the multithread function threadRenderCode work.</p>
-<p>It builds the secondary command buffer for one object of each thread.</p>
-<p>threadIndex is thread index.<br>cmdBufferIndex is the command buffer index.</p>
-<p>It begin to push command buffer to gpu driver through vkBeginCommandBuffer().</p>
-<p>Then it prepares the data for push constant. </p>
-<p>And push the data to gpu driver through vkCmdPushConstants().</p>
-<p>Then it pass vertex data and index data through vkCmdBindVertexBuffers() and vkCmdDrawIndexed().</p>
-<p>Then it issues draw operation through vkCmdDrawIndexed().</p>
-<p>Then it stops the recording of command buffer through vkEndCommandBuffer().</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Builds the secondary command buffer for each thread</span></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">threadRenderCode</span><span class="params">(<span class="keyword">uint32_t</span> threadIndex, <span class="keyword">uint32_t</span> cmdBufferIndex, VkCommandBufferInheritanceInfo inheritanceInfo)</span></span></div><div class="line">&#123;</div><div class="line">	ThreadData *thread = &amp;threadData[threadIndex];</div><div class="line">	ObjectData *objectData = &amp;thread-&gt;objectData[cmdBufferIndex];</div><div class="line"></div><div class="line">	<span class="comment">// Check visibility against view frustum</span></div><div class="line">	objectData-&gt;visible = frustum.checkSphere(objectData-&gt;pos, objectSphereDim * <span class="number">0.5f</span>); </div><div class="line"></div><div class="line">	<span class="keyword">if</span> (!objectData-&gt;visible)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">return</span>;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	VkCommandBufferBeginInfo commandBufferBeginInfo = vks::initializers::commandBufferBeginInfo();</div><div class="line">	commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;</div><div class="line">	commandBufferBeginInfo.pInheritanceInfo = &amp;inheritanceInfo;</div><div class="line"></div><div class="line">	VkCommandBuffer cmdBuffer = thread-&gt;commandBuffer[cmdBufferIndex];</div><div class="line"></div><div class="line">	VK_CHECK_RESULT(vkBeginCommandBuffer(cmdBuffer, &amp;commandBufferBeginInfo));</div><div class="line"></div><div class="line">	VkViewport viewport = vks::initializers::viewport((<span class="keyword">float</span>)width, (<span class="keyword">float</span>)height, <span class="number">0.0f</span>, <span class="number">1.0f</span>);</div><div class="line">	vkCmdSetViewport(cmdBuffer, <span class="number">0</span>, <span class="number">1</span>, &amp;viewport);</div><div class="line"></div><div class="line">	VkRect2D scissor = vks::initializers::rect2D(width, height, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line">	vkCmdSetScissor(cmdBuffer, <span class="number">0</span>, <span class="number">1</span>, &amp;scissor);</div><div class="line"></div><div class="line">	vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.phong);</div><div class="line"></div><div class="line">	<span class="comment">// Update objectData</span></div><div class="line">	objectData-&gt;rotation.y += <span class="number">2.5f</span> * objectData-&gt;rotationSpeed * frameTimer;</div><div class="line">	......</div><div class="line">	objectData-&gt;model = glm::scale(objectData-&gt;model, glm::vec3(objectData-&gt;scale));</div><div class="line"></div><div class="line">	thread-&gt;pushConstBlock[cmdBufferIndex].mvp = matrices.projection * matrices.view * objectData-&gt;model;</div><div class="line"></div><div class="line">	<span class="comment">// Update shader push constant block</span></div><div class="line">	<span class="comment">// Contains model view matrix</span></div><div class="line">	vkCmdPushConstants(</div><div class="line">		cmdBuffer,</div><div class="line">		pipelineLayout,</div><div class="line">		VK_SHADER_STAGE_VERTEX_BIT,</div><div class="line">		<span class="number">0</span>,</div><div class="line">		<span class="keyword">sizeof</span>(ThreadPushConstantBlock),</div><div class="line">		&amp;thread-&gt;pushConstBlock[cmdBufferIndex]);</div><div class="line"></div><div class="line">	VkDeviceSize offsets[<span class="number">1</span>] = &#123; <span class="number">0</span> &#125;;</div><div class="line">	vkCmdBindVertexBuffers(cmdBuffer, <span class="number">0</span>, <span class="number">1</span>, &amp;models.ufo.vertices.buffer, offsets);</div><div class="line">	vkCmdBindIndexBuffer(cmdBuffer, models.ufo.indices.buffer, <span class="number">0</span>, VK_INDEX_TYPE_UINT32);</div><div class="line">	vkCmdDrawIndexed(cmdBuffer, models.ufo.indexCount, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line"></div><div class="line">	VK_CHECK_RESULT(vkEndCommandBuffer(cmdBuffer));</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h1 id="0x3-Performance-analysis"><a href="#0x3-Performance-analysis" class="headerlink" title="0x3 Performance analysis"></a>0x3 Performance analysis</h1><p>Here we will compare the performance with/without multithread support using vulkan.</p>
-<p>And then check the thread profiling data of them.</p>
-<h2 id="0x31-With-multithread"><a href="#0x31-With-multithread" class="headerlink" title="0x31  With multithread"></a>0x31  With multithread</h2><p>Here is the performance of using vulkan with multithread support(4 threads), the fps is 28.</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/test_result_4cores.png" alt="multithread-4cores"></p>
-<p>Here is the cpu profiling data of it, we can see the cpu loading is balanced to 5 threads, one is main thread, other 4 threads are working thread for generating object for vulkan command buffer, the working thread number 4 is the number of cpu cores.</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/profiling_4cores.png" alt="profiling-4cores"></p>
-<h2 id="0x32-Without-multithread"><a href="#0x32-Without-multithread" class="headerlink" title="0x32  Without multithread"></a>0x32  Without multithread</h2><p>Here is the performance of using vulkan without multithread support(1 thread), the fps is 17.</p>
-<p>We can see the fps gain from 1 thread to 4 threads is 65%(17 -&gt; 28).</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/test_result_1core.png" alt="multithread-1core"></p>
-<p>Here is the cpu profiling data of it, we can see the cpu loading is only bounded to two threads, one is the main thread, another is the working thread.</p>
-<p><img src="/2019/02/08/How-vulkan-benefit-from-multithread-on-cpu/profiling_1core.png" alt="profiling-1core"></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1871,7 +1817,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-count">29</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
