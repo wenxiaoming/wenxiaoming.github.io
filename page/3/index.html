@@ -254,6 +254,139 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/25/douyin-streaming-analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2018/03/25/douyin-streaming-analysis/" itemprop="url">douyin streaming analysis</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-03-25T22:11:03+09:00">
+                2018-03-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2018/03/25/douyin-streaming-analysis/" class="leancloud_visitors" data-flag-title="douyin streaming analysis">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-简介"><a href="#0x1-简介" class="headerlink" title="0x1    简介"></a>0x1    简介</h1><p>抖音是最近火热的短视频app, 本文通过抓包来分析douyin的在线视频播放过程。<br>通过分析，可以知道其播放流程如下，<br><img src="/2018/03/25/douyin-streaming-analysis/architecture.png" alt="architecture"><br>server是指保存用户上传内容(UGC)的服务器，客户端连接到该服务器下载需要播放的内容。</p>
+<p>其它三个模块(downloader, local streamer, local player)都是在客户端实现的, 其中downloader负责把数据从远端server下载下来，并把下载下来的数据送给local streamer进行本地streaming, 然后local player连接到local streamer来得到需要播放的数据进行播放。通过下面的抓包分析可知，downloader是通过http协议来从远端server下载数据，local streamer也是通过提供本地http服务把播放数据提供给local player.</p>
+<p>下面分析android平台上douyin下载数据并播放的过程。</p>
+<h1 id="0x2-下载"><a href="#0x2-下载" class="headerlink" title="0x2  下载"></a>0x2  下载</h1><h2 id="0x21-dns查询服务器的ip地址"><a href="#0x21-dns查询服务器的ip地址" class="headerlink" title="0x21 dns查询服务器的ip地址"></a>0x21 dns查询服务器的ip地址</h2><p>通过dns查询v1-dy.ixiguavideo.com的ip地址，这一步是为后面的http连接服务的。<br>如下图所示，第49号包是发送dns查询请求，第56号包是返回dns查询结果。<br><img src="/2018/03/25/douyin-streaming-analysis/dns.png" alt="dns"></p>
+<p>dns查询结果如下，可以看到对应服务器的ip地址, 其中返回好几个ip地址，下面的http连接采用的是第一个ip地址。<br><img src="/2018/03/25/douyin-streaming-analysis/dns_result.png" alt="dns_result"></p>
+<h2 id="0x22-http连接到服务器并下载数据"><a href="#0x22-http连接到服务器并下载数据" class="headerlink" title="0x22 http连接到服务器并下载数据"></a>0x22 http连接到服务器并下载数据</h2><p>如下所示，通过http连接到服务器。<br>可以看到http url如下, 这个地址是经过加密的，直接在浏览器中去访问是连接不上去的。<br><a href="http://v1-dy.ixiguavideo.com/9980b014844ac5185d899a1af1e41554/5acf7425/video/m/220fea4bc73a1c54023a9819c71b52a9b3e115640520000a8c154141acc/?device_platform=android&amp;device_type=myandroid&amp;version_code=179" target="_blank" rel="external">http://v1-dy.ixiguavideo.com/9980b014844ac5185d899a1af1e41554/5acf7425/video/m/220fea4bc73a1c54023a9819c71b52a9b3e115640520000a8c154141acc/?device_platform=android&amp;device_type=myandroid&amp;version_code=179</a><br><img src="/2018/03/25/douyin-streaming-analysis/connection.png" alt="http_connection"></p>
+<p>然后可以看到客户端不停地从服务器上下载数据。<br><img src="/2018/03/25/douyin-streaming-analysis/download.png" alt="http_download"></p>
+<h1 id="0x3-播放"><a href="#0x3-播放" class="headerlink" title="0x3  播放"></a>0x3  播放</h1><p>下载过程中，启动本地http服务, 播放器通过访问这个http服务来得到播放数据，<br>前面三个包(1130, 1131, 1132)是三次握手的过程。<br>后面的包是发送给播放器的播放数据。<br><img src="/2018/03/25/douyin-streaming-analysis/local_playback.png" alt="http_playback"></p>
+<p>下面是douyin app中的lib，从其中可以看到其播放架构是基于ffmpeg实现的。通过分析可知，这里面有好几个库都包括了ffmpeg的代码，感觉模块之间划分不是很清楚，代码有冗余。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">libaudiocore.so             libdaemon.so          libijkffmpeg.so      libst_mobile.so     libttnativecrash.so</div><div class="line">libaudiofp.so               libdys.so             libijkplayer.so      libstatic-webp.so   libttvideouploader.so</div><div class="line">libbdEASRAndroid.v1<span class="number">.5</span><span class="number">.6</span>.so  libeffect.so          libijksdl.so         libsupervisor.so    libuserinfo.so</div><div class="line">libbspatch.so               libffmpeg.so          libimagepipeline.so  libtnet<span class="number">-3.1</span><span class="number">.11</span>.so   libweibosdkcore.so</div><div class="line">libBugly.so                 libffmpeg-invoker.so  liblivestream.so     libtongdun.so       libyuv.so</div><div class="line">libcocklogic<span class="number">-1.1</span><span class="number">.3</span>.so       libffmpeg-main.so     libmain.so           libttEncrypt.so</div><div class="line">libcrashlytics.so           libgif.so             libNailSLAM_jni.so   libttmplayer.so</div><div class="line">libcrashlytics-envelope.so  libgifimage.so        libSDL2.so           libttmplayer_mc.so</div></pre></td></tr></table></figure>
+<p>其中libeffect.so实现了对用户拍摄好的视频内容进行编辑，加特效等工作，如下所示，其中包括了CV相关的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">00493</span>ecd T cvGetImage</div><div class="line"><span class="number">00494511</span> T cvGetImageCOI</div><div class="line"><span class="number">0049439</span>d T cvGetImageROI</div><div class="line"><span class="number">00491261</span> T cvGetMat</div><div class="line"><span class="number">0048f</span>e41 T cvGetND</div><div class="line"><span class="number">0053</span>d33d T cvGetNumThreads</div><div class="line"><span class="number">004b</span>a981 T cvGetOptimalDFTSize</div><div class="line"><span class="number">0041f</span>609 T cvGetPerspectiveTransform</div><div class="line"><span class="number">0048f</span>4f5 T cvGetRawData</div><div class="line"><span class="number">0048f</span>ea1 T cvGetReal1D</div><div class="line"><span class="number">004900</span>d9 T cvGetReal2D</div><div class="line"><span class="number">00545685</span> T cvGetRootFileNode</div><div class="line"><span class="number">00490321</span> T cvGetReal3D</div></pre></td></tr></table></figure></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/03/19/analysis-of-ijkplayer/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1614,7 +1747,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-count">30</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1627,7 +1760,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">17</span>
+                <span class="site-state-item-count">18</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
