@@ -254,6 +254,159 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/09/Synchronization-in-Vulkan/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/09/Synchronization-in-Vulkan/" itemprop="url">Synchronization-in-Vulkan</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-09T17:00:10+09:00">
+                2019-03-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/09/Synchronization-in-Vulkan/" class="leancloud_visitors" data-flag-title="Synchronization-in-Vulkan">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Overview"><a href="#0x1-Overview" class="headerlink" title="0x1 Overview"></a>0x1 Overview</h1><p>Vulkan的一大优势是能通过多线程来提升CPU bounding场景的performance，这依赖于其提供了下面几种同步机制。</p>
+<p>Semaphores，用于多个queue之间的同步或者是一个queue的任务提交同步。<br>Events，用于一个command buffer内部的同步或在同一个queue内部多个command buffer的同步。<br>Fences，用于提供devive和host之间的同步。<br>barriers，用于精确控制pipeline中各个pipeline阶段的资源流动。<br>下图说明了这几种同步机制适用的场景。</p>
+<p><img src="/2019/03/09/Synchronization-in-Vulkan/sync_types.png" alt=""></p>
+<h1 id="0x2-Details"><a href="#0x2-Details" class="headerlink" title="0x2 Details"></a>0x2 Details</h1><h2 id="0x21-Pipeline-Barrier"><a href="#0x21-Pipeline-Barrier" class="headerlink" title="0x21 Pipeline Barrier"></a>0x21 Pipeline Barrier</h2><p>Barrier是一种同步机制，用来管理内存访问和同步Vulkan pipeline中各个阶段里的资源状态变化。通过这种机制来fine-grained控制command buffer执行过程中资源在pipeline的各个阶段中的流动。</p>
+<p>Vulkan通过API vkCmdPipelineBarrier()来控制三种barrier操作，Memory barrier, Buffer Memory barrier和Image Memory barrier。</p>
+<p>其中Memory barrier, Buffer Memory barrier会控制资源在pipeline各个阶段的执行次序。其作用有两个，<br>一个作用是控制执行顺序，对写后读(WaR)，读后写(RaW)，写后写(WaW)三种情况提供保护。另外一个作用是保证pipeline不同部分中数据的视图的一致性，因为pipeline不同stage之间可能有cache，在插入了barrier的地方需要flush cache。<br>Image Memory barrier的作用是控制对图像的访问。</p>
+<p>三种barrier的数据结构如下所示<br><img src="/2019/03/09/Synchronization-in-Vulkan/pipelinebarrier.png" alt=""></p>
+<p>Vulkan的pipeline包括下面这几种,Command的执行从top开始，然后执行类似VS，FS之类的pipeline，最后是bottom。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">TOP_OF_PIPE_BIT</div><div class="line">DRAW_INDIRECT_BIT</div><div class="line">VERTEX_INPUT_BIT</div><div class="line">VERTEX_SHADER_BIT</div><div class="line">TESSELLATION_CONTROL_SHADER_BIT</div><div class="line">TESSELLATION_EVALUATION_SHADER_BIT</div><div class="line">GEOMETRY_SHADER_BIT</div><div class="line">FRAGMENT_SHADER_BIT</div><div class="line">EARLY_FRAGMENT_TESTS_BIT</div><div class="line">LATE_FRAGMENT_TESTS_BIT</div><div class="line">COLOR_ATTACHMENT_OUTPUT_BIT</div><div class="line">TRANSFER_BIT</div><div class="line">COMPUTE_SHADER_BIT</div><div class="line">BOTTOM_OF_PIPE_BIT</div></pre></td></tr></table></figure>
+<p>但是如何设置vkCmdPipelineBarrier中source stage和dest stage呢？ </p>
+<p>最简单的方式是把source stage设置为VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT，dest stage设置为VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT。<br>这种设置会等待前面command buffer的所有pipeline都执行结束了，后面command buffer才能开始，很明显这种设置多个command buffer没有并行执行，command buffer之间只是串行的，performance应该会受到影响。</p>
+<p><img src="/2019/03/09/Synchronization-in-Vulkan/slow-barrier.png" alt=""></p>
+<p>如果希望能在多个command buffer之间并行执行，需要根据实际情况设置source stage和dest stage。</p>
+<p>假如vertex shader后面接了一个compute shader, compute shader执行的时候需要读取vertex shader的执行结果，<br>我们可以把source stage设置为VK_PIPELINE_STAGE_VERTEX_SHADER_BIT，dest stage设置为VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT。<br>更详细的介绍，请参考后面的代码说明。</p>
+<p>原则上source stage和dest stage的设置应该尽量使下图中的ubblocked pipeline(green stages)尽可能地多，这样并行度会越高。</p>
+<p><img src="/2019/03/09/Synchronization-in-Vulkan/good-barrier.png" alt=""></p>
+<p>Memory barrier示例代码</p>
+<p>根据需要，创建两个queue(graphics queue和compute queue)和对应的command buffer.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">// 创建graphics queue和command pool</span></div><div class="line">vkGetDeviceQueue(device, vulkanDevice-&gt;queueFamilyIndices.graphics, <span class="number">0</span>, &amp;<span class="built_in">queue</span>);</div><div class="line"></div><div class="line">VkCommandPoolCreateInfo cmdPoolInfo = &#123;&#125;;</div><div class="line">cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;</div><div class="line">cmdPoolInfo.queueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.graphics;</div><div class="line">cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;</div><div class="line">VK_CHECK_RESULT(vkCreateCommandPool(device, &amp;cmdPoolInfo, <span class="literal">nullptr</span>, &amp;cmdPool));</div><div class="line"></div><div class="line"><span class="comment">// 创建compute queue和command pool</span></div><div class="line">vkGetDeviceQueue(device, vulkanDevice-&gt;queueFamilyIndices.compute, <span class="number">0</span>, &amp;compute.<span class="built_in">queue</span>);</div><div class="line">VkCommandPoolCreateInfo cmdPoolInfo = &#123;&#125;;</div><div class="line">cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;</div><div class="line">cmdPoolInfo.queueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.compute;</div><div class="line">cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;</div><div class="line">VK_CHECK_RESULT(vkCreateCommandPool(device, &amp;cmdPoolInfo, <span class="literal">nullptr</span>, &amp;compute.commandPool));</div></pre></td></tr></table></figure></p>
+<p>下面的代码说明了如何在这两个command buffer执行的过程中插入barrier, 从而实现资源访问的控制。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">buildComputeCommandBuffer</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">	VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();</div><div class="line"></div><div class="line">	VK_CHECK_RESULT(vkBeginCommandBuffer(compute.commandBuffer, &amp;cmdBufInfo));</div><div class="line"></div><div class="line">	<span class="comment">// Compute particle movement</span></div><div class="line"></div><div class="line">	<span class="comment">// Add memory barrier to ensure that the (graphics) vertex shader has fetched attributes before compute starts to write to the buffer</span></div><div class="line">	VkBufferMemoryBarrier bufferBarrier = vks::initializers::bufferMemoryBarrier();</div><div class="line">	bufferBarrier.buffer = compute.storageBuffer.buffer;</div><div class="line">	bufferBarrier.size = compute.storageBuffer.descriptor.range;</div><div class="line">	bufferBarrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;	<span class="comment">// Vertex shader invocations have finished reading from the buffer</span></div><div class="line">	bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT; <span class="comment">// Compute shader wants to write to the buffer</span></div><div class="line">	<span class="comment">// Compute and graphics queue may have different queue families (see VulkanDevice::createLogicalDevice)</span></div><div class="line">	<span class="comment">// For the barrier to work across different queues, we need to set their family indices</span></div><div class="line">	bufferBarrier.srcQueueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.graphics; <span class="comment">// Required as compute and graphics queue may have different families</span></div><div class="line">	bufferBarrier.dstQueueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.compute; <span class="comment">// Required as compute and graphics queue may have different families</span></div><div class="line"></div><div class="line">	vkCmdPipelineBarrier(</div><div class="line">		compute.commandBuffer,</div><div class="line">		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,</div><div class="line">		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,</div><div class="line">		VK_FLAGS_NONE,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>,</div><div class="line">		<span class="number">1</span>, &amp;bufferBarrier,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>);</div><div class="line"></div><div class="line">	vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipeline);</div><div class="line">	vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelineLayout, <span class="number">0</span>, <span class="number">1</span>, &amp;compute.descriptorSet, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line"></div><div class="line">	<span class="comment">// Dispatch the compute job</span></div><div class="line">	vkCmdDispatch(compute.commandBuffer, PARTICLE_COUNT / <span class="number">256</span>, <span class="number">1</span>, <span class="number">1</span>);</div><div class="line"></div><div class="line">	<span class="comment">// Add memory barrier to ensure that compute shader has finished writing to the buffer</span></div><div class="line">	<span class="comment">// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame) </span></div><div class="line">	bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;  <span class="comment">// Compute shader has finished writes to the buffer</span></div><div class="line">	bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;	<span class="comment">// Vertex shader invocations want to read from the buffer</span></div><div class="line">	bufferBarrier.buffer = compute.storageBuffer.buffer;</div><div class="line">	bufferBarrier.size = compute.storageBuffer.descriptor.range;</div><div class="line">	<span class="comment">// Compute and graphics queue may have different queue families (see VulkanDevice::createLogicalDevice)</span></div><div class="line">	<span class="comment">// For the barrier to work across different queues, we need to set their family indices</span></div><div class="line">	bufferBarrier.srcQueueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.compute;	<span class="comment">// Required as compute and graphics queue may have different families</span></div><div class="line">	bufferBarrier.dstQueueFamilyIndex = vulkanDevice-&gt;queueFamilyIndices.graphics;	<span class="comment">// Required as compute and graphics queue may have different families</span></div><div class="line"></div><div class="line">	vkCmdPipelineBarrier(</div><div class="line">		compute.commandBuffer,</div><div class="line">		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,</div><div class="line">		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,</div><div class="line">		VK_FLAGS_NONE,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>,</div><div class="line">		<span class="number">1</span>, &amp;bufferBarrier,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>);</div><div class="line"></div><div class="line">	vkEndCommandBuffer(compute.commandBuffer);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>Image barrier示例代码如下</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> (<span class="keyword">int32_t</span> i = <span class="number">0</span>; i &lt; drawCmdBuffers.size(); ++i)</div><div class="line">&#123;</div><div class="line">	<span class="comment">// Set target frame buffer</span></div><div class="line">	renderPassBeginInfo.framebuffer = frameBuffers[i];</div><div class="line"></div><div class="line">	VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &amp;cmdBufInfo));</div><div class="line"></div><div class="line">	<span class="comment">// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture</span></div><div class="line">	VkImageMemoryBarrier imageMemoryBarrier = &#123;&#125;;</div><div class="line">	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;</div><div class="line">	<span class="comment">// We won't be changing the layout of the image</span></div><div class="line">	imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;</div><div class="line">	imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;</div><div class="line">	imageMemoryBarrier.image = textureComputeTarget.image;</div><div class="line">	imageMemoryBarrier.subresourceRange = &#123; VK_IMAGE_ASPECT_COLOR_BIT, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">1</span> &#125;;</div><div class="line">	imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;</div><div class="line">	imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;</div><div class="line">	vkCmdPipelineBarrier(</div><div class="line">		drawCmdBuffers[i],</div><div class="line">		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,</div><div class="line">		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,</div><div class="line">		VK_FLAGS_NONE,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>,</div><div class="line">		<span class="number">0</span>, <span class="literal">nullptr</span>,</div><div class="line">		<span class="number">1</span>, &amp;imageMemoryBarrier);</div><div class="line">	vkCmdBeginRenderPass(drawCmdBuffers[i], &amp;renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);</div><div class="line"></div><div class="line">	VkViewport viewport = vks::initializers::viewport((<span class="keyword">float</span>)width * <span class="number">0.5f</span>, (<span class="keyword">float</span>)height, <span class="number">0.0f</span>, <span class="number">1.0f</span>);</div><div class="line">	vkCmdSetViewport(drawCmdBuffers[i], <span class="number">0</span>, <span class="number">1</span>, &amp;viewport);</div><div class="line"></div><div class="line">	VkRect2D scissor = vks::initializers::rect2D(width, height, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line">	vkCmdSetScissor(drawCmdBuffers[i], <span class="number">0</span>, <span class="number">1</span>, &amp;scissor);</div><div class="line"></div><div class="line">	VkDeviceSize offsets[<span class="number">1</span>] = &#123; <span class="number">0</span> &#125;;</div><div class="line">	vkCmdBindVertexBuffers(drawCmdBuffers[i], VERTEX_BUFFER_BIND_ID, <span class="number">1</span>, &amp;vertexBuffer.buffer, offsets);</div><div class="line">	vkCmdBindIndexBuffer(drawCmdBuffers[i], indexBuffer.buffer, <span class="number">0</span>, VK_INDEX_TYPE_UINT32);</div><div class="line"></div><div class="line">	<span class="comment">// Left (pre compute)</span></div><div class="line">	vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics.pipelineLayout, <span class="number">0</span>, <span class="number">1</span>, &amp;graphics.descriptorSetPreCompute, <span class="number">0</span>, <span class="literal">NULL</span>);</div><div class="line">	vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics.pipeline);</div><div class="line"></div><div class="line">	vkCmdDrawIndexed(drawCmdBuffers[i], indexCount, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line"></div><div class="line">	<span class="comment">// Right (post compute)</span></div><div class="line">	vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics.pipelineLayout, <span class="number">0</span>, <span class="number">1</span>, &amp;graphics.descriptorSetPostCompute, <span class="number">0</span>, <span class="literal">NULL</span>);</div><div class="line">	vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics.pipeline);</div><div class="line"></div><div class="line">	viewport.x = (<span class="keyword">float</span>)width / <span class="number">2.0f</span>;</div><div class="line">	vkCmdSetViewport(drawCmdBuffers[i], <span class="number">0</span>, <span class="number">1</span>, &amp;viewport);</div><div class="line">	vkCmdDrawIndexed(drawCmdBuffers[i], indexCount, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line"></div><div class="line">	vkCmdEndRenderPass(drawCmdBuffers[i]);</div><div class="line"></div><div class="line">	VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x22-Semaphore-Event-Fence"><a href="#0x22-Semaphore-Event-Fence" class="headerlink" title="0x22 Semaphore/Event/Fence"></a>0x22 Semaphore/Event/Fence</h2><p>下面说明并行渲染多帧时采用的同步机制。</p>
+<p><img src="/2019/03/09/Synchronization-in-Vulkan/frame_sync.png" alt=""></p>
+<p>如上图所示，当swap chain中的image可用时，vkAcquireNextImageKHR会触发一个semaphore a，vkQueueSubmit拿到这个semaphore b以后开始执行command buffer的命令，执行command buffer的过程中会往vkAcquireNextImageKHR得到的image(这个image类似于frame buffer的概念)中写内容，执行完毕以后会触发semaphore b, vkQueuePresentKHR等待这个semaphore b触发以后就把image的内容绘制到display上。<br>当第N frame在Submit任务到GPU上执行的时候， (N+1)frame同时在CPU上开启多线程往多个command buffer中生成command，这样CPU和GPU相互配合，提升performance。</p>
+<p>下面说明渲染一帧时内部采用的同步机制。<br><img src="/2019/03/09/Synchronization-in-Vulkan/sync-example.png" alt=""></p>
+<p>上图中第一个vkQueueSubmit的参数如下<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">submitInfo.waitSemaphoreCount = <span class="number">1</span>;</div><div class="line">   <span class="comment">// 执行vkQueueSubmit的wait semaphore，等待其触发，其已经在vkAcquireNextImageKHR中触发</span></div><div class="line">submitInfo.pWaitSemaphores = &amp;semaphores.presentComplete;</div><div class="line">submitInfo.signalSemaphoreCount = <span class="number">1</span>;</div><div class="line">   <span class="comment">// vkQueueSubmit执行完以后的signal semaphore</span></div><div class="line">submitInfo.pSignalSemaphores = &amp;semaphores.renderComplete;</div><div class="line">submitInfo.commandBufferCount = <span class="number">1</span>;</div><div class="line">submitInfo.pCommandBuffers = &amp;primaryCommandBuffer;</div><div class="line"></div><div class="line">VK_CHECK_RESULT(vkQueueSubmit(<span class="built_in">queue</span>, <span class="number">1</span>, &amp;submitInfo, renderFence));</div></pre></td></tr></table></figure></p>
+<p>然后执行vKQueuePresentKHR，这边的wait semaphore是前面一步的renderComplete, 表明只有renderComplete被触发以后vKQueuePresentKHR才能被执行。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">VK_CHECK_RESULT(swapChain.queuePresent(<span class="built_in">queue</span>, currentBuffer, submitTextOverlay ? semaphores.textOverlayComplete : semaphores.renderComplete));</div></pre></td></tr></table></figure></p>
+<p>上面虚线部分表明在执行vKQueuePresentKHR之间，还有一个text overlay command buffer需要执行。<br>这个command buffer的wait semaphore为renderComplete。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Set semaphores</span></div><div class="line"><span class="comment">// Wait for render complete semaphore</span></div><div class="line">submitInfo.waitSemaphoreCount = <span class="number">1</span>;</div><div class="line">submitInfo.pWaitSemaphores = &amp;semaphores.renderComplete;</div><div class="line"><span class="comment">// Signal ready with text overlay complete semaphpre</span></div><div class="line">submitInfo.signalSemaphoreCount = <span class="number">1</span>;</div><div class="line">submitInfo.pSignalSemaphores = &amp;semaphores.textOverlayComplete;</div><div class="line"></div><div class="line"><span class="comment">// Submit current text overlay command buffer</span></div><div class="line">submitInfo.commandBufferCount = <span class="number">1</span>;</div><div class="line">submitInfo.pCommandBuffers = &amp;textOverlay-&gt;cmdBuffers[currentBuffer];</div><div class="line">VK_CHECK_RESULT(vkQueueSubmit(<span class="built_in">queue</span>, <span class="number">1</span>, &amp;submitInfo, VK_NULL_HANDLE));</div></pre></td></tr></table></figure>
+<h1 id="0x3-References"><a href="#0x3-References" class="headerlink" title="0x3 References"></a>0x3 References</h1><p><a href="https://gpuopen.com/vulkan-barriers-explained/" target="_blank" rel="external">Vulkan barriers explained</a><br><a href="https://community.arm.com/developer/tools-software/graphics/b/blog/posts/multi-threading-in-vulkan" target="_blank" rel="external">Multi-Threading in Vulkan</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/02/The-overview-of-AV1-coding/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1627,141 +1780,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/15/Implement-yuv2rgb-gpu-filter/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/04/15/Implement-yuv2rgb-gpu-filter/" itemprop="url">Implement yuv2rgb gpu filter</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-15T21:02:13+09:00">
-                2018-04-15
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2018/04/15/Implement-yuv2rgb-gpu-filter/" class="leancloud_visitors" data-flag-title="Implement yuv2rgb gpu filter">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1     Introduction"></a>0x1     Introduction</h1><p>本文我们将在GPU上实现yuv420p到rgb的转换，转换代码采用opengl es glsl实现。该转换代码在GPU上运行，为了更好地展示这个实现过程和体现转换效果，我们在Android平台上实现一个app应用。<br>详细代码请参考 <a href="https://github.com/wenxiaoming/YUVRender" target="_blank" rel="external">YUVRender</a></p>
-<p>YUV2RGB转换的算法原理如下，其中Y/U/V是从yuv420p数据中读取的三个分量。<br>    B=1.164(Y−16)+2.018(U−128)<br>    G=1.164(Y−16)−0.813(V−128)−0.391(U−128)<br>    R=1.164(Y−16)+1.596(V−128)</p>
-<h1 id="0x2-Shader代码"><a href="#0x2-Shader代码" class="headerlink" title="0x2     Shader代码"></a>0x2     Shader代码</h1><h2 id="0x21-vertex-shader代码"><a href="#0x21-vertex-shader代码" class="headerlink" title="0x21 vertex shader代码"></a>0x21 vertex shader代码</h2><p>vertex shader代码首先输入顶点坐标和纹理坐标。<br>输出变量gl_Position用于在计算顶点位置以后将其写入裁剪坐标。<br>输出变量vtexcoord是输入给fragment shader作为纹理坐标的。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">precision mediump <span class="keyword">float</span>;</div><div class="line">varying   mediump vec2 vtexcoord;</div><div class="line">attribute mediump vec4 position;</div><div class="line">attribute mediump vec2 texcoord;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">	gl_Position  = position;</div><div class="line">	vtexcoord = texcoord;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x22-fragment-shader代码"><a href="#0x22-fragment-shader代码" class="headerlink" title="0x22 fragment shader代码"></a>0x22 fragment shader代码</h2><p>fragment shader代码首先输入texture坐标, 该坐标首先经过了vertex shader处理，<br>然后又经过了Primitive Assembly阶段的clip和插值处理。<br>然后输入三个sampler2D，这三个sampler2D分别对应yuv420p的Y/U/V数据，通过texture2D这个内置的纹理访问函数，我们可以读取对应纹理坐标下的Y/U/V数据。<br>接下面的代码就是执行YUV到RGB的转换矩阵了，具体的矩阵可以参考前面的介绍。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">precision mediump <span class="keyword">float</span>;</div><div class="line">varying   mediump vec2 vtexcoord;</div><div class="line">uniform   lowp  sampler2D samplerY;</div><div class="line">uniform   lowp  sampler2D samplerU;</div><div class="line">uniform   lowp  sampler2D samplerV;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    mediump <span class="keyword">float</span> y;</div><div class="line">    mediump <span class="keyword">float</span> u;</div><div class="line">    mediump <span class="keyword">float</span> v;</div><div class="line">    lowp  vec3 rgb;</div><div class="line">    mat3 convmatrix = mat3(vec3(<span class="number">1.164</span>,  <span class="number">1.164</span>, <span class="number">1.164</span>),</div><div class="line">                           vec3(<span class="number">0.0</span>,   <span class="number">-0.392</span>, <span class="number">2.017</span>),</div><div class="line">                           vec3(<span class="number">1.596</span>, <span class="number">-0.813</span>, <span class="number">0.0</span>));</div><div class="line"></div><div class="line">    y = (texture2D(samplerY, vtexcoord).r - (<span class="number">16.0</span> / <span class="number">255.0</span>));</div><div class="line">    u = (texture2D(samplerU, vtexcoord).r - (<span class="number">128.0</span> / <span class="number">255.0</span>));</div><div class="line">    v = (texture2D(samplerV, vtexcoord).r - (<span class="number">128.0</span> / <span class="number">255.0</span>));</div><div class="line"></div><div class="line">    rgb = convmatrix * vec3(y, u, v);</div><div class="line">    gl_FragColor = vec4(rgb, <span class="number">1.0</span>);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h1 id="0x3-具体实现"><a href="#0x3-具体实现" class="headerlink" title="0x3     具体实现"></a>0x3     具体实现</h1><h2 id="0x31-texture的创建"><a href="#0x31-texture的创建" class="headerlink" title="0x31 texture的创建"></a>0x31 texture的创建</h2><p>为了让GPU能读取到YUV的数据，需要创建3个texture, 这三个texture分别存放Y/U/V分量。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">GLES20.glGenTextures(<span class="number">3</span>, mTexture, <span class="number">0</span>);</div><div class="line"></div><div class="line"><span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">3</span>; i++)</div><div class="line">&#123;</div><div class="line">    GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + i);</div><div class="line">    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[i]);</div><div class="line">    GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);</div><div class="line">    GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);</div><div class="line">    GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);</div><div class="line">    GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x32-yuv420p数据的读取"><a href="#0x32-yuv420p数据的读取" class="headerlink" title="0x32 yuv420p数据的读取"></a>0x32 yuv420p数据的读取</h2><p>我们读取的yuv420p数据是foreman.qcif，分辨率是qcif(176x144), 从数据布局来看，首先是176x144大小的Y分量，然后是88x72大小的U分量, 最后是88x72大小的V分量。下面是读取YUV数据的详细代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">getYuvData</span><span class="params">(String fileName)</span></span></div><div class="line">&#123;</div><div class="line">    String res=<span class="string">""</span>;</div><div class="line">    <span class="keyword">try</span>&#123;</div><div class="line">        InputStream in = getResources().getAssets().open(fileName);</div><div class="line"></div><div class="line">        <span class="keyword">int</span> length = in.available();</div><div class="line">        byte [] buffer = <span class="keyword">new</span> byte[length];</div><div class="line"></div><div class="line">        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);</div><div class="line">        mYuvBuffer = byteBuffer;</div><div class="line"></div><div class="line">        in.read(buffer);</div><div class="line">        in.close();</div><div class="line"></div><div class="line">        mYuvBuffer.put(buffer);</div><div class="line">        mYuvBuffer.position(<span class="number">0</span>);</div><div class="line"></div><div class="line">        mBufferU = ByteBuffer.allocateDirect(<span class="number">88</span>*<span class="number">72</span>);</div><div class="line">        mBufferV = ByteBuffer.allocateDirect(<span class="number">88</span>*<span class="number">72</span>);</div><div class="line"></div><div class="line">        mBufferU.put(buffer,<span class="number">176</span>*<span class="number">144</span>,<span class="number">88</span>*<span class="number">72</span>);</div><div class="line">        mBufferU.position(<span class="number">0</span>);</div><div class="line"></div><div class="line">        mBufferV.put(buffer,<span class="number">176</span>*<span class="number">144</span>+<span class="number">88</span>*<span class="number">72</span>,<span class="number">88</span>*<span class="number">72</span>);</div><div class="line">        mBufferV.position(<span class="number">0</span>);</div><div class="line">    &#125;<span class="keyword">catch</span>(Exception e)&#123;</div><div class="line">        e.printStackTrace();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x33-texture的更新"><a href="#0x33-texture的更新" class="headerlink" title="0x33 texture的更新"></a>0x33 texture的更新</h2><p>YUV数据保持在pixels数组中，通过调用glTexImage2D把YUV数据输入到GPU driver中。<br>因为需要给YUV的三个texture分别输入，所以需要循环3次。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">int</span>[] planes    = &#123; <span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span> &#125;;</div><div class="line"><span class="keyword">int</span>[] widths    = &#123; width, width/<span class="number">2</span>, width/<span class="number">2</span> &#125;;</div><div class="line"><span class="keyword">int</span>[] heights  = &#123; height, height/<span class="number">2</span>, height/<span class="number">2</span> &#125;;</div><div class="line"></div><div class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">3</span>; ++i)</div><div class="line">&#123;</div><div class="line">    <span class="keyword">int</span> plane = planes[i];</div><div class="line">    GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + i);</div><div class="line"></div><div class="line">    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[i]);</div><div class="line">    ShaderManager.checkGlError(<span class="string">"glBindTexture"</span>);</div><div class="line"></div><div class="line">    <span class="keyword">if</span>(pixels[plane] == null)</div><div class="line">        Log.e(<span class="string">"YUV2RGBFilter"</span>, <span class="string">"pixels[plane] == null"</span>);</div><div class="line"></div><div class="line">    GLES20.glTexImage2D(</div><div class="line">            GLES20.GL_TEXTURE_2D,</div><div class="line">            <span class="number">0</span>,</div><div class="line">            GLES20.GL_LUMINANCE,</div><div class="line">            widths[plane],</div><div class="line">            heights[plane],</div><div class="line">            <span class="number">0</span>,</div><div class="line">            GLES20.GL_LUMINANCE,</div><div class="line">            GLES20.GL_UNSIGNED_BYTE,</div><div class="line">            pixels[plane]);</div><div class="line"></div><div class="line">    ShaderManager.checkGlError(<span class="string">"glTexImage2D"</span>);</div><div class="line"></div><div class="line">    GLES20.glUniform1i(mTextureHandle[i], i);</div><div class="line"></div><div class="line">    ShaderManager.checkGlError(<span class="string">"glUniform1i"</span>);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x34-更新其他参数"><a href="#0x34-更新其他参数" class="headerlink" title="0x34 更新其他参数"></a>0x34 更新其他参数</h2><p>下面的代码是把顶点坐标和纹理坐标输入给GPU driver。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">GLES20.glVertexAttribPointer(mPositionHandle, <span class="number">3</span>, GLES20.GL_FLOAT,</div><div class="line">        <span class="literal">false</span>, <span class="number">0</span>, mVertexBuffer);</div><div class="line">ShaderManager.checkGlError(<span class="string">"glVertexAttribPointer"</span>);</div><div class="line"></div><div class="line">GLES20.glEnableVertexAttribArray(mPositionHandle);</div><div class="line"></div><div class="line">ShaderManager.checkGlError(<span class="string">"glEnableVertexAttribArray"</span>);</div><div class="line"></div><div class="line">GLES20.glVertexAttribPointer(mTexCoordHandle, <span class="number">2</span>, GLES20.GL_FLOAT,</div><div class="line">        <span class="literal">false</span>, <span class="number">0</span>, mTexCoorBuffer);</div><div class="line">ShaderManager.checkGlError(<span class="string">"glVertexAttribPointer"</span>);</div><div class="line"></div><div class="line">GLES20.glEnableVertexAttribArray(mTexCoordHandle);</div></pre></td></tr></table></figure></p>
-<h1 id="0x4-调试中碰到的问题"><a href="#0x4-调试中碰到的问题" class="headerlink" title="0x4 调试中碰到的问题"></a>0x4 调试中碰到的问题</h1><p>代码写好以后，一运行，不能出来正确的图像，一直是绿屏。下面介绍一下解决绿屏的过程。<br>首先检查api调用是否正确，通过启用swiftshader，我们可以打印出所有的opengl es api调用log, 检查该app调用的opengl es api，没有发现问题。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.439</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: ClearColor external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">710</span> ((GLclampf red = <span class="number">1.000000</span>, GLclampf green = <span class="number">0.000000</span>, GLclampf blue = <span class="number">1.000000</span>, GLclampf alpha = <span class="number">1.000000</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.439</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: Clear external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">692</span> ((GLbitfield mask = <span class="number">4100</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.451</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: UseProgram external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">5925</span> ((GLuint program = <span class="number">3</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.451</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: BindTexture external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">354</span> ((GLenum target = <span class="number">0xDE1</span>, GLuint texture = <span class="number">1</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: Uniform1iv external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">5545</span> ((GLint location = <span class="number">0</span>, GLsizei count = <span class="number">1</span>, <span class="keyword">const</span> GLint* v = <span class="number">0x7b00d3a1621c</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: BindTexture external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">354</span> ((GLenum target = <span class="number">0xDE1</span>, GLuint texture = <span class="number">2</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: Uniform1iv external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">5545</span> ((GLint location = <span class="number">1</span>, GLsizei count = <span class="number">1</span>, <span class="keyword">const</span> GLint* v = <span class="number">0x7b00d3a1621c</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: BindTexture external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">354</span> ((GLenum target = <span class="number">0xDE1</span>, GLuint texture = <span class="number">3</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: Uniform1iv external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">5545</span> ((GLint location = <span class="number">2</span>, GLsizei count = <span class="number">1</span>, <span class="keyword">const</span> GLint* v = <span class="number">0x7b00d3a1621c</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: VertexAttribPointer external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">6127</span> ((GLuint index = <span class="number">0</span>, GLint size = <span class="number">3</span>, GLenum type = <span class="number">0x1406</span>, GLboolean normalized = <span class="number">0</span>, GLsizei stride = <span class="number">0</span>, <span class="keyword">const</span> GLvoid* ptr = <span class="number">0x740e1d10</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">3300</span>  <span class="number">3300</span> E libGLESv2_swiftshader: BindTexture external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">354</span> ((GLenum target = <span class="number">0x8D65</span>, GLuint texture = <span class="number">4</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">3300</span>  <span class="number">3300</span> E libGLESv2_swiftshader: EGLImageTargetTexture2DOES external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">6659</span> ((GLenum target = <span class="number">0x8D65</span>, GLeglImageOES image = <span class="number">0x8</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: EnableVertexAttribArray external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1865</span> ((GLuint index = <span class="number">0</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.452</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: VertexAttribPointer external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">6127</span> ((GLuint index = <span class="number">1</span>, GLint size = <span class="number">2</span>, GLenum type = <span class="number">0x1406</span>, GLboolean normalized = <span class="number">0</span>, GLsizei stride = <span class="number">0</span>, <span class="keyword">const</span> GLvoid* ptr = <span class="number">0x740e0b80</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.453</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: EnableVertexAttribArray external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1865</span> ((GLuint index = <span class="number">1</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.453</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: DrawArrays external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1537</span> ((GLenum mode = <span class="number">0x5</span>, GLint first = <span class="number">0</span>, GLsizei count = <span class="number">4</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.453</span>  <span class="number">3300</span>  <span class="number">3300</span> E libGLESv2_swiftshader: Disable external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1493</span> ((GLenum cap = <span class="number">0xC11</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.454</span>  <span class="number">3300</span>  <span class="number">3300</span> E libGLESv2_swiftshader: Viewport external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">6189</span> ((GLint x = <span class="number">0</span>, GLint y = <span class="number">0</span>, GLsizei width = <span class="number">1080</span>, GLsizei height = <span class="number">1920</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.468</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: Finish external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1922</span> (())</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.728</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: DisableVertexAttribArray external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1520</span> ((GLuint index = <span class="number">0</span>))</div><div class="line"><span class="number">01</span><span class="number">-01</span> <span class="number">04</span>:<span class="number">50</span>:<span class="number">52.729</span>  <span class="number">8547</span>  <span class="number">8615</span> E libGLESv2_swiftshader: DisableVertexAttribArray external/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:<span class="number">1520</span> ((GLuint index = <span class="number">1</span>))</div></pre></td></tr></table></figure></p>
-<p>再怀疑是因为texture没有被正确地送入到GPU中，通过dump glTexImage2D()输入的pixel，发现也是正确的。</p>
-<p>最后在fragment shader中写hard code, 强制输出某种颜色，也是正确的，说明整个流程没有问题。</p>
-<p>最后怀疑是texture的坐标没有正确地设置，在打印glVertexAttribPointer()的输入参数，发现这个时候的texture坐标都是0，明显不是正确的值，一步一步往上debug， 发现是因为Java ByteBuffer的order没有被设置成本机字节顺序(ByteOrder.nativeOrder()), 设置了以后，texture的坐标就正确了。</p>
-<p>解决了绿屏的问题以后，yuv420p的数据能在Android上正确显示了，显示效果如下<br><img src="/2018/04/15/Implement-yuv2rgb-gpu-filter/screencap.jpg" alt="result"></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1811,7 +1829,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">32</span>
+                <span class="site-state-item-count">33</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1824,7 +1842,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">19</span>
+                <span class="site-state-item-count">20</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
