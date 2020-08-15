@@ -254,6 +254,199 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/26/About SceneGraph/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/04/26/About SceneGraph/" itemprop="url">About SceneGraph</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-04-26T20:10:10+09:00">
+                2020-04-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/04/26/About SceneGraph/" class="leancloud_visitors" data-flag-title="About SceneGraph">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-什么是SceneGraph"><a href="#0x1-什么是SceneGraph" class="headerlink" title="0x1 什么是SceneGraph"></a>0x1 什么是SceneGraph</h1><p>渲染引擎需要解决的问题是如何把需要绘制的各种对象高效地组织起来并绘制出来，这其中很重要的概念是SceneGraph。目前各种渲染引擎包括2D UI引擎到3D引擎都实现了类似的概念。<br>其实SceneGraph应该称为SceneTree更合适，因为其中的数据组织一般是采用Tree的形式。</p>
+<p>qt中采用的SceneGraph介绍如下<br><a href="https://doc.qt.io/qt-5/qtquick-visualcanvas-scenegraph.html" target="_blank" rel="external">https://doc.qt.io/qt-5/qtquick-visualcanvas-scenegraph.html</a></p>
+<p>cocos2d也有类似的概念如下<br><a href="https://docs.cocos2d-x.org/cocos2d-x/v4/en/basic_concepts/scene.html" target="_blank" rel="external">https://docs.cocos2d-x.org/cocos2d-x/v4/en/basic_concepts/scene.html</a></p>
+<p>ogre中对SceneGraph的介绍如下<br><a href="https://ogrecave.github.io/ogre/api/latest/_the-_core-_objects.html" target="_blank" rel="external">https://ogrecave.github.io/ogre/api/latest/_the-_core-_objects.html</a></p>
+<h1 id="0x2-SceneGraph包括哪些功能"><a href="#0x2-SceneGraph包括哪些功能" class="headerlink" title="0x2 SceneGraph包括哪些功能"></a>0x2 SceneGraph包括哪些功能</h1><p>典型的SceneGraph包括了SceneManager，RenderManager，ResourceManager， Camera， RenderTarget，Animation， Particle子模块，下面来简单介绍一下这些概念。</p>
+<p>SceneManager提供对场景图的组织和管理，具体可以采用二叉分割树，八叉树等。<br>RenderManager提供了绘制相关操作，也就是通常所说的各种Backend，如OpenGL,Directx,Metal,Vulkan等。<br>ResourceManager提供了对资源的管理，包括Material, Mesh等。<br>Camera提供了在SceneGraph中模拟眼睛的功能。<br>Viewer是在SceneGraph遨游时的眼睛，通过变化Camera的位置，我们可以看到SceneGraph中不同的风景。其中提供lookAt()类似的函数来指定场景中眼睛的位置。</p>
+<h1 id="0x3-SceneGraph的设计"><a href="#0x3-SceneGraph的设计" class="headerlink" title="0x3 SceneGraph的设计"></a>0x3 SceneGraph的设计</h1><h2 id="0x31-数据结构设计"><a href="#0x31-数据结构设计" class="headerlink" title="0x31 数据结构设计"></a>0x31 数据结构设计</h2><p>渲染引擎一般采用场景节点和场景内容分离的机制，也就是说场景内容作为场景节点的成员变量，而不是把场景内容作为场景节点的子类。场景节点一般包含了类似位置，旋转等信息，场景内容指需要绘制的Mesh和渲染属性等。<br>另外一种实现方式是把场景内容作为场景节点的子类，这种实现方式把场景内容和场景节点耦合在一起，不利于添加新的场景内容的支持。<br>场景节点和场景内容分离机制带来了SceneGraph中数据松耦合的好处，场景内容添加到一个场景节点中，也可以从一个场景节点中移除。SceneManager控制的是场景节点，不需要关心具体的场景内容。我们可以精心设计场景节点的接口，这样可以保持SceneManager对场景节点的灵活控制。</p>
+<p>下面是典型的SceneGraph数据结构图。</p>
+<p><img src="/2020/04/26/About SceneGraph/Data_Structure.png" alt="Data_Structure"></p>
+<p>SceneNode表示场景节点。<br>Object表示场景内容。一个Object可以包括多个RenderObject，如房间可以表示为一个Object，房间里的一张桌子是RenderObject。<br>RenderObject表示可被渲染的内容。RenderObject需要通过Mesh和Material来绘制。如前所述，一张桌子是RenderObject，然后我们需要知道桌子的Mesh，需要知道如何设置Mesh的渲染属性如shader，color等。</p>
+<h2 id="0x32-场景图管理器"><a href="#0x32-场景图管理器" class="headerlink" title="0x32 场景图管理器"></a>0x32 场景图管理器</h2><p>场景图管理器实现的功能有，<br>第一类是数据对象管理相关的功能，包括如下功能。</p>
+<ol>
+<li><p>创建/删除SceneNode。</p>
+</li>
+<li><p>创建/删除Camera。</p>
+</li>
+<li><p>创建/删除各种Light。</p>
+</li>
+<li><p>创建/删除Object，前面提到Object作为场景内容节点挂接到SceneNode上。</p>
+</li>
+<li><p>创建删除各种绘制对象，设置各种绘制属性。</p>
+</li>
+<li><p>创建/删除ParticleSystem。</p>
+</li>
+<li><p>创建/删除AnimationSystem。</p>
+</li>
+</ol>
+<p>另外是渲染流程相关功能，包括如下，</p>
+<ol>
+<li><p>查找当前Camera可见的渲染Object。</p>
+</li>
+<li><p>渲染前面查找到的渲染Object</p>
+</li>
+</ol>
+<p>场景图管理器的结构图如下所示，<br><img src="/2020/04/26/About SceneGraph/SceneManager.png" alt="SceneManager"></p>
+<p>Core下面的SceneManager提供了基本的框架和系统中其他模块交互，对应于具体的SceneManager而言，如上图所示的BspScenemanager和OctTreeSceneManager，其核心功能是解决如何高效地查找到当前Camera可见范围内的渲染Object，因为场景图中包括了很多数据，如在关卡游戏中，场景图中包括了很多游戏关卡，如果都去渲染，性能可能很差，所以通过SceneManager快速找到Camera可见范围内的渲染Object，然后只需要渲染这些Object。</p>
+<h2 id="0x33-渲染管理器"><a href="#0x33-渲染管理器" class="headerlink" title="0x33 渲染管理器"></a>0x33 渲染管理器</h2><p>渲染管理器的结构图如下所示，<br><img src="/2020/04/26/About SceneGraph/RenderManager.png" alt="RenderManager"></p>
+<p>渲染管理器也称为渲染的后端，这里来谈一下如何设计渲染管理器的接口使特定后端的代码量最少。也就是说如何把功能尽量放在Core中，Backend只保留特定平台相关的实现，这部分也是比较各种渲染引擎的跨平台技术做的好坏的评价标准之一。</p>
+<p>RenderManager需要抽象出下面的模块作为通用的接口，这些是所有Backend都具备的特性，是公共的模块。在具体的Backend模块中中去继承这些接口从而实现各个Backend的对接。</p>
+<ol>
+<li><p>Texture操作接口。</p>
+</li>
+<li><p>HardwareBuffer操作接口，包括Index bufer/Vertex buffer/Uniform buffer/Texture buffer等。</p>
+</li>
+<li><p>Shader/Program操作接口。</p>
+</li>
+<li><p>DrawCall操作接口。</p>
+</li>
+</ol>
+<h1 id="0x4-渲染流程设计及优化"><a href="#0x4-渲染流程设计及优化" class="headerlink" title="0x4 渲染流程设计及优化"></a>0x4 渲染流程设计及优化</h1><h2 id="0x41-数据准备"><a href="#0x41-数据准备" class="headerlink" title="0x41 数据准备"></a>0x41 数据准备</h2><p>绘制内容的设置<br>绘制内容包括各种资源，如Mesh，Skelton，Shader等。他们通过各种ReaourceManager加载进来。</p>
+<p>绘制坐标的设置<br>如果SceneNode存在父子关系，有两种方法来设置绘制坐标，第一种是在生成绘制内容的时候，根据父节点的坐标计算好当前节点的坐标，然后设置到SceneNode中。另外一种方法是给SceneNode设置一个TransformNode作为SceneNode的成员，这个TransformNode是计算好的本地坐标系坐标(没有考虑父子关系)，这样在包括所有SceneNode的tree创建好了以后，再去从根节点开始遍历这颗树，根据父子关系，计算出每个SceneNode的世界坐标。具体实现中推荐采用第一种方法，因为如果SceneNode的层次太深，递归遍历节点的时候可能会出现栈溢出。</p>
+<p>具有父子关系的SceneNode结构图如下所示。</p>
+<p><img src="/2020/04/26/About SceneGraph/SceneNode_Strucutre.png" alt="SceneNode_Strucutre"></p>
+<h2 id="0x42-数据绘制"><a href="#0x42-数据绘制" class="headerlink" title="0x42 数据绘制"></a>0x42 数据绘制</h2><p>场景绘制的完整流程如下，</p>
+<p><img src="/2020/04/26/About SceneGraph/Rendering_Process.png" alt="Rendering_Process"></p>
+<ol>
+<li><p>首先是设置好场景数据，这些场景数据可以是通过离线工具如Blender，由美工来制作完成并导出，然后再加载进来。渲染引擎也可以提供在线实时生成场景数据的功能，如生成矩形，球形，立方体等。设置好的场景数据封装成RenderObject，再由RenderObject组成Object。</p>
+</li>
+<li><p>然后是需要把场景数据挂接到场景图的SceneNode中，这样场景图管理器就拥有了场景数据了，可以根据视点在场景图中执行查询等操作。</p>
+</li>
+<li><p>然后开始根据Camera的位置找到可见范围内的RenderObject，这个也就是前面提到的SceneManager发挥作用的地方，可以简单地称为Culling操作。</p>
+</li>
+<li><p>找到了需要渲染的RenderObject集合，可以对这些RenderObject的渲染顺序进行Bactch优化，如果两个RenderObject需要的渲染Maerial是一样地，可以合并成一个drawcall，这种优化方式我们称为动态Batch。如果由美工在素材制作阶段对场景数据的组织进行优化，把能用一个drawcall进行渲染的物体合并起来，这种优化被称为静态Batch。</p>
+</li>
+<li><p>优化好了以后就开始调用具体的Backend进行渲染了。</p>
+</li>
+</ol>
+<h2 id="0x43-流程优化"><a href="#0x43-流程优化" class="headerlink" title="0x43 流程优化"></a>0x43 流程优化</h2><p>如下图所示，可以把渲染过程划分成两个线程并行处理，这样在数据加载阶段可以做上一帧的绘制动作，等数据加载完成再同步给渲染线程。</p>
+<p><img src="/2020/04/26/About SceneGraph/Pipeline_Optimization.png" alt="Pipeline_Optimization"></p>
+<p>另外一个优化是资源的异步加载，如果前面的Load Thread同时要响应用户操作，如果长时间在运行，会造成UI卡死，这个时候可以通过开启异步线程来处理。</p>
+<h1 id="0x5-SceneGraph的发展方向思考"><a href="#0x5-SceneGraph的发展方向思考" class="headerlink" title="0x5 SceneGraph的发展方向思考"></a>0x5 SceneGraph的发展方向思考</h1><p>SceneGraph技术作为各种渲染引擎的根基，目前是很完善的技术了。包括光线跟踪渲染引擎，其中也包含了SceneGraph的实现。如果要考虑未来方向，是否可以和其他方向结合，如人工智能等？搞出一套智能的渲染引擎。如是否可以用CNN来加速特大场景图的可见渲染物体查询？</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/03/15/clDNN Introduction/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1650,165 +1843,6 @@ Detection output
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/16/AV1-syntax-explanation/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/03/16/AV1-syntax-explanation/" itemprop="url">AV1-syntax-explanation</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-16T17:00:10+09:00">
-                2019-03-16
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/03/16/AV1-syntax-explanation/" class="leancloud_visitors" data-flag-title="AV1-syntax-explanation">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-解码流程介绍"><a href="#0x1-解码流程介绍" class="headerlink" title="0x1 解码流程介绍"></a>0x1 解码流程介绍</h1><p><img src="/2019/03/16/AV1-syntax-explanation/av1 syntax description.png" alt=""><br>解码流程说明如下</p>
-<h2 id="0x11-tile-group-obu"><a href="#0x11-tile-group-obu" class="headerlink" title="0x11 tile_group_obu"></a>0x11 tile_group_obu</h2><p>   对tile group的每个tile调用decode_tile()进行解码，直至tile group中包括的tile都解码完成.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> ( TileNum = tg_start; TileNum &lt;= tg_end; TileNum++ ) &#123;</div><div class="line">    tileRow = TileNum / TileCols</div><div class="line">    tileCol = TileNum % TileCols</div><div class="line">    ......</div><div class="line">    decode_tile( )</div><div class="line">    exit_symbol( )</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x12-decode-tile"><a href="#0x12-decode-tile" class="headerlink" title="0x12 decode_tile"></a>0x12 decode_tile</h2><p>   对tile中包含的每个partition进行解码。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> ( r = MiRowStart; r &lt; MiRowEnd; r += sbSize4 ) &#123;</div><div class="line">    <span class="keyword">for</span> ( c = MiColStart; c &lt; MiColEnd; c += sbSize4 ) &#123;</div><div class="line">        ......</div><div class="line">        decode_partition( r, c, sbSize )</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x13-decode-partition"><a href="#0x13-decode-partition" class="headerlink" title="0x13 decode_partition"></a>0x13 decode_partition</h2><p>   每个partition的解码过程就是对一个super block(super block的定义参考0x2)进行解码的过程.<br>   根据partition类型对进一步split, 不能split的类型调用decode_block().</p>
-<pre><code>partition类型的定义如下
-
-| Partition index | Type of partition  |
-|:-------:|:------------- |
-| 0 |PARTITION_NONE|
-| 1 |PARTITION_HORZ|
-| 2 |PARTITION_VERT|
-| 3 |PARTITION_SPLIT|
-| 4 |PARTITION_HORZ_A|
-| 5 |PARTITION_HORZ_B|
-| 6 |PARTITION_VERT_A|
-| 7 |PARTITION_VERT_B|
-| 8 |PARTITION_HORZ_4|
-| 9 |PARTITION_VERT_4|
-</code></pre><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ( partition == PARTITION_NONE ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line"><span class="keyword">if</span> ( hasRows )</div><div class="line">    decode_block( r + halfBlock4x4, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    <span class="keyword">if</span> ( hasCols )</div><div class="line">       decode_block( r, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_SPLIT ) &#123;</div><div class="line">    decode_partition( r, c, subSize )</div><div class="line">    decode_partition( r, c + halfBlock4x4, subSize )</div><div class="line">    decode_partition( r + halfBlock4x4, c, subSize )</div><div class="line">    decode_partition( r + halfBlock4x4, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_A ) &#123;</div><div class="line">    decode_block( r, c, splitSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_B ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c + halfBlock4x4, splitSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT_A ) &#123;</div><div class="line">    decode_block( r, c, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c, splitSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, subSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_VERT_B ) &#123;</div><div class="line">    decode_block( r, c, subSize )</div><div class="line">    decode_block( r, c + halfBlock4x4, splitSize )</div><div class="line">    decode_block( r + halfBlock4x4, c + halfBlock4x4, splitSize )</div><div class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> ( partition == PARTITION_HORZ_4 ) &#123;</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">0</span>, c, subSize )</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">1</span>, c, subSize )</div><div class="line">    decode_block( r + quarterBlock4x4 * <span class="number">2</span>, c, subSize )</div><div class="line">    <span class="keyword">if</span> ( r + quarterBlock4x4 * <span class="number">3</span> &lt; MiRows )</div><div class="line">        decode_block( r + quarterBlock4x4 * <span class="number">3</span>, c, subSize )</div><div class="line">&#125; <span class="keyword">else</span> &#123; <span class="comment">//PARTITION_VERT_4</span></div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">0</span>, subSize )</div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">1</span>, subSize )</div><div class="line">    decode_block( r, c + quarterBlock4x4 * <span class="number">2</span>, subSize )</div><div class="line">    <span class="keyword">if</span> ( c + quarterBlock4x4 * <span class="number">3</span> &lt; MiCols )</div><div class="line">        decode_block( r, c + quarterBlock4x4 * <span class="number">3</span>, subSize )</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x14-decode-block"><a href="#0x14-decode-block" class="headerlink" title="0x14 decode_block"></a>0x14 decode_block</h2><p>   对一个block进行解码，进一步调用residual对残差进行解码.</p>
-<h2 id="0x15-transform-tree"><a href="#0x15-transform-tree" class="headerlink" title="0x15 transform_tree"></a>0x15 transform_tree</h2><p>   对不同size的transform块进行解码，它是一个递归函数，递归退出函数是transform_block.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line">transform_tree( startX, startY, w, h ) &#123; Type</div><div class="line">    maxX = MiCols * MI_SIZE</div><div class="line">    maxY = MiRows * MI_SIZE</div><div class="line">    <span class="keyword">if</span> ( startX &gt;= maxX || startY &gt;= maxY ) &#123;</div><div class="line">        <span class="keyword">return</span></div><div class="line">    &#125;</div><div class="line">    row = startY &gt;&gt; MI_SIZE_LOG2</div><div class="line">    col = startX &gt;&gt; MI_SIZE_LOG2</div><div class="line">    lumaTxSz = InterTxSizes[ row ][ col ]</div><div class="line">    lumaW = Tx_Width[ lumaTxSz ]</div><div class="line">    lumaH = Tx_Height[ lumaTxSz ]</div><div class="line">    <span class="keyword">if</span> ( w &lt;= lumaW &amp;&amp; h &lt;= lumaH ) &#123;</div><div class="line">        txSz = find_tx_size( w, h )</div><div class="line">        transform_block( <span class="number">0</span>, startX, startY, txSz, <span class="number">0</span>, <span class="number">0</span> )</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">        <span class="keyword">if</span> ( w &gt; h ) &#123;</div><div class="line">            transform_tree( startX, startY, w/<span class="number">2</span>, h )</div><div class="line">            transform_tree( startX + w / <span class="number">2</span>, startY, w/<span class="number">2</span>, h )</div><div class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> ( w &lt; h ) &#123;</div><div class="line">            transform_tree( startX, startY, w, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX, startY + h/<span class="number">2</span>, w, h/<span class="number">2</span> )</div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">            transform_tree( startX, startY, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX + w/<span class="number">2</span>, startY, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX, startY + h/<span class="number">2</span>, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">            transform_tree( startX + w/<span class="number">2</span>, startY + h/<span class="number">2</span>, w/<span class="number">2</span>, h/<span class="number">2</span> )</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x16-Reconstruct中包括具体的反量化，反dct-重建像素和loop-filter等过程"><a href="#0x16-Reconstruct中包括具体的反量化，反dct-重建像素和loop-filter等过程" class="headerlink" title="0x16 Reconstruct中包括具体的反量化，反dct,重建像素和loop filter等过程."></a>0x16 Reconstruct中包括具体的反量化，反dct,重建像素和loop filter等过程.</h2><h1 id="0x2-super-block"><a href="#0x2-super-block" class="headerlink" title="0x2 super block"></a>0x2 super block</h1><p>下图说明了一个frame由许多super block组成，super block的定义稍后说明.<br><img src="/2019/03/16/AV1-syntax-explanation/super_block.png" alt=""></p>
-<p>Super block的定义如下<br>The top level of the block quadtree within a tile. All superblocks within a frame are the same size and are square. The<br>superblocks may be 128x128 luma samples or 64x64 luma samples. A superblock may contain 1 or 2 or 4 mode info<br>blocks, or may be bisected in each direction to create 4 sub-blocks, which may themselves be further subpartitioned,<br>forming the block quadtree.</p>
-<p>通过在sequence_header_obu中的use_128x128_superblock来控制superblock的大小是128x128还是64x64.<br>sequence_header_obu( ) {<br>    ……<br>    use_128x128_superblock f(1)<br>    ……<br>}</p>
-<p>use_128x128_superblock的定义如下<br>when equal to 1, indicates that superblocks contain 128x128 luma samples. When equal to 0,<br>it indicates that superblocks contain 64x64 luma samples.</p>
-<h1 id="0x3-split划分"><a href="#0x3-split划分" class="headerlink" title="0x3 split划分"></a>0x3 split划分</h1><p>下图显示了super block(64x64)的split状态, 从图中可以看到，64x64的block会被split到32x32，再进一步split到16x16.</p>
-<p><img src="/2019/03/16/AV1-syntax-explanation/split_.png" alt=""></p>
-<h1 id="0x4-Intra-Y-mode"><a href="#0x4-Intra-Y-mode" class="headerlink" title="0x4 Intra Y mode"></a>0x4 Intra Y mode</h1><p>下图显示了Intra Prediction中Y分量的mode，不同的颜色代码不同的mode.</p>
-<p><img src="/2019/03/16/AV1-syntax-explanation/mode.png" alt=""></p>
-<h1 id="0x5-Intra-UV-mode"><a href="#0x5-Intra-UV-mode" class="headerlink" title="0x5 Intra UV mode"></a>0x5 Intra UV mode</h1><p>下图显示了Intra Prediction中UV分量的mode，不同的颜色代码不同的mode，其中显示数字的块表示该mode为chroma from luma prediction, 其中显示的数字表示chroma需要从哪个位置的luma预测.</p>
-<p><img src="/2019/03/16/AV1-syntax-explanation/uv_mode.png" alt=""></p>
-<h1 id="0x6-Motion-vector"><a href="#0x6-Motion-vector" class="headerlink" title="0x6 Motion vector"></a>0x6 Motion vector</h1><p>下图显示了Inter frame帧间预测的运动向量.</p>
-<p><img src="/2019/03/16/AV1-syntax-explanation/motion_vector.png" alt=""></p>
-<h1 id="0x7-Reference"><a href="#0x7-Reference" class="headerlink" title="0x7 Reference"></a>0x7 Reference</h1><p><a href="https://people.xiph.org/~mbebenita/analyzer/" target="_blank" rel="external">AV1 analyzer</a></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1858,7 +1892,7 @@ Detection output
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">33</span>
+                <span class="site-state-item-count">34</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1871,7 +1905,7 @@ Detection output
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">20</span>
+                <span class="site-state-item-count">21</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

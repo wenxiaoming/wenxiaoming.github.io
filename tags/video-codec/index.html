@@ -95,7 +95,7 @@
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Kevin Wen&#39;s Blog">
-<meta property="og:url" content="http://yoursite.com/tags/video-codec/index.html">
+<meta property="og:url" content="http://yoursite.com/tags/Video-Codec/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kevin Wen&#39;s Blog">
@@ -126,13 +126,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/tags/video-codec/"/>
+  <link rel="canonical" href="http://yoursite.com/tags/Video-Codec/"/>
 
 
 
 
 
-  <title>标签: video codec | Kevin Wen's Blog</title>
+  <title>标签: Video Codec | Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -244,7 +244,7 @@
 
   <div id="posts" class="posts-collapse">
     <div class="collection-title">
-      <h1>video codec<small>标签</small>
+      <h1>Video Codec<small>标签</small>
       </h1>
     </div>
 
@@ -256,37 +256,9 @@
 
       <h2 class="post-title">
         
-            <a class="post-title-link" href="/2019/04/06/Use AI to speed up AV1 encoder/" itemprop="url">
+            <a class="post-title-link" href="/2019/10/13/About Video Codec Optimization/" itemprop="url">
               
-                <span itemprop="name">Use AI to speed up AV1 encoder</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2019-04-06T17:00:10+09:00"
-              content="2019-04-06" >
-          04-06
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-    
-      
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
-            <a class="post-title-link" href="/2019/03/16/AV1-syntax-explanation/" itemprop="url">
-              
-                <span itemprop="name">AV1-syntax-explanation</span>
+                <span itemprop="name">About Video Codec Optimization</span>
               
             </a>
         
@@ -294,9 +266,9 @@
 
       <div class="post-meta">
         <time class="post-time" itemprop="dateCreated"
-              datetime="2019-03-16T17:00:10+09:00"
-              content="2019-03-16" >
-          03-16
+              datetime="2019-10-13T18:01:30+09:00"
+              content="2019-10-13" >
+          10-13
         </time>
       </div>
 
@@ -350,7 +322,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">33</span>
+                <span class="site-state-item-count">34</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -363,7 +335,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">20</span>
+                <span class="site-state-item-count">21</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
@@ -630,6 +602,44 @@
               success: function(newcounter) {
                 var $element = $(document.getElementById(url));
                 $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
+t.find('.leancloud-visitors-count').text(newcounter.get('time'));
               },
               error: function(newcounter, error) {
                 console.log('Failed to create');
