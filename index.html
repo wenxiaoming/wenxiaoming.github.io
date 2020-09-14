@@ -254,6 +254,165 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/30/EGL in Mesa/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/05/30/EGL in Mesa/" itemprop="url">EGL in Mesa</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-05-30T18:10:10+09:00">
+                2020-05-30
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/05/30/EGL in Mesa/" class="leancloud_visitors" data-flag-title="EGL in Mesa">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-EGL介绍"><a href="#0x1-EGL介绍" class="headerlink" title="0x1 EGL介绍"></a>0x1 EGL介绍</h1><p>我们知道通过OpenGL来绘制的时候需要和EGL配合才能完成渲染，本文主要来介绍一下mesa中的EGL驱动实现。下面先来简单介绍一下EGL。<br>EGL用于管理绘图表面，其主要提供了下列几种功能，</p>
+<p>a 与设备平台的原生窗口系统进行交互。</p>
+<p>b 查询可用的绘制类似和相关配置。</p>
+<p>c 创建和管理绘制surface。</p>
+<p>d 创建和管理绘制context。</p>
+<p>e 提供present接口eglSwapBuffers，一般通过交换前后缓存区来实现。</p>
+<p>EGL驱动中包括了对下面这些EGL API的封装，应用调用这些API来和EGL驱动交互。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line">eglBindAPI</div><div class="line">eglBindTexImage</div><div class="line">eglChooseConfig</div><div class="line">eglClientWaitSync</div><div class="line">eglCopyBuffers</div><div class="line">eglCreateContext</div><div class="line">eglCreateImage</div><div class="line">eglCreatePbufferFromClientBuffer</div><div class="line">eglCreatePbufferSurface</div><div class="line">eglCreatePixmapSurface</div><div class="line">eglCreatePlatformPixmapSurface</div><div class="line">eglCreatePlatformWindowSurface</div><div class="line">eglCreateSync</div><div class="line">eglCreateWindowSurface</div><div class="line">eglDestroyContext</div><div class="line">eglDestroyImage</div><div class="line">eglDestroySurface</div><div class="line">eglDestroySync</div><div class="line">eglGetConfigAttrib</div><div class="line">eglGetConfigs</div><div class="line">eglGetCurrentContext</div><div class="line">eglGetCurrentDisplay</div><div class="line">eglGetCurrentSurface</div><div class="line">eglGetDisplay</div><div class="line">eglGetError</div><div class="line">eglGetPlatformDisplay</div><div class="line">eglGetProcAddress</div><div class="line">eglGetSyncAttrib</div><div class="line">eglInitialize</div><div class="line">eglMakeCurrent</div><div class="line">eglQueryAPI</div><div class="line">eglQueryContext</div><div class="line">eglQueryString</div><div class="line">eglQuerySurface</div><div class="line">eglReleaseTexImage</div><div class="line">eglReleaseThread</div><div class="line">eglSurfaceAttrib</div><div class="line">eglSwapBuffers</div><div class="line">eglSwapInterval</div><div class="line">eglTerminate</div><div class="line">eglWaitClient</div><div class="line">eglWaitGL</div><div class="line">eglWaitNative</div><div class="line">eglWaitSync</div><div class="line">MesaGLInteropEGLQueryDeviceInfo</div><div class="line">MesaGLInteropEGLExportObject</div></pre></td></tr></table></figure></p>
+<p>mesa中egl架构如下图所示。</p>
+<p><img src="/2020/05/30/EGL in Mesa/mesa_egl-architecture.svg" alt="EGL in Mesa"></p>
+<p>对上图简单说明如下，<br>从上图左上角可以看到，EGL需要和具体显示平台的窗口NativeWindow交互。这个NativeWindow需要在应用侧创建好，创建的NativeWindow是根据具体的平台(如Android， X11， Wayland)的不同而不同。这个应用创建好的NativeWindow通过调用eglCreateWindowSurface()传入到egl驱动中。</p>
+<p>EGL还需要和绘制缓冲区对象(framebuffer)进行交互，这些缓冲区一般由EGL驱动调用外部窗口系统的提供的接口(如android上的surface)来分配和释放。绘制之前需要先得到空闲的buffer，绘制完成以后需要把buffer送给下一级pipeline，交出控制权。这里面一般会创建2~3个buffer，和下一级pipeline一起循环使用。这些buffer在pipeline的不同阶段流动，控制权也在各个阶段中流转，所以需要一种同步机制来保证buffer何时可读，何时可写，在android上是通过fence机制来保证的。</p>
+<p>GL Driver调用EGL的内部接口(getBuffers)来得到当前绘制的目标buffer，然后GL Driver就可以发送绘制命令给GPU硬件，GPU硬件把渲染结果绘制到目标buffer中。</p>
+<p>笔者的测试平台是Intel i3，GPU是Gen5xx，通过配置mesa的编译参数，可以编译出GPU平台相关的库是iris_dri.so。<br>这种配置下mesa中代码调用关系如下图所示。<br>从下图可以看出，mesa把驱动进行了分层，上面是通用的实现，对具体gpu平台相关实现都封装在xxx_dri.so中，这里Gen5xx平台对应的是iris_dri.so，对broadcom vc4 gpu来说，对应的是vc4_dri.so。</p>
+<p><img src="/2020/05/30/EGL in Mesa/code_architecture.svg" alt="EGL in Mesa"></p>
+<h1 id="0x2-mesa中egl流程介绍"><a href="#0x2-mesa中egl流程介绍" class="headerlink" title="0x2 mesa中egl流程介绍"></a>0x2 mesa中egl流程介绍</h1><p>下图说明了一个OpenGL ES应用程序调用EGL接口来绘制的基本流程。<br><img src="/2020/05/30/EGL in Mesa/mesa_egl.svg" alt="EGL in Mesa"></p>
+<p>下面对流程中的egl api调用做详细的说明，</p>
+<h2 id="0x21-创建X11平台对应的Display和Window"><a href="#0x21-创建X11平台对应的Display和Window" class="headerlink" title="0x21 创建X11平台对应的Display和Window"></a>0x21 创建X11平台对应的Display和Window</h2><p>首先在应用程序中通过下面的代码来创建x11平台上的display和window。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// create display and window for x11 platform</span></div><div class="line">x_display = XOpenDisplay(<span class="literal">NULL</span>);</div><div class="line"><span class="keyword">if</span> ( x_display == <span class="literal">NULL</span> )</div><div class="line">&#123;</div><div class="line">    <span class="keyword">return</span> EGL_FALSE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">root = DefaultRootWindow(x_display);</div><div class="line"></div><div class="line">win = XCreateWindow(</div><div class="line">            x_display, root,</div><div class="line">            <span class="number">0</span>, <span class="number">0</span>, esContext-&gt;width, esContext-&gt;height, <span class="number">0</span>,</div><div class="line">            CopyFromParent, InputOutput,</div><div class="line">            CopyFromParent, CWEventMask,</div><div class="line">            &amp;swa );</div></pre></td></tr></table></figure></p>
+<h2 id="0x21-调用eglInitialize"><a href="#0x21-调用eglInitialize" class="headerlink" title="0x21 调用eglInitialize"></a>0x21 调用eglInitialize</h2><p>该函数的调用堆栈如下。</p>
+<p><img src="/2020/05/30/EGL in Mesa/eglInitialize.png" alt="EGL in Mesa"></p>
+<p>eglInitialize的参数是display，这就是前面调用<br>平台相关接口得到的x_display。</p>
+<p>上面调用堆栈最后调用的函数是iris_screen_create，这是mesa的gallium架构下初始化具体gpu型号的硬件驱动的入口函数。<br>这个在后续的文章中会做详细的介绍，这里我们知道了应用调用eglInitialize()的时候会去调用具体的gpu型号的硬件驱动。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// src/gallium/winsys/iris/drm/iris_drm_winsys.c</span></div><div class="line"><span class="function"><span class="keyword">extern</span> struct pipe_screen *<span class="title">iris_screen_create</span><span class="params">(<span class="keyword">int</span> fd, <span class="keyword">const</span> struct pipe_screen_config *config)</span></span>;</div><div class="line"></div><div class="line"><span class="function">struct pipe_screen *</span></div><div class="line"><span class="title">iris_drm_screen_create</span><span class="params">(<span class="keyword">int</span> fd, <span class="keyword">const</span> struct pipe_screen_config *config)</span></div><div class="line">&#123;</div><div class="line">   <span class="keyword">return</span> iris_screen_create(os_dupfd_cloexec(fd), config);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>下图的调用堆栈说明了eglInitialize调用过程中的gem buffer分配操作。这个操作最后会调用到kernel 驱动中完成内存分配动作。<br><img src="/2020/05/30/EGL in Mesa/eglInitialize_alloc_buffer.png" alt="EGL in Mesa"></p>
+<h2 id="0x22-eglCreateContext的调用流程"><a href="#0x22-eglCreateContext的调用流程" class="headerlink" title="0x22 eglCreateContext的调用流程"></a>0x22 eglCreateContext的调用流程</h2><p>eglCreateContext的调用堆栈如下<br><img src="/2020/05/30/EGL in Mesa/eglCreateContext.png" alt="EGL in Mesa"></p>
+<p>EGL驱动最后会调用到iris driver中创建context的代码中，其中包括了初始化各种函数指针的代码，包括program, clear, blit等操作。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// src/gallium/drivers/iris/iris_context.c</span></div><div class="line"><span class="comment">/**</span></div><div class="line"> * Create a context.</div><div class="line"> *</div><div class="line"> * This is where each context begins.</div><div class="line"> */</div><div class="line"><span class="function">struct pipe_context *</span></div><div class="line"><span class="title">iris_create_context</span><span class="params">(struct pipe_screen *pscreen, <span class="keyword">void</span> *priv, <span class="keyword">unsigned</span> flags)</span></div><div class="line">&#123;</div><div class="line">   <span class="class"><span class="keyword">struct</span> <span class="title">iris_screen</span> *<span class="title">screen</span> = (<span class="title">struct</span> <span class="title">iris_screen</span>*)<span class="title">pscreen</span>;</span></div><div class="line">   <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">gen_device_info</span> *<span class="title">devinfo</span> = &amp;<span class="title">screen</span>-&gt;<span class="title">devinfo</span>;</span></div><div class="line">   <span class="class"><span class="keyword">struct</span> <span class="title">iris_context</span> *<span class="title">ice</span> = <span class="title">rzalloc</span>(<span class="title">NULL</span>, <span class="title">struct</span> <span class="title">iris_context</span>);</span></div><div class="line">   ......</div><div class="line">   iris_init_context_fence_functions(ctx);</div><div class="line">   iris_init_blit_functions(ctx);</div><div class="line">   iris_init_clear_functions(ctx);</div><div class="line">   iris_init_program_functions(ctx);</div><div class="line">   iris_init_resource_functions(ctx);</div><div class="line">   iris_init_flush_functions(ctx);</div><div class="line">   iris_init_perfquery_functions(ctx);</div><div class="line"></div><div class="line">   iris_init_program_cache(ice);</div><div class="line">   iris_init_border_color_pool(ice);</div><div class="line">   iris_init_binder(ice);</div><div class="line"></div><div class="line">   slab_create_child(&amp;ice-&gt;transfer_pool, &amp;screen-&gt;transfer_pool);</div><div class="line"></div><div class="line">   ice-&gt;state.surface_uploader =</div><div class="line">      u_upload_create(ctx, <span class="number">16384</span>, PIPE_BIND_CUSTOM, PIPE_USAGE_IMMUTABLE,</div><div class="line">                      IRIS_RESOURCE_FLAG_SURFACE_MEMZONE);</div><div class="line">   ice-&gt;state.dynamic_uploader =</div><div class="line">      u_upload_create(ctx, <span class="number">16384</span>, PIPE_BIND_CUSTOM, PIPE_USAGE_IMMUTABLE,</div><div class="line">                      IRIS_RESOURCE_FLAG_DYNAMIC_MEMZONE);</div><div class="line"></div><div class="line">   ice-&gt;query_buffer_uploader =</div><div class="line">      u_upload_create(ctx, <span class="number">4096</span>, PIPE_BIND_CUSTOM, PIPE_USAGE_STAGING,</div><div class="line">                      <span class="number">0</span>);</div><div class="line"></div><div class="line">   genX_call(devinfo, init_state, ice);</div><div class="line">   genX_call(devinfo, init_blorp, ice);</div><div class="line">   genX_call(devinfo, init_query, ice);</div><div class="line">   ......</div><div class="line">   <span class="keyword">return</span> ctx;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>下面是iris创建context的时候初始化state相关函数指针的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// src/gallium/drivers/iris/iris_state.c</span></div><div class="line"><span class="function"><span class="keyword">void</span></span></div><div class="line"><span class="title">genX</span><span class="params">(init_state)</span><span class="params">(struct iris_context *ice)</span></div><div class="line">&#123;</div><div class="line">   <span class="class"><span class="keyword">struct</span> <span class="title">pipe_context</span> *<span class="title">ctx</span> = &amp;<span class="title">ice</span>-&gt;<span class="title">ctx</span>;</span></div><div class="line">   <span class="class"><span class="keyword">struct</span> <span class="title">iris_screen</span> *<span class="title">screen</span> = (<span class="title">struct</span> <span class="title">iris_screen</span> *)<span class="title">ctx</span>-&gt;<span class="title">screen</span>;</span></div><div class="line"></div><div class="line">   ctx-&gt;create_blend_state = iris_create_blend_state;</div><div class="line">   ctx-&gt;create_depth_stencil_alpha_state = iris_create_zsa_state;</div><div class="line">   ctx-&gt;create_rasterizer_state = iris_create_rasterizer_state;</div><div class="line">   ctx-&gt;create_sampler_state = iris_create_sampler_state;</div><div class="line">   ctx-&gt;create_sampler_view = iris_create_sampler_view;</div><div class="line">   ctx-&gt;create_surface = iris_create_surface;</div><div class="line">   ctx-&gt;create_vertex_elements_state = iris_create_vertex_elements;</div><div class="line">   ctx-&gt;bind_blend_state = iris_bind_blend_state;</div><div class="line">   ctx-&gt;bind_depth_stencil_alpha_state = iris_bind_zsa_state;</div><div class="line">   ctx-&gt;bind_sampler_states = iris_bind_sampler_states;</div><div class="line">   ctx-&gt;bind_rasterizer_state = iris_bind_rasterizer_state;</div><div class="line">   ctx-&gt;bind_vertex_elements_state = iris_bind_vertex_elements_state;</div><div class="line">   ctx-&gt;delete_blend_state = iris_delete_state;</div><div class="line">   ctx-&gt;delete_depth_stencil_alpha_state = iris_delete_state;</div><div class="line">   ctx-&gt;delete_rasterizer_state = iris_delete_state;</div><div class="line">   ctx-&gt;delete_sampler_state = iris_delete_state;</div><div class="line">   ctx-&gt;delete_vertex_elements_state = iris_delete_state;</div><div class="line">   ctx-&gt;set_blend_color = iris_set_blend_color;</div><div class="line">   ctx-&gt;set_clip_state = iris_set_clip_state;</div><div class="line">   ctx-&gt;set_constant_buffer = iris_set_constant_buffer;</div><div class="line">   ctx-&gt;set_shader_buffers = iris_set_shader_buffers;</div><div class="line">   ctx-&gt;set_shader_images = iris_set_shader_images;</div><div class="line">   ctx-&gt;set_sampler_views = iris_set_sampler_views;</div><div class="line">   ctx-&gt;set_compute_resources = iris_set_compute_resources;</div><div class="line">   ctx-&gt;set_global_binding = iris_set_global_binding;</div><div class="line">   ctx-&gt;set_tess_state = iris_set_tess_state;</div><div class="line">   ctx-&gt;set_framebuffer_state = iris_set_framebuffer_state;</div><div class="line">   ctx-&gt;set_polygon_stipple = iris_set_polygon_stipple;</div><div class="line">   ctx-&gt;set_sample_mask = iris_set_sample_mask;</div><div class="line">   ctx-&gt;set_scissor_states = iris_set_scissor_states;</div><div class="line">   ctx-&gt;set_stencil_ref = iris_set_stencil_ref;</div><div class="line">   ctx-&gt;set_vertex_buffers = iris_set_vertex_buffers;</div><div class="line">   ctx-&gt;set_viewport_states = iris_set_viewport_states;</div><div class="line">   ctx-&gt;sampler_view_destroy = iris_sampler_view_destroy;</div><div class="line">   ctx-&gt;surface_destroy = iris_surface_destroy;</div><div class="line">   ctx-&gt;draw_vbo = iris_draw_vbo;</div><div class="line">   ctx-&gt;launch_grid = iris_launch_grid;</div><div class="line">   ctx-&gt;create_stream_output_target = iris_create_stream_output_target;</div><div class="line">   ctx-&gt;stream_output_target_destroy = iris_stream_output_target_destroy;</div><div class="line">   ctx-&gt;set_stream_output_targets = iris_set_stream_output_targets;</div><div class="line">   ctx-&gt;set_frontend_noop = iris_set_frontend_noop;</div><div class="line"></div><div class="line">   screen-&gt;vtbl.destroy_state = iris_destroy_state;</div><div class="line">   screen-&gt;vtbl.init_render_context = iris_init_render_context;</div><div class="line">   screen-&gt;vtbl.init_compute_context = iris_init_compute_context;</div><div class="line">   screen-&gt;vtbl.upload_render_state = iris_upload_render_state;</div><div class="line">   screen-&gt;vtbl.update_surface_base_address = iris_update_surface_base_address;</div><div class="line">   screen-&gt;vtbl.upload_compute_state = iris_upload_compute_state;</div><div class="line">   screen-&gt;vtbl.emit_raw_pipe_control = iris_emit_raw_pipe_control;</div><div class="line">   screen-&gt;vtbl.emit_mi_report_perf_count = iris_emit_mi_report_perf_count;</div><div class="line">   screen-&gt;vtbl.rebind_buffer = iris_rebind_buffer;</div><div class="line">   screen-&gt;vtbl.load_register_reg32 = iris_load_register_reg32;</div><div class="line">   screen-&gt;vtbl.load_register_reg64 = iris_load_register_reg64;</div><div class="line">   screen-&gt;vtbl.load_register_imm32 = iris_load_register_imm32;</div><div class="line">   screen-&gt;vtbl.load_register_imm64 = iris_load_register_imm64;</div><div class="line">   screen-&gt;vtbl.load_register_mem32 = iris_load_register_mem32;</div><div class="line">   screen-&gt;vtbl.load_register_mem64 = iris_load_register_mem64;</div><div class="line">   screen-&gt;vtbl.store_register_mem32 = iris_store_register_mem32;</div><div class="line">   screen-&gt;vtbl.store_register_mem64 = iris_store_register_mem64;</div><div class="line">   screen-&gt;vtbl.store_data_imm32 = iris_store_data_imm32;</div><div class="line">   screen-&gt;vtbl.store_data_imm64 = iris_store_data_imm64;</div><div class="line">   screen-&gt;vtbl.copy_mem_mem = iris_copy_mem_mem;</div><div class="line">   screen-&gt;vtbl.derived_program_state_size = iris_derived_program_state_size;</div><div class="line">   screen-&gt;vtbl.store_derived_program_state = iris_store_derived_program_state;</div><div class="line">   screen-&gt;vtbl.create_so_decl_list = iris_create_so_decl_list;</div><div class="line">   screen-&gt;vtbl.populate_vs_key = iris_populate_vs_key;</div><div class="line">   screen-&gt;vtbl.populate_tcs_key = iris_populate_tcs_key;</div><div class="line">   screen-&gt;vtbl.populate_tes_key = iris_populate_tes_key;</div><div class="line">   screen-&gt;vtbl.populate_gs_key = iris_populate_gs_key;</div><div class="line">   screen-&gt;vtbl.populate_fs_key = iris_populate_fs_key;</div><div class="line">   screen-&gt;vtbl.populate_cs_key = iris_populate_cs_key;</div><div class="line">   screen-&gt;vtbl.lost_genx_state = iris_lost_genx_state;</div><div class="line"></div><div class="line">   ice-&gt;state.dirty = ~<span class="number">0u</span>ll;</div><div class="line">   ice-&gt;state.stage_dirty = ~<span class="number">0u</span>ll;</div><div class="line"></div><div class="line">   ice-&gt;state.statistics_counters_enabled = <span class="literal">true</span>;</div><div class="line"></div><div class="line">   ice-&gt;state.sample_mask = <span class="number">0xffff</span>;</div><div class="line">   ice-&gt;state.num_viewports = <span class="number">1</span>;</div><div class="line">   ice-&gt;state.prim_mode = PIPE_PRIM_MAX;</div><div class="line">   ice-&gt;state.genx = <span class="built_in">calloc</span>(<span class="number">1</span>, <span class="keyword">sizeof</span>(struct iris_genx_state));</div><div class="line">   ice-&gt;draw.derived_params.drawid = <span class="number">-1</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="0x23-和外部NativeWindow的交互"><a href="#0x23-和外部NativeWindow的交互" class="headerlink" title="0x23 和外部NativeWindow的交互"></a>0x23 和外部NativeWindow的交互</h2><p>主要是buffer的管理, 通过dequeueBuffer取得空闲buffer供本次绘制使用，在绘制完成了以后，再调用queueBuffer把buffer送去显示。另外外部NativeWindow大小发生变化的时候，也需要调用相应的接口来通知mesa，这个时候一般的流程是先把前面分配的旧的大小的buffer释放掉，然后重新去分配新的大小的buffer，另外还需要调用glViewPort重新设置draw区域的viewport大小。</p>
+<h2 id="0x24-gl-driver如何取得当前绘制的buffer"><a href="#0x24-gl-driver如何取得当前绘制的buffer" class="headerlink" title="0x24 gl driver如何取得当前绘制的buffer"></a>0x24 gl driver如何取得当前绘制的buffer</h2><p>GL Driver调用EGL的内部接口(getBuffers)来得到当前绘制的目标buffer。</p>
+<p>下图是eglMakeCurrent函数执行的时候分配绘制buffer的堆栈。</p>
+<p><img src="/2020/05/30/EGL in Mesa/eglMakeCurrent.png" alt="EGL in Mesa"></p>
+<p>具体的调用代码如下所示，外部通过getBuffers来调用具体egl driver的buffer接口。对x11_dr3而言，最后调用的函数是loader_dri3_get_buffers，在这个时候会返回需要的buffer，如果有必要也会重新分配buffer。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// src/egl/drivers/dri2/platform_x11_dri3.c</span></div><div class="line"><span class="keyword">const</span> __DRIimageLoaderExtension dri3_image_loader_extension = &#123;</div><div class="line">   .base = &#123; __DRI_IMAGE_LOADER, <span class="number">1</span> &#125;,</div><div class="line"></div><div class="line">   .getBuffers          = loader_dri3_get_buffers,</div><div class="line">   .flushFrontBuffer    = dri3_flush_front_buffer,</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="comment">// src/loader/loader_dri3_helper.c</span></div><div class="line"></div><div class="line"><span class="comment">/** loader_dri3_get_buffers</span></div><div class="line"> *</div><div class="line"> * The published buffer allocation API.</div><div class="line"> * Returns all of the necessary buffers, allocating</div><div class="line"> * as needed.</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">int</span></span></div><div class="line"><span class="title">loader_dri3_get_buffers</span><span class="params">(__DRIdrawable *driDrawable,</span></div><div class="line">                        <span class="keyword">unsigned</span> <span class="keyword">int</span> format,</div><div class="line">                        <span class="keyword">uint32_t</span> *stamp,</div><div class="line">                        <span class="keyword">void</span> *loaderPrivate,</div><div class="line">                        <span class="keyword">uint32_t</span> buffer_mask,</div><div class="line">                        struct __DRIimageList *buffers)</div><div class="line">&#123;</div><div class="line">   ......</div><div class="line">   <span class="keyword">if</span> (!dri3_update_drawable(draw))</div><div class="line">      <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line"></div><div class="line">   dri3_update_num_back(draw);</div><div class="line"></div><div class="line">   <span class="comment">/* Free no longer needed back buffers */</span></div><div class="line">   <span class="keyword">for</span> (buf_id = draw-&gt;num_back; buf_id &lt; LOADER_DRI3_MAX_BACK; buf_id++) &#123;</div><div class="line">      <span class="keyword">if</span> (draw-&gt;cur_blit_source != buf_id &amp;&amp; draw-&gt;buffers[buf_id]) &#123;</div><div class="line">         dri3_free_render_buffer(draw, draw-&gt;buffers[buf_id]);</div><div class="line">         draw-&gt;buffers[buf_id] = <span class="literal">NULL</span>;</div><div class="line">      &#125;</div><div class="line">   &#125;</div><div class="line"></div><div class="line">   <span class="comment">/* pixmaps always have front buffers.</span></div><div class="line">    * Exchange swaps also mandate fake front buffers.</div><div class="line">    */</div><div class="line">   <span class="keyword">if</span> (draw-&gt;is_pixmap || draw-&gt;swap_method == __DRI_ATTRIB_SWAP_EXCHANGE)</div><div class="line">      buffer_mask |= __DRI_IMAGE_BUFFER_FRONT;</div><div class="line"></div><div class="line">   <span class="keyword">if</span> (buffer_mask &amp; __DRI_IMAGE_BUFFER_FRONT) &#123;</div><div class="line">      <span class="comment">/* All pixmaps are owned by the server gpu.</span></div><div class="line">       * When we use a different gpu, we can't use the pixmap</div><div class="line">       * as buffer since it is potentially tiled a way</div><div class="line">       * our device can't understand. In this case, use</div><div class="line">       * a fake front buffer. Hopefully the pixmap</div><div class="line">       * content will get synced with the fake front</div><div class="line">       * buffer.</div><div class="line">       */</div><div class="line">      <span class="keyword">if</span> (draw-&gt;is_pixmap &amp;&amp; !draw-&gt;is_different_gpu)</div><div class="line">         front = dri3_get_pixmap_buffer(driDrawable,</div><div class="line">                                               format,</div><div class="line">                                               loader_dri3_buffer_front,</div><div class="line">                                               draw);</div><div class="line">      <span class="keyword">else</span></div><div class="line">         front = dri3_get_buffer(driDrawable,</div><div class="line">                                        format,</div><div class="line">                                        loader_dri3_buffer_front,</div><div class="line">                                        draw);</div><div class="line"></div><div class="line">      <span class="keyword">if</span> (!front)</div><div class="line">         <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">   &#125; <span class="keyword">else</span> &#123;</div><div class="line">      dri3_free_buffers(driDrawable, loader_dri3_buffer_front, draw);</div><div class="line">      draw-&gt;have_fake_front = <span class="number">0</span>;</div><div class="line">   &#125;</div><div class="line">   ......</div><div class="line">   <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="0x25-glClear"><a href="#0x25-glClear" class="headerlink" title="0x25 glClear"></a>0x25 glClear</h2><p>glClear的调用堆栈如下，可以看到这个时候也需要分配buffer。</p>
+<p><img src="/2020/05/30/EGL in Mesa/glClear.png" alt="EGL in Mesa"></p>
+<h2 id="0x26-eglswapbuffer流程"><a href="#0x26-eglswapbuffer流程" class="headerlink" title="0x26 eglswapbuffer流程"></a>0x26 eglswapbuffer流程</h2><p><img src="/2020/05/30/EGL in Mesa/eglSwapBuffers.png" alt="EGL in Mesa"><br>通过调用相关的OpenGL ES API，把需要的绘制资源，如顶点数据(VBO/VAO等)，纹理资源(glTexImage2D)等准备好，mesa内部也构造好了对应GPU需要执行的command，这个时候可以启动GPU来绘制了。在函数submit_batch中通过调用DRM_IOCTL_I915_GEM_EXECBUFFER2 ioctl命令来启动kernel的绘制动作。</p>
+<h2 id="0x27-egl驱动中实现的其他功能，如chooseConfig"><a href="#0x27-egl驱动中实现的其他功能，如chooseConfig" class="headerlink" title="0x27 egl驱动中实现的其他功能，如chooseConfig"></a>0x27 egl驱动中实现的其他功能，如chooseConfig</h2><p>这部分主要是软件逻辑，根据硬件平台的能力，对configure进行管理。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/26/About SceneGraph/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1692,157 +1851,6 @@ Detection output
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/How escher support physically based render/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/03/23/How escher support physically based render/" itemprop="url">How escher support physically based render</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-23T12:00:00+09:00">
-                2019-03-23
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/03/23/How escher support physically based render/" class="leancloud_visitors" data-flag-title="How escher support physically based render">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-物理渲染和光栅化渲染"><a href="#0x1-物理渲染和光栅化渲染" class="headerlink" title="0x1 物理渲染和光栅化渲染"></a>0x1 物理渲染和光栅化渲染</h1><h2 id="0x21-传统光栅化渲染器的特点"><a href="#0x21-传统光栅化渲染器的特点" class="headerlink" title="0x21 传统光栅化渲染器的特点"></a>0x21 传统光栅化渲染器的特点</h2><p>光栅化是指把3D空间的几何图形及其色彩信息转换至2D计算机屏幕上像素的过程。光栅化渲染器的pipeline包括Vertex Shader,Rasterization,Fragment Shader等阶段，目前GPU硬件也是采用这种高效率的光栅化架构。基于这些GPU硬件设计的渲染API有Windows上的DirectX,跨平台的OpenGL和Vulkan，已经Apple的Metal等。应用程序可以基于这些渲染API开发出酷炫的3D效果。但是这种光栅化的缺点也很明显，那就是无法完全模拟真实场景下的光线传播，导致绘制效果失真。</p>
-<p>下图说明了光栅化渲染器的流水线。</p>
-<p><img src="/2019/03/23/How escher support physically based render/pipeline.png" alt=""></p>
-<p>现代GPU中vertex shader和fragment shader一般是逻辑的概念，当时比较早的GPU是采用两种独立的硬件单元(不是Unified Shader)来实现的，如ARM Mali-400就是这种架构，这种架构的缺点是vertex shader和fragment shader的负载没办法平衡，极端情况下会出现其中一种硬件Shader满负荷运行，另外一种硬件Shader空闲的情况。后来的架构一般是基于通用可编程计算单元实现这些功能。也就是我们常说的Unified Shader架构。如树莓派中的Soc VideoCore采用了BroadCom V3D GPU, 其中的Unified Shader中采用QPU这种通用可编程计算单元来实现。</p>
-<p>移动GPU相对桌面GPU的架构也有差别，因为移动平台上对带宽及功耗的要求都比较高。<br>桌面GPU一般采用IMR(Immediate Mode Rendering)架构, 这种架构需要同时对该次渲染的全部物体进行处理，需要频繁访问系统帧缓存（位于系统内存里），故对带宽要求较高。</p>
-<p>移动GPU一般采用TBR架构(Tile Based Rendering)。TBR架构包括两个阶段Tiling和Binning。Tiling阶段把整个画面分成小块，然后计算每个小块中有哪些三角形需要处理。Binning阶段每次只对一个小块中包括的三角形进行处理，这种方式避免了对帧缓存（位于系统内存里）的频繁读写和修改，因为这些小块中的三角形的渲染是在GPU上的高速缓存里进行，所以能节约带宽，同时也减少了功耗。</p>
-<p>Imagination在TBR架构的基础上又提出了TBDR(Tile Based Deferred Rendering), 在执行shading之前加入HSR(Hidded Surface Remove), 这个模块利用vertex shader/rasterization之后的fragment的深度值来优化掉不必要的计算。</p>
-<h2 id="0x22-物理渲染器的特点"><a href="#0x22-物理渲染器的特点" class="headerlink" title="0x22 物理渲染器的特点"></a>0x22 物理渲染器的特点</h2><p>物理渲染器PBR(Physically Based Rendering),也称光线跟踪器(Ray tracer)。采用该算法渲染的结果看起来更真实，因为它基于物理参数的方法来编写材质，而且考虑了光线的发射和折射，材质对光线的吸收等。</p>
-<p>光线跟踪算法描述如下，沿着到达视点的光线的反方向跟踪，经过屏幕上每一个象素，找出与视线相交的物体表面点，并继续跟踪，找出影响点光强的所有光源，从而算出点上精确的光线强度。这种算法计算量极大，一般用于离线渲染。</p>
-<p>一个典型的物理渲染器包括如下模块。<br>相机<br>光线-对象相交测试<br>光照分布/光线传播<br>递归光线跟踪机制</p>
-<p>考虑到PBR的计算量太大，只适合离线渲染，后来基于全局光照Global Illuslaton技术的来实现实时PBR，因为考虑到了速度的提升，在渲染质量上会有损失。</p>
-<p>早期Ray tracing的硬件有德国萨尔兰大学计算机图形小组在2005年的SIGGRAPH上展示了第一个实时光线追踪加速硬件——RPU（Ray Processing Unit），最近有NVIDIA在GPU硬件中加入了Ray tracing。</p>
-<p>下图是采用Blender中的cycles物理渲染器渲染的坦克效果图，如果完全用CPU来计算，速度很慢，大概需要几十分钟。<br><img src="/2019/03/23/How escher support physically based render/tank.png" alt=""></p>
-<h1 id="0x2-Escher是如何做到物理渲染的？"><a href="#0x2-Escher是如何做到物理渲染的？" class="headerlink" title="0x2 Escher是如何做到物理渲染的？"></a>0x2 Escher是如何做到物理渲染的？</h1><p>Escher是Google下一代操作系统Fuchsia上内置的基于物理的真实感渲染引擎，它和Scenic一起提供了Fuchsia上的合成及进一步特效处理功能。</p>
-<p>Escher目前看来主要采用光照和阴影技术来达到物理渲染的效果。</p>
-<p>阴影是真实感渲染的一个重要组成部分，它对增加渲染物体的表面细节，帮助观察者增加对场景的空间感，从而更好地来判断物体的位置关系以及形状等有很大的帮助。可以说没有了阴影，3D场景中的真实感和吸引力将降低。</p>
-<p>Escher中包括了如下几种阴影技术，ShadowMap、ShadowVolume等。</p>
-<p>从Escher的实现代码可知，Escher还只是实现了部分物理渲染的功能，主要是通过light和shadow来体现真实感效果，后续要支持AR/VR中更多酷炫效果的话，需要进一步开发。</p>
-<h1 id="0x03-展望"><a href="#0x03-展望" class="headerlink" title="0x03 展望"></a>0x03 展望</h1><p>随着GPU硬件中增加了Ray tracing的功能，主流API都增加了对Ray tracing的支持，未来Escher中可能会直接调用这些API(目前Escher中是调用了Vulkan，也就是说会调用Vulkan的Ray tracing支持)来加速Ray tracing的处理。</p>
-<p>下来介绍一种主流API对 ray tracing的支持</p>
-<h2 id="0x31-Directx-raytracing"><a href="#0x31-Directx-raytracing" class="headerlink" title="0x31 Directx raytracing"></a>0x31 Directx raytracing</h2><p>DirectX Raytracing在DirectX 12 API的基础上引入了下面这些概念<br><a href="https://devblogs.microsoft.com/directx/announcing-microsoft-directx-raytracing/" target="_blank" rel="external">DirectX Raytracing</a></p>
-<p>What is DirectX Raytracing?<br>At the highest level, DirectX Raytracing (DXR) introduces four, new concepts to the DirectX 12 API:</p>
-<p>The acceleration structure is an object that represents a full 3D environment in a format optimal for traversal by the GPU.  Represented as a two-level hierarchy, the structure affords both optimized ray traversal by the GPU, as well as efficient modification by the application for dynamic objects.</p>
-<p>A new command list method, DispatchRays, which is the starting point for tracing rays into the scene.  This is how the game actually submits DXR workloads to the GPU.</p>
-<p>A set of new HLSL shader types including ray-generation, closest-hit, any-hit, and miss shaders.  These specify what the DXR workload actually does computationally.  When DispatchRays is called, the ray-generation shader runs.  Using the new TraceRay intrinsic function in HLSL, the ray generation shader causes rays to be traced into the scene.  Depending on where the ray goes in the scene, one of several hit or miss shaders may be invoked at the point of intersection.  This allows a game to assign each object its own set of shaders and textures, resulting in a unique material.</p>
-<p>The raytracing pipeline state, a companion in spirit to today’s Graphics and Compute pipeline state objects, encapsulates the raytracing shaders and other state relevant to raytracing workloads.</p>
-<h2 id="0x32-Vulkan-ray-tracing"><a href="#0x32-Vulkan-ray-tracing" class="headerlink" title="0x32 Vulkan ray tracing"></a>0x32 Vulkan ray tracing</h2><p>NVIDIA提供了Vulkan的扩展了支持ray tracing。<br><a href="https://devblogs.nvidia.com/vulkan-raytracing/" target="_blank" rel="external">Vulkan ray tracing</a></p>
-<h2 id="0x33-Metal-ray-tracing"><a href="#0x33-Metal-ray-tracing" class="headerlink" title="0x33 Metal ray tracing"></a>0x33 Metal ray tracing</h2><p>Metal提供了ray tracing的支持。<br><img src="/2019/03/23/How escher support physically based render/metal_ray_tracing.png" alt=""></p>
-<p>详细信息请参考<br><a href="https://developer.apple.com/videos/play/wwdc2018/606/" target="_blank" rel="external">Metal ray tracing</a></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1892,7 +1900,7 @@ Detection output
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">34</span>
+                <span class="site-state-item-count">35</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
