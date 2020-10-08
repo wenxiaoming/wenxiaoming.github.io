@@ -110,7 +110,7 @@
 <meta property="og:image" content="http://yoursite.com/2019/10/13/About%20Video%20Codec%20Optimization/Macroblock%20Level%20Parallel.png">
 <meta property="og:image" content="http://yoursite.com/2019/10/13/About%20Video%20Codec%20Optimization/DXVA.png">
 <meta property="og:image" content="http://yoursite.com/2019/10/13/About%20Video%20Codec%20Optimization/LibVA.png">
-<meta property="og:updated_time" content="2020-06-07T13:53:48.701Z">
+<meta property="og:updated_time" content="2020-10-08T01:29:37.706Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="About Video Codec Optimization">
 <meta name="twitter:description" content="0x1 Video Codec流程视频编码流程如下图所示。视频解码流程如下图所示。如何对编解码器进行优化呢？主要方法有算法优化，指令集优化和并行优化。本文的后面部分会对这些优化方法进行详细的介绍。这边先来介绍一下优化的量化指标。 对编解码来说，共性的指标是编解码速度和消耗的功耗。编解码速度可以用fps来量化。这个是典型的软件优化过程，这个时候，诸如降低cache miss率，循环展开等优化思想都是">
@@ -349,7 +349,7 @@
 <p>另外在编解码优化过程中，我们还会用到码流分析工具，如<a href="http://www.interrasystems.com/pdf/datasheet/Vega_Datasheet.pdf" target="_blank" rel="external">Vega</a>,<a href="https://www.elecard.com/zh/products/video-analysis/streameye" target="_blank" rel="external">streameye</a>和yuvviewer等。</p>
 <p>对解码器来说，我们还需要运行各种conformance test来保证解码优化以后不引入衰退。</p>
 <h1 id="0x2-算法优化"><a href="#0x2-算法优化" class="headerlink" title="0x2 算法优化"></a>0x2 算法优化</h1><p>算法优化主要针对编码器而言的。<br>编码算法优化的目标有三个，一个是在保证质量的前提下降低码率，另一个是码率不变情况下提升编码质量。第三个目标是保证图形质量和码率不变的情况下提升编码速度。</p>
-<p>前面两者的任务一般是编码器设计者的工作，在一种特定的码流格式确定之前需要开各种会议来讨论码流的细节，这种会议中的很多提案都是用来解决这些问题的。下面我们来讨论一下如何按照第三个目标来优化编码器。</p>
+<p>前面两个的目标也是制定编解码器标准的目标，在一种特定的码流格式确定之前需要召开多次会议来讨论码流的细节，这种会议会讨论各个单位的提案，选出最佳的coding tools，达到最佳的压缩效率。下面我们来讨论一下如何按照第三个目标来优化编码器。</p>
 <p>编码算法进行优化后，如何保证编码质量呢？这个时候需要通过客观指标如PSNR来保证，或者是类似的主观指标如MOS或者DMOS来保证。通过比较优化前后的PSNR，我们可以知道编码质量有没有下降。如何检查码率有没有变化呢？这个很简单，直接比较编码生成的文件大小有没有增加即可。</p>
 <p>下面以AVC的编码器为例，看看如何对编码算法进行一定的优化。</p>
 <p>帧内预测优化<br>比如在AVC的Luma帧内编码过程中，对应4x4大小的block，我们需要遍历9种预测方向来找到最优的预测方式。这个时候我们可以利用像素的特点减少预测方向的数量。另外还有16x16,8x8(High Profile而言)大小需要比较，这个时候都可以通过减少预测数量来优化。</p>
