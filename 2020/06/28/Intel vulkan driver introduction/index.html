@@ -96,31 +96,31 @@
 <meta name="description" content="0x1 OverviewAs we know, mesa has supported vulkan driver for four different platforms, these four platforms are Intel，AMD，Qualcomm Adreno，Broadcom V3D. Currently vulkan driver support in mesa is not u">
 <meta name="keywords" content="GPU driver">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Intel Vulkan Driver Introduction">
-<meta property="og:url" content="http://yoursite.com/2020/06/28/Intel Vulkan Driver Introduction/index.html">
+<meta property="og:title" content="Intel vulkan driver introduction">
+<meta property="og:url" content="http://yoursite.com/2020/06/28/Intel vulkan driver introduction/index.html">
 <meta property="og:site_name" content="Kevin Wen&#39;s Blog">
 <meta property="og:description" content="0x1 OverviewAs we know, mesa has supported vulkan driver for four different platforms, these four platforms are Intel，AMD，Qualcomm Adreno，Broadcom V3D. Currently vulkan driver support in mesa is not u">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/vulkan_driver_of_mesa.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/GPU-block.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/GPU-block1.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/GPU-pipeline.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/GPU-pipeline1.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/component_overview.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/component_overview_1.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/gem_alloc.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/gem_release.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/gem_execbuffer.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/architecture.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/spirv_to_nir_to_gpucode.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/anv_dump.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/anv_dump_result.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/intel_gpu_dump.png">
-<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/intel_gpu_dump_result.png">
-<meta property="og:updated_time" content="2020-10-25T11:55:27.882Z">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/vulkan_driver_of_mesa.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/GPU-block.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/GPU-block1.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/GPU-pipeline.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/GPU-pipeline1.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/component_overview.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/component_overview_1.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/gem_alloc.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/gem_release.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/gem_execbuffer.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/architecture.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/spirv_to_nir_to_gpucode.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/anv_dump.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/anv_dump_result.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/intel_gpu_dump.png">
+<meta property="og:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/intel_gpu_dump_result.png">
+<meta property="og:updated_time" content="2020-10-25T12:42:15.984Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Intel Vulkan Driver Introduction">
+<meta name="twitter:title" content="Intel vulkan driver introduction">
 <meta name="twitter:description" content="0x1 OverviewAs we know, mesa has supported vulkan driver for four different platforms, these four platforms are Intel，AMD，Qualcomm Adreno，Broadcom V3D. Currently vulkan driver support in mesa is not u">
-<meta name="twitter:image" content="http://yoursite.com/2020/06/28/Intel%20Vulkan%20Driver%20Introduction/vulkan_driver_of_mesa.png">
+<meta name="twitter:image" content="http://yoursite.com/2020/06/28/Intel%20vulkan%20driver%20introduction/vulkan_driver_of_mesa.png">
 
 
 
@@ -148,13 +148,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2020/06/28/Intel Vulkan Driver Introduction/"/>
+  <link rel="canonical" href="http://yoursite.com/2020/06/28/Intel vulkan driver introduction/"/>
 
 
 
 
 
-  <title>Intel Vulkan Driver Introduction | Kevin Wen's Blog</title>
+  <title>Intel vulkan driver introduction | Kevin Wen's Blog</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -274,7 +274,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/28/Intel Vulkan Driver Introduction/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/28/Intel vulkan driver introduction/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Kevin Wen">
@@ -291,7 +291,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Intel Vulkan Driver Introduction</h1>
+          <h1 class="post-title" itemprop="name headline">Intel vulkan driver introduction</h1>
         
 
         <div class="post-meta">
@@ -321,7 +321,7 @@
 
           
           
-             <span id="/2020/06/28/Intel Vulkan Driver Introduction/" class="leancloud_visitors" data-flag-title="Intel Vulkan Driver Introduction">
+             <span id="/2020/06/28/Intel vulkan driver introduction/" class="leancloud_visitors" data-flag-title="Intel vulkan driver introduction">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -350,24 +350,28 @@
 
       
         <h1 id="0x1-Overview"><a href="#0x1-Overview" class="headerlink" title="0x1 Overview"></a>0x1 Overview</h1><p>As we know, mesa has supported vulkan driver for four different platforms, these four platforms are Intel，AMD，Qualcomm Adreno，Broadcom V3D. Currently vulkan driver support in mesa is not using Gallium architecture like OpenGL，its architecture seems child stage, the four vulkan drivers don’t have much shared common codes, the abstraction of the four vulkan drivers is the architecture optimization of mesa vulkan driver in the next stage.It has widely discussed in the mesa dev community.And the coming optimized architecture will accelerate the supporting for more GPU platforms like Mali GPU and Imagination GPU.</p>
-<p><img src="/2020/06/28/Intel Vulkan Driver Introduction/vulkan_driver_of_mesa.png" alt=""></p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/vulkan_driver_of_mesa.png" alt=""></p>
 <p>In this article, I will show you how Intel Vulkan driver is supported in mesa.</p>
 <p>Let’s have a look of Intel GEN GPU hardware architecture.</p>
 <p>The following diagram is about the hardware block of the <a href="http://kiwitree.net/~chadv/intel-gfx-docs/prm/gen11.0-icl/intel-gfx-prm-osrc-icllp-vol09-renderengine_0.pdf" target="_blank" rel="external">Intel GEN GPU</a></p>
-<p><img src="/2020/06/28/Intel Vulkan Driver Introduction/GPU-block.png" alt=""><br><img src="/2020/06/28/Intel Vulkan Driver Introduction/GPU-block1.png" alt=""></p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/GPU-block.png" alt=""><br><img src="/2020/06/28/Intel vulkan driver introduction/GPU-block1.png" alt=""></p>
 <p>Here is the 3D pipeline block of <a href="https://01.org/sites/default/files/documentation/snb_ihd_os_vol2_part1_0.pdf" target="_blank" rel="external">Intel Gen GPU</a>. the left part is the 3D pipleine, the right part is the GPU hardware block.</p>
-<p><img src="/2020/06/28/Intel Vulkan Driver Introduction/GPU-pipeline.png" alt=""><br><img src="/2020/06/28/Intel Vulkan Driver Introduction/GPU-pipeline1.png" alt=""></p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/GPU-pipeline.png" alt=""><br><img src="/2020/06/28/Intel vulkan driver introduction/GPU-pipeline1.png" alt=""></p>
+<p>The GPU driver (userspace and kernel space) will configure the above hardware block according to graphics API’s input, then trigger gpu hardware to execute as its configuration.</p>
 <h1 id="0x2-Component-overview"><a href="#0x2-Component-overview" class="headerlink" title="0x2 Component overview"></a>0x2 Component overview</h1><p>We know mesa includes several abstraction layers. it supports different graphics api,different compiler frontend, different gpu hardware code generation.</p>
-<p>In mesa, Intel vulkan driver’s module name is ANV.Here is the diagram about how ANV driver is built from different sub component.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/component_overview.png" alt=""></p>
-<p>And here is the relationship of intel vulkan driver library and its dpendencies.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/component_overview_1.png" alt=""></p>
+<p>In mesa, Intel vulkan driver’s module name is ANV.Here is the diagram about how ANV driver is built from different sub component.<br><img src="/2020/06/28/Intel vulkan driver introduction/component_overview.png" alt=""></p>
+<p>And here is the relationship of intel vulkan driver library and its dpendencies.<br><img src="/2020/06/28/Intel vulkan driver introduction/component_overview_1.png" alt=""></p>
 <h1 id="0x3-Mem-interface"><a href="#0x3-Mem-interface" class="headerlink" title="0x3 Mem interface"></a>0x3 Mem interface</h1><p>GPU harware needs serveral input data for further processing, like vertex buffer, texture buffer, uniform buffer and surface, these buffer will be accessed by CPU and GPU together. so mesa should provide interface to alloc/release buffer, set these buffer’s address to GPU hardware then issue hardware to execute it.</p>
 <p>Let’s have brief explanation about how buffer alloc/release happen in ANV vulkan driver.</p>
-<h2 id="0x31-Alloc-buffer"><a href="#0x31-Alloc-buffer" class="headerlink" title="0x31 Alloc buffer"></a>0x31 Alloc buffer</h2><p><img src="/2020/06/28/Intel Vulkan Driver Introduction/gem_alloc.png" alt=""></p>
-<h2 id="0x32-Release-buffer"><a href="#0x32-Release-buffer" class="headerlink" title="0x32 Release buffer"></a>0x32 Release buffer</h2><p><img src="/2020/06/28/Intel Vulkan Driver Introduction/gem_release.png" alt=""></p>
-<h2 id="0x33-Issue-command-to-kernel-driver"><a href="#0x33-Issue-command-to-kernel-driver" class="headerlink" title="0x33 Issue command to kernel driver"></a>0x33 Issue command to kernel driver</h2><p><img src="/2020/06/28/Intel Vulkan Driver Introduction/gem_execbuffer.png" alt=""></p>
+<p>Here is the sequence about allocating gem buffer.</p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/gem_alloc.png" alt=""></p>
+<p>Here is the sequence about releasing buffer.</p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/gem_release.png" alt=""></p>
+<p>Here is the sequence about issuing command to kernel driver.</p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/gem_execbuffer.png" alt=""></p>
 <p>For performance optimization, ANV can use a cache mechansim to boost the performance since the memory alloc/release is resource heavy operation. In broadcom close source v3d driver, it uses a similar mechansim like linux slab to cache buffer in userland driver.</p>
-<h1 id="0x4-Typical-objects-in-vulkan"><a href="#0x4-Typical-objects-in-vulkan" class="headerlink" title="0x4 Typical objects in vulkan"></a>0x4 Typical objects in vulkan</h1><p>Here are several important objects of vulkan concepts. RenderPass object and ShaderModule object are passed to Pipeline through VkGraphicsPipelineCreateInfo when creating Pipeline object. then Pipeline is binded to CommandBuffer using VkCmdBindPipeline api, after that the commanbuffer can use the passing Pipeline object, RenderPass object and ShaderModule object.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/architecture.png" alt=""></p>
-<h1 id="0x5-GPU-codegen"><a href="#0x5-GPU-codegen" class="headerlink" title="0x5 GPU codegen"></a>0x5 GPU codegen</h1><p>Here is the diagram about generating gpu code from SPIRV code.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/spirv_to_nir_to_gpucode.png" alt=""></p>
+<h1 id="0x4-Typical-objects-in-vulkan"><a href="#0x4-Typical-objects-in-vulkan" class="headerlink" title="0x4 Typical objects in vulkan"></a>0x4 Typical objects in vulkan</h1><p>Here are several important objects of vulkan concepts. RenderPass object and ShaderModule object are passed to Pipeline through VkGraphicsPipelineCreateInfo when creating Pipeline object. then Pipeline is binded to CommandBuffer using VkCmdBindPipeline api, after that the commanbuffer can use the passing Pipeline object, RenderPass object and ShaderModule object.<br><img src="/2020/06/28/Intel vulkan driver introduction/architecture.png" alt=""></p>
+<h1 id="0x5-GPU-codegen"><a href="#0x5-GPU-codegen" class="headerlink" title="0x5 GPU codegen"></a>0x5 GPU codegen</h1><p>Here is the diagram about generating gpu code from SPIRV code.<br><img src="/2020/06/28/Intel vulkan driver introduction/spirv_to_nir_to_gpucode.png" alt=""></p>
 <p>The gpu code is the code which will run on Intel GPU’s EUs(execution unit), it is programmable shader unit, likes broadcom v3d’s QPU.</p>
 <p>The input of the pipeline is SPIRV code, the SPIRV format is the standard IR for different shader formats like glsl,opencl. </p>
 <p>Then ANV driver will convert it to mesa internal IR format(NIR) code.</p>
@@ -375,7 +379,7 @@
 <p>The last step is gpu code generation.It uses typical graphic coloring algorithm. at this stage,we must read the GPU programmer guide carefully,then learn how to generate effective code for intel gen gpu.</p>
 <h1 id="0x6-Framebuffer-dump"><a href="#0x6-Framebuffer-dump" class="headerlink" title="0x6 Framebuffer dump"></a>0x6 Framebuffer dump</h1><p>This feature is useful for us to check the render result in the framebuffer. it is similar as we can use glReadPixels to read back framebuffer’s content on OpenGL.</p>
 <p>Currently mesa’s anv dump code has bug to blit framebuffer to write image, and I have fixed it to make this feature can work well.</p>
-<p>Here is the diagram about how to dump framebuffer.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/anv_dump.png" alt=""></p>
+<p>Here is the diagram about how to dump framebuffer.<br><img src="/2020/06/28/Intel vulkan driver introduction/anv_dump.png" alt=""></p>
 <p>It uses gdb call method to dump data, here is the use instruction about it.</p>
 <ul>
 <li>To dump the framebuffers of an application after each render pass, all you</li>
@@ -388,14 +392,14 @@
 <li>6) Continue until the next anv_QueuePresentKHR call</li>
 <li>7) Call anv_dump_finish() to complete the dump and write files</li>
 </ul>
-<p>Here is the dump result with the above method.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/anv_dump_result.png" alt=""></p>
+<p>Here is the dump result with the above method.<br><img src="/2020/06/28/Intel vulkan driver introduction/anv_dump_result.png" alt=""></p>
 <h1 id="0x7-Hardware-state-dump"><a href="#0x7-Hardware-state-dump" class="headerlink" title="0x7 Hardware state dump"></a>0x7 Hardware state dump</h1><p>It uses preload method to hook api, the hook api will dump state to a file.</p>
-<p>Here is the diagram about it.<br><img src="/2020/06/28/Intel Vulkan Driver Introduction/intel_gpu_dump.png" alt=""></p>
+<p>Here is the diagram about it.<br><img src="/2020/06/28/Intel vulkan driver introduction/intel_gpu_dump.png" alt=""></p>
 <p>Here is the gdb command for capturing data</p>
 <p>gdb -iex “set exec-wrapper env LD_PRELOAD=/home/kevin/mesa/mesa_build_vulkan/libexec/libintel_dump_gpu.so INTEL_DUMP_GPU_CONFIG=/home/kevin/mesa/test_intel_dump_gpu/dump_config” –args “/home/kevin/vulkan/build/bin/multithreading”</p>
 <p>Then we can use Aubinator Viewer to check the dumped states. please notice that this dump mechansim is also working for Opengl case, and the dump items are the same as Vulkan’s since the dump is for getting content of gpu hardware statue.</p>
 <p>The dump item shows what vulkan driver program the hardware. we can see the following states’s content like 3DSTATE_VS and other states.</p>
-<p><img src="/2020/06/28/Intel Vulkan Driver Introduction/intel_gpu_dump_result.png" alt=""></p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/intel_gpu_dump_result.png" alt=""></p>
 
       
     </div>
@@ -570,7 +574,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Overview"><span class="nav-number">1.</span> <span class="nav-text">0x1 Overview</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Component-overview"><span class="nav-number">2.</span> <span class="nav-text">0x2 Component overview</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-Mem-interface"><span class="nav-number">3.</span> <span class="nav-text">0x3 Mem interface</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x31-Alloc-buffer"><span class="nav-number">3.1.</span> <span class="nav-text">0x31 Alloc buffer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x32-Release-buffer"><span class="nav-number">3.2.</span> <span class="nav-text">0x32 Release buffer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x33-Issue-command-to-kernel-driver"><span class="nav-number">3.3.</span> <span class="nav-text">0x33 Issue command to kernel driver</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Typical-objects-in-vulkan"><span class="nav-number">4.</span> <span class="nav-text">0x4 Typical objects in vulkan</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-GPU-codegen"><span class="nav-number">5.</span> <span class="nav-text">0x5 GPU codegen</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x6-Framebuffer-dump"><span class="nav-number">6.</span> <span class="nav-text">0x6 Framebuffer dump</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x7-Hardware-state-dump"><span class="nav-number">7.</span> <span class="nav-text">0x7 Hardware state dump</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-Overview"><span class="nav-number">1.</span> <span class="nav-text">0x1 Overview</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Component-overview"><span class="nav-number">2.</span> <span class="nav-text">0x2 Component overview</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-Mem-interface"><span class="nav-number">3.</span> <span class="nav-text">0x3 Mem interface</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Typical-objects-in-vulkan"><span class="nav-number">4.</span> <span class="nav-text">0x4 Typical objects in vulkan</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x5-GPU-codegen"><span class="nav-number">5.</span> <span class="nav-text">0x5 GPU codegen</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x6-Framebuffer-dump"><span class="nav-number">6.</span> <span class="nav-text">0x6 Framebuffer dump</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x7-Hardware-state-dump"><span class="nav-number">7.</span> <span class="nav-text">0x7 Hardware state dump</span></a></li></ol></div>
             
 
           </div>
