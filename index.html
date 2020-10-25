@@ -533,7 +533,7 @@
 <p><img src="/2020/06/28/Intel vulkan driver introduction/GPU-block.png" alt=""><br><img src="/2020/06/28/Intel vulkan driver introduction/GPU-block1.png" alt=""></p>
 <p>Here is the 3D pipeline block of <a href="https://01.org/sites/default/files/documentation/snb_ihd_os_vol2_part1_0.pdf" target="_blank" rel="external">Intel Gen GPU</a>. the left part is the 3D pipleine, the right part is the GPU hardware block.</p>
 <p><img src="/2020/06/28/Intel vulkan driver introduction/GPU-pipeline.png" alt=""><br><img src="/2020/06/28/Intel vulkan driver introduction/GPU-pipeline1.png" alt=""></p>
-<p>The GPU driver (userspace and kernel space) will configure the above hardware block according to graphics API’s input, then trigger gpu hardware to execute as its configuration.</p>
+<p>The GPU driver (userspace and kernel space) will configure the above hardware block according to graphics API’s input, then trigger gpu hardware to execute as its configuration. So GPU driver’s task is simple, just to configure the GPU hardware!</p>
 <h1 id="0x2-Component-overview"><a href="#0x2-Component-overview" class="headerlink" title="0x2 Component overview"></a>0x2 Component overview</h1><p>We know mesa includes several abstraction layers. it supports different graphics api,different compiler frontend, different gpu hardware code generation.</p>
 <p>In mesa, Intel vulkan driver’s module name is ANV.Here is the diagram about how ANV driver is built from different sub component.<br><img src="/2020/06/28/Intel vulkan driver introduction/component_overview.png" alt=""></p>
 <p>And here is the relationship of intel vulkan driver library and its dpendencies.<br><img src="/2020/06/28/Intel vulkan driver introduction/component_overview_1.png" alt=""></p>
