@@ -446,6 +446,176 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/28/Intel vulkan driver introduction/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/06/28/Intel vulkan driver introduction/" itemprop="url">Intel Vulkan Driver Introduction</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-06-28T19:10:10+09:00">
+                2020-06-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2020/06/28/Intel vulkan driver introduction/" class="leancloud_visitors" data-flag-title="Intel Vulkan Driver Introduction">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>#0x1 Overview</p>
+<p>As we know, mesa has supported vulkan driver for four different platforms, these four platforms are Intel，AMD，Qualcomm Adreno，Broadcom V3D. Currently vulkan driver support in mesa is not using Gallium architecture like OpenGL，its architecture seems child stage, the four vulkan drivers don’t have much shared common codes, the abstraction of the four vulkan drivers is the architecture optimization of mesa vulkan driver in the next stage.It has widely discussed in the community.and the coming optimized architecture will accelerate the supporting for more GPU platforms like Mali GPU and Imagination GPU.</p>
+<p><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction/vulkan driver of mesa.png" alt=""></p>
+<p>In this article, I will show you how Intel Vulkan support in mesa.</p>
+<p>Let’s have a look of Intel GEN GPU hardware architecture.</p>
+<p>The following diagram is about the hardware block of the Intel GEN GPU.<br><a href="http://kiwitree.net/~chadv/intel-gfx-docs/prm/gen11.0-icl/intel-gfx-prm-osrc-icllp-vol09-renderengine_0.pdf" target="_blank" rel="external">http://kiwitree.net/~chadv/intel-gfx-docs/prm/gen11.0-icl/intel-gfx-prm-osrc-icllp-vol09-renderengine_0.pdf</a><br><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<p>Here is the 3D pipeline block of Intel Gen GPU. the left part is the 3D pipleine, the right part is the GPU hardware block.<br><a href="https://01.org/sites/default/files/documentation/snb_ihd_os_vol2_part1_0.pdf" target="_blank" rel="external">https://01.org/sites/default/files/documentation/snb_ihd_os_vol2_part1_0.pdf</a><br><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<p>#0x2 component overview<br>We know mesa includes several abstraction layers. it supports different graphics api,different compiler frontend, different gpu hardware code generation.</p>
+<p>Here is the diagram about how ANV vulkan driver is built from different sub component.<br><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<p>And here is the relationship of intel vulkan driver library and its dpendencies.<br><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<p>#0x3 Mem interface</p>
+<p>GPU harware needs serveral input data for further processing, like vertex buffer, texture buffer, uniform buffer and surface, these buffer will be accessed by CPU and GPU together. so mesa should provide interface to alloc/release buffer, set these buffer’s address<br>to GPU hardware.</p>
+<p>Let’s have brief explanation about how buffer alloc/release happen in ANV vulkan driver.</p>
+<h2 id="0x31-Alloc"><a href="#0x31-Alloc" class="headerlink" title="0x31 Alloc"></a>0x31 Alloc</h2><p><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<h2 id="0x32-Release"><a href="#0x32-Release" class="headerlink" title="0x32 Release"></a>0x32 Release</h2><p><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<h2 id="0x33-Issue-command"><a href="#0x33-Issue-command" class="headerlink" title="0x33 Issue command"></a>0x33 Issue command</h2><p><img src="/2020/06/28/Intel vulkan driver introduction/Intel Vulkan Driver Introduction" alt=""></p>
+<p>For performance optimization, we can use cache mechansim to boost the performance since the memory alloc/release is resource heavy operation. In broadcom close source v3d driver, it uses a mechansim like linux slab to cache buffer in userland driver.</p>
+<p>#0x4 Typical object relationship</p>
+<p>Here are the important objects of vulkan concepts. RenderPass object and ShaderModule object<br>are passed to Pipeline through VkGraphicsPipelineCreateInfo when creating Pipeline object. then Pipeline is binded to CommandBuffer using VkCmdBindPipeline api, after that the commanbuffer can use the passing Pipeline object, RenderPass object and ShaderModule object.</p>
+<p>#0x5 GPU codegen</p>
+<p>Here is the diagram about generating gpu code from SPIRV code</p>
+<p>The gpu code is the code which will run on Intel GPU’s EUs(execution unit), it is programmable shader unit, likes broadcom v3d’s QPU.</p>
+<p>The input of the pipeline is SPIRV code, the SPIRV format is the standard IR for different shader formats like glsl,opencl.<br>Then ANV driver will convert it to mesa internal IR format(NIR) code.</p>
+<p>Then it will be optimized by different passes, this idea is similar as other compiler’s optimization passes.</p>
+<p>The last step is gpu code generation. it uses typical graphic coloring algorithm. at this stage,we must read the GPU programmer guide carefully,then learn how to generate effective code for intel gen gpu.</p>
+<p>#0x6 dump framebuffer</p>
+<p>This feature is useful for us to check the render result in the framebuffer. it is similar as we can use glReadPixels to read back framebuffer’s content on OpenGL.</p>
+<p>Here is the diagram about how to dump framebuffer.</p>
+<p>Use gdb call method to dump data, here is the use instruction about it.</p>
+<ul>
+<li>To dump the framebuffers of an application after each render pass, all you</li>
+<li>have to do is the following<br>*</li>
+<li>1) Start the application in GDB</li>
+<li>2) Run until you get to the point where the rendering errors occur</li>
+<li>3) Pause in GDB and set a breakpoint in anv_QueuePresentKHR</li>
+<li>4) Continue until it reaches anv_QueuePresentKHR</li>
+<li>5) Call anv_dump_start(queue-&gt;device, ANV_DUMP_FRAMEBUFFERS_BIT)</li>
+<li>6) Continue until the next anv_QueuePresentKHR call</li>
+<li>7) Call anv_dump_finish() to complete the dump and write files</li>
+</ul>
+<p>Here is the dump result with the above method.</p>
+<p>#0x7 dump state and register</p>
+<p>Use preload method to hook api, the    hook api will dump state</p>
+<p>Here is the diagram about it.</p>
+<p>Here is the gdb command for capturing data</p>
+<p>gdb -iex “set exec-wrapper env LD_PRELOAD=/home/kevin/kevin/mesa/mesa_build_vulkan/libexec/libintel_dump_gpu.so INTEL_DUMP_GPU_CONFIG=/home/kevin/kevin/mesa/test_intel_dump_gpu/dump_config” –args “/home/kevin/kevin/vulkan/build/bin/multithreading”</p>
+<p>Then we can use viewer to check the dumped states. please notice that this dump mechansim is also working for Opengl case, and the dump items are the same as Vulkan’s since the dump is for getting content of gpu hardware statue.</p>
+<p>The dump item shows what vulkan driver program the hardware. we can see the following states’s content like 3DSTATE_VS</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/30/EGL in Mesa/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1759,139 +1929,6 @@ Detection output
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/04/06/Use AI to speed up AV1 encoder/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/04/06/Use AI to speed up AV1 encoder/" itemprop="url">Use AI to speed up AV1 encoder</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-06T17:00:10+09:00">
-                2019-04-06
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/04/06/Use AI to speed up AV1 encoder/" class="leancloud_visitors" data-flag-title="Use AI to speed up AV1 encoder">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-AV1的编码复杂性"><a href="#0x1-AV1的编码复杂性" class="headerlink" title="0x1 AV1的编码复杂性"></a>0x1 AV1的编码复杂性</h1><p>我们知道AV1的官方参考实现是libaom，由于AV1的编码复杂度高，如果采用libaom编码器来生成AV1的码流离实时编码还有很大的距离。我们知道传统视频编码器中有宏块的概念，宏块是16x16的亮度块 + 2个 8x8的色度快。从HEVC开始，到现在的AV1进一步引入了partiton的概念，也就是树形编码的概念，也就是说把先规定好最大的编码单元，这个最大的编码单元称为super block，在HEVC一般是64x64，在AV1中为128x128。然后进行四叉树划分，AV1中直至划分成4x4，HEVC中直至划分成8x8。而且这种划分进一步扩展到预测单元和变换单元。据统计，AV1编码中的复杂度80%是因为partiton引入的，所以要是能有一个快速方法来加速partiton的判断的话，AV1的编码速度能大幅提升。</p>
-<p>AV1中的partiton划分如下图所示。<br><img src="https://wenxiaoming.github.io/2019/03/02/The-overview-of-AV1-coding/partition2.png" alt=""></p>
-<h1 id="0x2-AI加速partiton划分"><a href="#0x2-AI加速partiton划分" class="headerlink" title="0x2 AI加速partiton划分"></a>0x2 AI加速partiton划分</h1><pre><code>在libaom目前的实现中，AI加速主要用在intra frame的partition划分优化上。
-</code></pre><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">av1_intra_mode_cnn_partition(</div><div class="line">    &amp;cpi-&gt;common, x, bsize, x-&gt;quad_tree_idx, &amp;partition_none_allowed,</div><div class="line">    &amp;partition_horz_allowed, &amp;partition_vert_allowed, &amp;do_rectangular_split,</div><div class="line">    &amp;do_square_split);</div></pre></td></tr></table></figure>
-<p>该函数的输入是图像的像素值，可以理解为图像对应的纹理。并且需要把对应亮度/色度值转换成0~1之间的浮点数。如下代码所示，c为亮度或色度分量的index，这里c为0，为亮度分量。max_val为亮度/色度分量的最大值255(假设为8bit yuv)。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; height; ++i)</div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; width; ++j)</div><div class="line">      input[i * in_stride + j] = (<span class="keyword">float</span>)dgd[c][i * stride + j] / max_val;</div></pre></td></tr></table></figure>
-<p>输出是这几个变量partition_none_allowed，partition_horz_allowed，partition_vert_allowed，do_rectangular_split，do_square_split。用来对后续的partition的划分进行优化，从变量的名称可以看到这些变量会对后续的partition划分进行限制，也就是减少了partition的数目。</p>
-<p>推理采用的网络是CNN + DNN的结合。<br>CNN是5层网络结构，网络定义如下。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> CNN_CONFIG av1_intra_mode_cnn_partition_cnn_config = &#123;</div><div class="line">    NUM_CNN_LAYERS,  <span class="comment">// num_layers</span></div><div class="line">    <span class="number">0</span>,               <span class="comment">// is_residue</span></div><div class="line">    <span class="number">0</span>,               <span class="comment">// ext_width</span></div><div class="line">    <span class="number">0</span>,               <span class="comment">// ext_height</span></div><div class="line">    <span class="number">0</span>,               <span class="comment">// strict_bounds</span></div><div class="line">    &#123;</div><div class="line">        &#123;</div><div class="line">            CNN_LAYER_0_IN_CH,                                <span class="comment">// in_channels</span></div><div class="line">            CNN_LAYER_0_WIDTH,                                <span class="comment">// filter_width</span></div><div class="line">            CNN_LAYER_0_WIDTH,                                <span class="comment">// filter_height</span></div><div class="line">            CNN_LAYER_0_OUT_CH,                               <span class="comment">// out_channels</span></div><div class="line">            CNN_LAYER_0_HORZ_STRIDE,                          <span class="comment">// skip_width</span></div><div class="line">            CNN_LAYER_0_VERT_STRIDE,                          <span class="comment">// skip_height</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// maxpool</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_0_kernel,  <span class="comment">// weights</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_0_bias,    <span class="comment">// bias</span></div><div class="line">            PADDING_VALID,                                    <span class="comment">// pad</span></div><div class="line">            RELU,                                             <span class="comment">// activation</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// deconvolve</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// branch</span></div><div class="line">            BRANCH_NO_COPY,                                   <span class="comment">// branch_copy_type</span></div><div class="line">            BRANCH_NOC,        <span class="comment">// branch_combine_type</span></div><div class="line">            NO_BRANCH_CONFIG,  <span class="comment">// branch_config</span></div><div class="line">            NO_BN_PARAMS,      <span class="comment">// bn_params</span></div><div class="line">            <span class="number">-1</span>,                <span class="comment">// output_num</span></div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            CNN_LAYER_1_IN_CH,                                <span class="comment">// in_channels</span></div><div class="line">            CNN_LAYER_1_WIDTH,                                <span class="comment">// filter_width</span></div><div class="line">            CNN_LAYER_1_WIDTH,                                <span class="comment">// filter_height</span></div><div class="line">            CNN_LAYER_1_OUT_CH,                               <span class="comment">// out_channels</span></div><div class="line">            CNN_LAYER_1_HORZ_STRIDE,                          <span class="comment">// skip_width</span></div><div class="line">            CNN_LAYER_1_VERT_STRIDE,                          <span class="comment">// skip_height</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// maxpool</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_1_kernel,  <span class="comment">// weights</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_1_bias,    <span class="comment">// bias</span></div><div class="line">            PADDING_VALID,                                    <span class="comment">// pad</span></div><div class="line">            RELU,                                             <span class="comment">// activation</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// deconvolve</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// branch</span></div><div class="line">            BRANCH_NO_COPY,                                   <span class="comment">// branch_copy_type</span></div><div class="line">            BRANCH_NOC,        <span class="comment">// branch_combine_type</span></div><div class="line">            NO_BRANCH_CONFIG,  <span class="comment">// branch_config</span></div><div class="line">            NO_BN_PARAMS,      <span class="comment">// bn_params</span></div><div class="line">            <span class="number">3</span>,                 <span class="comment">// output_num</span></div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            CNN_LAYER_2_IN_CH,                                <span class="comment">// in_channels</span></div><div class="line">            CNN_LAYER_2_WIDTH,                                <span class="comment">// filter_width</span></div><div class="line">            CNN_LAYER_2_WIDTH,                                <span class="comment">// filter_height</span></div><div class="line">            CNN_LAYER_2_OUT_CH,                               <span class="comment">// out_channels</span></div><div class="line">            CNN_LAYER_2_HORZ_STRIDE,                          <span class="comment">// skip_width</span></div><div class="line">            CNN_LAYER_2_VERT_STRIDE,                          <span class="comment">// skip_height</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// maxpool</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_2_kernel,  <span class="comment">// weights</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_2_bias,    <span class="comment">// bias</span></div><div class="line">            PADDING_VALID,                                    <span class="comment">// pad</span></div><div class="line">            RELU,                                             <span class="comment">// activation</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// deconvolve</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// branch</span></div><div class="line">            BRANCH_NO_COPY,                                   <span class="comment">// branch_copy_type</span></div><div class="line">            BRANCH_NOC,        <span class="comment">// branch_combine_type</span></div><div class="line">            NO_BRANCH_CONFIG,  <span class="comment">// branch_config</span></div><div class="line">            NO_BN_PARAMS,      <span class="comment">// bn_params</span></div><div class="line">            <span class="number">2</span>,                 <span class="comment">// output_num</span></div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            CNN_LAYER_3_IN_CH,                                <span class="comment">// in_channels</span></div><div class="line">            CNN_LAYER_3_WIDTH,                                <span class="comment">// filter_width</span></div><div class="line">            CNN_LAYER_3_WIDTH,                                <span class="comment">// filter_height</span></div><div class="line">            CNN_LAYER_3_OUT_CH,                               <span class="comment">// out_channels</span></div><div class="line">            CNN_LAYER_3_HORZ_STRIDE,                          <span class="comment">// skip_width</span></div><div class="line">            CNN_LAYER_3_VERT_STRIDE,                          <span class="comment">// skip_height</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// maxpool</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_3_kernel,  <span class="comment">// weights</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_3_bias,    <span class="comment">// bias</span></div><div class="line">            PADDING_VALID,                                    <span class="comment">// pad</span></div><div class="line">            RELU,                                             <span class="comment">// activation</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// deconvolve</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// branch</span></div><div class="line">            BRANCH_NO_COPY,                                   <span class="comment">// branch_copy_type</span></div><div class="line">            BRANCH_NOC,        <span class="comment">// branch_combine_type</span></div><div class="line">            NO_BRANCH_CONFIG,  <span class="comment">// branch_config</span></div><div class="line">            NO_BN_PARAMS,      <span class="comment">// bn_params</span></div><div class="line">            <span class="number">1</span>,                 <span class="comment">// output_num</span></div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            CNN_LAYER_4_IN_CH,                                <span class="comment">// in_channels</span></div><div class="line">            CNN_LAYER_4_WIDTH,                                <span class="comment">// filter_width</span></div><div class="line">            CNN_LAYER_4_WIDTH,                                <span class="comment">// filter_height</span></div><div class="line">            CNN_LAYER_4_OUT_CH,                               <span class="comment">// out_channels</span></div><div class="line">            CNN_LAYER_4_HORZ_STRIDE,                          <span class="comment">// skip_width</span></div><div class="line">            CNN_LAYER_4_VERT_STRIDE,                          <span class="comment">// skip_height</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// maxpool</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_4_kernel,  <span class="comment">// weights</span></div><div class="line">            av1_intra_mode_cnn_partition_cnn_layer_4_bias,    <span class="comment">// bias</span></div><div class="line">            PADDING_VALID,                                    <span class="comment">// pad</span></div><div class="line">            RELU,                                             <span class="comment">// activation</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// deconvolve</span></div><div class="line">            <span class="number">0</span>,                                                <span class="comment">// branch</span></div><div class="line">            BRANCH_NO_COPY,                                   <span class="comment">// branch_copy_type</span></div><div class="line">            BRANCH_NOC,        <span class="comment">// branch_combine_type</span></div><div class="line">            NO_BRANCH_CONFIG,  <span class="comment">// branch_config</span></div><div class="line">            NO_BN_PARAMS,      <span class="comment">// bn_params</span></div><div class="line">            <span class="number">0</span>,                 <span class="comment">// output_num</span></div><div class="line">        &#125;,</div><div class="line">    &#125;,</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
-<p>DNN是两层网络结构，网络定义如下。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> NN_CONFIG av1_intra_mode_cnn_partition_branch_0_dnn_config = &#123;</div><div class="line">    BRANCH_0_NUM_DNN_FEATURES,</div><div class="line">    BRANCH_0_NUM_LOGITS,</div><div class="line">    BRANCH_0_NUM_DNN_LAYERS,</div><div class="line">    &#123;</div><div class="line">        BRANCH_0_NUM_DNN_LAYER_0_UNITS,</div><div class="line">        BRANCH_0_NUM_DNN_LAYER_1_UNITS,</div><div class="line">    &#125;,</div><div class="line">    &#123;</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_dnn_layer_0_kernel,</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_dnn_layer_1_kernel,</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_logits_kernel,</div><div class="line">    &#125;,</div><div class="line">    &#123;</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_dnn_layer_0_bias,</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_dnn_layer_1_bias,</div><div class="line">        av1_intra_mode_cnn_partition_branch_0_logits_bias,</div><div class="line">    &#125;,</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
-<h1 id="0x3-推理模型的训练"><a href="#0x3-推理模型的训练" class="headerlink" title="0x3 推理模型的训练"></a>0x3 推理模型的训练</h1><p>以上编码过程中采用的CNN + DNN的网络是经过训练的，在libaom的代码中并没有提供这个网络结构的训练过程代码。参考<a href="https://zhuanlan.zhihu.com/p/40034222" target="_blank" rel="external">HEVC partition优化</a>可以大体知道其训练过程。应该是设计好网络以后，通过大量样本数据来训练得到该推理网络的。</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1941,7 +1978,7 @@ Detection output
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">36</span>
+                <span class="site-state-item-count">37</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1954,7 +1991,7 @@ Detection output
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">22</span>
+                <span class="site-state-item-count">21</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>
