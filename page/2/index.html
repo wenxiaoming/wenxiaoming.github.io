@@ -254,6 +254,144 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/01/Graphics buffer Summary/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/06/01/Graphics buffer Summary/" itemprop="url">Graphics buffer总结</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-01T18:20:31+08:00">
+                2019-06-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/06/01/Graphics buffer Summary/" class="leancloud_visitors" data-flag-title="Graphics buffer总结">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-GPU系统Buffer介绍"><a href="#0x1-GPU系统Buffer介绍" class="headerlink" title="0x1 GPU系统Buffer介绍"></a>0x1 GPU系统Buffer介绍</h1><p>  本文对GPU系统中的buffer管理进行了总结。<br>  简单说来GPU系统使用到的buffer主要包括两部分，其中一部分是GPU绘制输出的frame buffer， 另外一部分是GPU driver中内部运行所需的各种buffer。<br>  这些buffer在CPU和GPU之间的pipeline如下图所示。<br>  从图中可知，Graphics程序运行的时候首先需要CPU先准备好各种数据，如纹理，顶点数据等。另外很大一块是Command，这个是用来驱动GPU硬件执行图形流水线的指令。另外Shader指的是用来执行GPU可编程pileine(如vertex shader，fragment shader等)的GPU指令。<br>  CPU把数据准备好了以后，驱动GPU硬件根据前面buffer里的数据和指令执行绘制工作，绘制的结果需要输出到一个地方，这个就是frame buffer。当然我们知道frame buffer也是可以被GPU再读进来。图中的Bin List部分指的是在Tile Based Render架构特有的buffer，这个buffer用来存储Tile划分(一般称为Binning阶段)以后每个Tile需要绘制的信息。</p>
+<p>  <img src="/2019/06/01/Graphics buffer Summary/gpu bufer pileline.svg" alt=""></p>
+<h1 id="0x2-Frame-Buffer"><a href="#0x2-Frame-Buffer" class="headerlink" title="0x2 Frame Buffer"></a>0x2 Frame Buffer</h1><p>  下面先来介绍一下Android系统中Graphics Buffer管理模块，后续再介绍一下DRM结构下Buffer分配的流程。<br>  Android系统中Graphics Buffer的架构图如下所示。<br>  <img src="/2019/06/01/Graphics buffer Summary/android buffer management.svg" alt=""></p>
+<p>  Android系统中Graphics框架或应用通过Gralloc模块调用到ION driver，再通过ION driver分配出相应的frame buffer。如上图所示，ION driver中提供多种不同的heap。Carveout heap一般是指系统启动的时候预分配好的物理连续地址空间，缺点是这部分内存属于特定驱动独占式的，不能和其他模块共享，目前已经很少使用了。CMA(contiguous memory allocation) heap分配出来的buffer的物理地址也是连续的，但是它是在系统运行过程中通过内核中CMA框架来动态分配的。system heap分配出来的buffer其物理地址一般不是连续的。这三种类型的buffer适用于不同的硬件类型。对没有MMU的硬件来说，一般需要要求其访问的物理地址空间是连续的，所以这种硬件一般要求分配的buffer是CMA heap。对包含MMU的硬件来说，由于可以通过MMU(也称为IOMMU)来做虚拟地址到物理地址的转换，所以可以不需要保证其分配的buffer的物理地址空间是连续的。</p>
+<p>  下面来介绍一下DRM架构下buffer分配的流程。<br>  传统的Linux系统如Ubuntu系统采用的是DRM架构图形系统，这个时候通过DRM kernel driver中的GEM模块来分配buffer。GEM是DRM kernel driver的buffer管理模块。其分配出来的buffer一般称为GEM buffer。其buffer分配过程简单说明如下。<br>  <img src="/2019/06/01/Graphics buffer Summary/drm buffer management.svg" alt=""></p>
+<p>  为了简化DRM架构下GEM buffer的分配工作，其提供了libgbm模块作为管理kernel driver和图形应用之间的buffer分配的桥梁。<br>  libgbm的功能类似于Android上的gralloc+libion。mesa中包括了libgbm的实现代码。libgbm提供了底层DRM driver中buffer管理的封装。一般包括分配(DRM_IOCTL_MODE_CREATE_DUMB)，释放(DRM_IOCTL_MODE_DESTROY_DUMB)和mmap操作(DRM_IOCTL_MODE_MAP_DUMB)等操作。各种采用Linux作为内核的操作系统的HAL模块都提供了类似libgbm功能的buffer管理模块。</p>
+<p>  下面来简单介绍一下为什么要执行 DRM_IOCTL_MODE_MAP_DUMB? DRM_IOCTL_MODE_MAP_DUMB的输入是一个 gem handle，返回结果是一个 offset，通过 offset 可以知道 mmap 当前要操作的dumb buffer。所以对 drm device 进行 mmap 操作时，其参数offset 并不是真正的内存偏移量，而是一个 gem object 的索引值。通过该索引值，drm 驱动就可以准确确定当前要操作的是哪个 gem对象，然后可以获取到与该 object 相对应的物理 buffer，并对完成真正的 mmap 操作。</p>
+<p>   libgbm中DRM_IOCTL_MODE_MAP_DUMB的使用如下所示。可以看到和前面的解析是可以对应起来的。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">map_arg.handle = bo-&gt;handle;</div><div class="line"></div><div class="line">ret = drmIoctl(bo-&gt;base.gbm-&gt;fd, DRM_IOCTL_MODE_MAP_DUMB, &amp;map_arg);</div><div class="line"><span class="keyword">if</span> (ret)</div><div class="line">   <span class="keyword">return</span> <span class="literal">NULL</span>;</div><div class="line"></div><div class="line">bo-&gt;<span class="built_in">map</span> = mmap(<span class="number">0</span>, bo-&gt;size, PROT_WRITE,</div><div class="line">               MAP_SHARED, bo-&gt;base.gbm-&gt;fd, map_arg.offset);</div></pre></td></tr></table></figure></p>
+<p>   下面来说一下mesa driver中frame buffer分配过程。<br>   调用eglCreateWindowSurface之类的函数会指明需要创建Suface。这个时候一般不会真正分配buffer，而是会创建类似buffer的占位符的Suface对象。然后等真正需要使用这个buffer的时候才完成分配工作，这里面体现了defer分配的思想。<br>   下面介绍一下真正需要分配buffer的时候buffer是如何分配出来的。<br>   首先通过eglMakeCurrent分配，具体流程如下。这个分配出来的buffer供给后续的eglSwapBuffer使用。<br>    <img src="/2019/06/01/Graphics buffer Summary/eglMakeCurrent.svg" alt=""></p>
+<p>   eglSwapBuffer在前面分配好的buffer执行完绘制工作以后，对应的buffer可能送去合成模块继续执行合成动作了。如果后面再调用glClear，需要分配新的buffer，具体流程如下。<br>   <img src="/2019/06/01/Graphics buffer Summary/glClear.svg" alt=""></p>
+<p>   在eglMakeCurrent和glClear调用执行buffer分配工作的时候，需要找到一块目标buffer执行clear操作，如果这个时候没有可用的buffer，或者buffer大小不符合要求，则需要重新分配一块新的buffer。</p>
+<p>   前面看到，不同的Graphics API函数都可能触发buffer的分配，但是每个egl context可以分配buffer的数量是有限制的，一般是2~3个。如果buffer用完了，这个时候可能就需要等待一个空的可用的buffer从其他的pipeline中释放出来。如我们可能在systrace上看到glClear函数占用很长时间，这个时候就会感觉很奇怪，因为glClear按理说不应该占用GPU太长时间，这个时候大概率是在等待一个空的buffer变成可用，并不是在GPU在执行繁重的绘制任务。</p>
+<h1 id="0x3-GPU-driver中内部使用的buffer"><a href="#0x3-GPU-driver中内部使用的buffer" class="headerlink" title="0x3 GPU driver中内部使用的buffer"></a>0x3 GPU driver中内部使用的buffer</h1><p>   这里介绍的buffer一般是指GPU driver运行过程中内部需要的各种buffer，如常见的texture buffer,vertex buffer,shader buffer, command buffer。这种buffer一般用来保存GPU需要读取的各种数据, 这种buffer的使用一般流程是先通过kernel driver分配出来，然后mmap到CPU端，CPU完成写入以后，GPU开始读取。GPU读取的时候会涉及到GPU MMU的动作，需要完成GPU虚拟地址到GPU物理地址的转换。</p>
+<p>   Andorid的GPU驱动架构下，其内部使用的buffer管理一般是char kernel driver+闭源User space library的架构来实现。kernel driver通过alloc_pages之类的底层API直接分配buffer，然后mmap到User space给CPU写入，写入完成通过ioctl通知GPU硬件开始使用这些buffer。</p>
+<p>   下面来简单介绍一下Intel Gen i915 kernel driver中GEM buffer实现。<br>    i915 kernel driver提供了下面三种gem buffer实现。<br>    其中shmem_region_ops采用的是shmem机制来分配内存，shmem是一套ipc，通过相应的ipc系统调用shmget能够以指定key创建一块的共享内存。需要使用这块内存的进程可以通过shmat系统调用来获得它。<br>    stolen buffer指的通过GTT(Graphics translation table)来管理的buffer，这里面类似GTT,PPGTT的概念都是很大的一块技术，这里就不深入介绍了。<br>    下面直接贴出i915 kernel driver中三种gem buffer定义和初始化的代码。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">enum</span> intel_region_id &#123;</div><div class="line">    INTEL_REGION_SMEM = <span class="number">0</span>,</div><div class="line">    INTEL_REGION_LMEM,</div><div class="line">    INTEL_REGION_STOLEN,</div><div class="line">    INTEL_REGION_UNKNOWN, <span class="comment">/* Should be last */</span></div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">intel_memory_region_ops</span> <span class="title">shmem_region_ops</span> = &#123;</span></div><div class="line">    .init = init_shmem,</div><div class="line">    .release = release_shmem,</div><div class="line">    .create_object = create_shmem,</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">intel_memory_region_ops</span> <span class="title">i915_region_stolen_ops</span> = &#123;</span></div><div class="line">    .init = init_stolen,</div><div class="line">    .release = release_stolen,</div><div class="line">    .create_object = _i915_gem_object_create_stolen,</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">intel_memory_region_ops</span> <span class="title">intel_region_lmem_ops</span> = &#123;</span></div><div class="line">    .init = region_lmem_init,</div><div class="line">    .release = region_lmem_release,</div><div class="line">    .create_object = __i915_gem_lmem_object_create,</div><div class="line">&#125;;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">intel_memory_regions_hw_probe</span><span class="params">(struct drm_i915_private *i915)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">int</span> err, i;</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; ARRAY_SIZE(i915-&gt;mm.regions); i++) &#123;</div><div class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">intel_memory_region</span> *<span class="title">mem</span> = <span class="title">ERR_PTR</span>(-<span class="title">ENODEV</span>);</span></div><div class="line">        u32 type;</div><div class="line"></div><div class="line">        <span class="keyword">if</span> (!HAS_REGION(i915, BIT(i)))</div><div class="line">            <span class="keyword">continue</span>;</div><div class="line"></div><div class="line">        type = MEMORY_TYPE_FROM_REGION(intel_region_map[i]);</div><div class="line">        <span class="keyword">switch</span> (type) &#123;</div><div class="line">        <span class="keyword">case</span> INTEL_MEMORY_SYSTEM:</div><div class="line">            mem = i915_gem_shmem_setup(i915);</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        <span class="keyword">case</span> INTEL_MEMORY_STOLEN:</div><div class="line">            mem = i915_gem_stolen_setup(i915);</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        <span class="keyword">case</span> INTEL_MEMORY_LOCAL:</div><div class="line">            mem = intel_setup_fake_lmem(i915);</div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        <span class="keyword">if</span> (IS_ERR(mem)) &#123;</div><div class="line">            err = PTR_ERR(mem);</div><div class="line">            drm_err(&amp;i915-&gt;drm,</div><div class="line">                <span class="string">"Failed to setup region(%d) type=%d\n"</span>,</div><div class="line">                err, type);</div><div class="line">            <span class="keyword">goto</span> out_cleanup;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        mem-&gt;id = intel_region_map[i];</div><div class="line">        mem-&gt;type = type;</div><div class="line">        mem-&gt;instance = MEMORY_INSTANCE_FROM_REGION(intel_region_map[i]);</div><div class="line"></div><div class="line">        i915-&gt;mm.regions[i] = mem;</div><div class="line">    &#125;</div><div class="line">    ......</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>  另外我们知道buffer的分配是很heavy的操作，gpu驱动一般都提供了cache机制来缓存使用过的buffer，也就是说延迟释放这些使用过的buffer。mesa和broadcom gpu驱动中实现了用户态驱动的cache机制，mali早期gpu(mali400/450)在kernel space driver中加了cache机制。从性能的角度的来说，用户态驱动的cache应该更好一些，毕竟少了从用户态到内核态的调用，但是用户态驱动的cache实现复杂一些。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/04/06/Use AI to speed up AV1 encoder/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -285,7 +423,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-06T17:00:10+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-06T17:00:10+08:00">
                 2019-04-06
               </time>
             
@@ -418,7 +556,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-30T19:30:00+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-30T19:30:00+08:00">
                 2019-03-30
               </time>
             
@@ -569,7 +707,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-23T12:00:00+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-23T12:00:00+08:00">
                 2019-03-23
               </time>
             
@@ -720,7 +858,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-16T17:00:10+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-16T17:00:10+08:00">
                 2019-03-16
               </time>
             
@@ -879,7 +1017,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-09T17:00:10+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-09T17:00:10+08:00">
                 2019-03-09
               </time>
             
@@ -1032,7 +1170,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-02T20:00:10+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-02T20:00:10+08:00">
                 2019-03-02
               </time>
             
@@ -1192,7 +1330,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-23T20:15:30+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-23T20:15:30+08:00">
                 2019-02-23
               </time>
             
@@ -1341,7 +1479,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-16T23:21:36+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-16T23:21:36+08:00">
                 2019-02-16
               </time>
             
@@ -1508,7 +1646,7 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-08T12:59:57+09:00">
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-08T12:59:57+08:00">
                 2019-02-08
               </time>
             
@@ -1653,182 +1791,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/01/Waterfall-test-of-escher-in-fuchsia/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/" itemprop="url">Waterfall test of escher in fuchsia</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-01T23:21:36+09:00">
-                2019-02-01
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/" class="leancloud_visitors" data-flag-title="Waterfall test of escher in fuchsia">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Escher-Introduction"><a href="#0x1-Escher-Introduction" class="headerlink" title="0x1 Escher Introduction"></a>0x1 Escher Introduction</h1><p>Escher is physical rendering engine in fuchsia os</p>
-<p>It aims to support Mixed Reality(MR), MR will mix virtual 3D objects with reality world.</p>
-<p>It only supports vulkan as its rendering backend.</p>
-<p>Here is the escher’s architecture view.</p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/escher.png" alt="architecture"></p>
-<h1 id="0x2-Waterfall-execution-flow"><a href="#0x2-Waterfall-execution-flow" class="headerlink" title="0x2 Waterfall execution flow"></a>0x2 Waterfall execution flow</h1><p>Waterfall is the demo of how echer is running.</p>
-<p>Here is the draw main loop of Waterfall.</p>
-<ol>
-<li><p>Create objects in scene, place them into Model</p>
-</li>
-<li><p>Create shadow through DrawFrameWithMomentShadowMapShadows</p>
-</li>
-<li><p>Draw objects with shadow in PaperRenderer</p>
-</li>
-</ol>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/drawloop.png" alt="main loop"></p>
-<p>Here is the sequence diagram of creating shadowmap</p>
-<ol>
-<li><p>DrawShadowPass of ShadowMapRenderer is entrypoint for drawing shadow</p>
-</li>
-<li><p>Create CreateDisplayList in ModelRenderer</p>
-</li>
-<li><p>ModelRenderer call GetPipeline to create or reuse pipeline</p>
-</li>
-<li><p>It will call SPIR-V compiler if need to create a new pipeline</p>
-</li>
-</ol>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/createshadowmap.png" alt="create shadowmap"></p>
-<p>Here is the sequence diagram of drawing objects with shadowmap</p>
-<ol>
-<li><p>Call DrawFrameWithMomentShadowMapShadows</p>
-</li>
-<li><p>Create CreateDisplayList in ModelRenderer</p>
-</li>
-<li><p>Draw each item in ModelRenderer::Draw()</p>
-</li>
-<li><p>Do following operations in command buffer</p>
-<p>vk_command_buffer.bindPipeline()   </p>
-<p>vk_command_buffer.setStencilReference()</p>
-<p>vk_command_buffer.bindDescriptorSets()</p>
-</li>
-<li><p>Call CommandBuffer::DrawMesh() to draw mesh,it will bind vertex data and index data(similar as OpenGL ES)</p>
-<p> command<em>buffer</em>.bindVertexBuffers()</p>
-<p> command<em>buffer</em>.bindIndexBuffer()</p>
-<p> command<em>buffer</em>.drawIndexed()</p>
-</li>
-</ol>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/drawframe.png" alt="draw frame"></p>
-<h1 id="0x3-Waterfall-snapshot"><a href="#0x3-Waterfall-snapshot" class="headerlink" title="0x3 Waterfall snapshot"></a>0x3 Waterfall snapshot</h1><p>Here are snapshots when Waterfall is running.</p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/waterfall_2.png" alt="waterfall_2"></p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/waterfall_3.png" alt="waterfall_3"></p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/waterfall_4.png" alt="waterfall_4"></p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/waterfall_5.png" alt="waterfall_5"></p>
-<p><img src="/2019/02/01/Waterfall-test-of-escher-in-fuchsia/waterfall_8.png" alt="waterfall_8"></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1878,7 +1840,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-count">38</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
