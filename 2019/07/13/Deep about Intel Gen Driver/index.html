@@ -1,0 +1,852 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="GPU driver," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="0x1 总体流程GPU硬件简单说来可以包括这几块，首先是内存访问相关模块，如MMU，Cache等。其次是各种Fixed Function模块，如Rasterizer，Clipper等。最后是可编程单元模块Shader Core，Shader Core的加入使GPU具有了和CPU一样具体处理各种复杂问题的能力，赋予了用户很大的发挥空间来编写各个OpenGL shader，OpenCL kernel，">
+<meta name="keywords" content="GPU driver">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Intel Gen Driver流程介绍">
+<meta property="og:url" content="http://yoursite.com/2019/07/13/Deep about Intel Gen Driver/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="0x1 总体流程GPU硬件简单说来可以包括这几块，首先是内存访问相关模块，如MMU，Cache等。其次是各种Fixed Function模块，如Rasterizer，Clipper等。最后是可编程单元模块Shader Core，Shader Core的加入使GPU具有了和CPU一样具体处理各种复杂问题的能力，赋予了用户很大的发挥空间来编写各个OpenGL shader，OpenCL kernel，">
+<meta property="og:image" content="http://yoursite.com/2019/07/13/Deep%20about%20Intel%20Gen%20Driver/general%20structure%20of%20gpu.svg">
+<meta property="og:image" content="http://yoursite.com/2019/07/13/Deep%20about%20Intel%20Gen%20Driver/triangle%20test.svg">
+<meta property="og:image" content="http://yoursite.com/2019/07/13/Deep%20about%20Intel%20Gen%20Driver/genXml.svg">
+<meta property="og:updated_time" content="2020-12-09T13:58:25.937Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Intel Gen Driver流程介绍">
+<meta name="twitter:description" content="0x1 总体流程GPU硬件简单说来可以包括这几块，首先是内存访问相关模块，如MMU，Cache等。其次是各种Fixed Function模块，如Rasterizer，Clipper等。最后是可编程单元模块Shader Core，Shader Core的加入使GPU具有了和CPU一样具体处理各种复杂问题的能力，赋予了用户很大的发挥空间来编写各个OpenGL shader，OpenCL kernel，">
+<meta name="twitter:image" content="http://yoursite.com/2019/07/13/Deep%20about%20Intel%20Gen%20Driver/general%20structure%20of%20gpu.svg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/07/13/Deep about Intel Gen Driver/"/>
+
+
+
+
+
+  <title>Intel Gen Driver流程介绍 | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/07/13/Deep about Intel Gen Driver/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Intel Gen Driver流程介绍</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-07-13T21:18:20+08:00">
+                2019-07-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/07/13/Deep about Intel Gen Driver/" class="leancloud_visitors" data-flag-title="Intel Gen Driver流程介绍">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="0x1-总体流程"><a href="#0x1-总体流程" class="headerlink" title="0x1 总体流程"></a>0x1 总体流程</h1><p>GPU硬件简单说来可以包括这几块，首先是内存访问相关模块，如MMU，Cache等。其次是各种Fixed Function模块，如Rasterizer，Clipper等。最后是可编程单元模块Shader Core，Shader Core的加入使GPU具有了和CPU一样具体处理各种复杂问题的能力，赋予了用户很大的发挥空间来编写各个OpenGL shader，OpenCL kernel，这些shader和kernel最后都会生成对应的专有GPU指令并运行在Shader Core上。在Intel Gen GPU中，对应的Shader Core模块也称为EU(Execution Unit)。</p>
+<p>从GPU driver到GPU硬件完成绘制的流程可以简单说明如下。</p>
+<p>a. GPU user space driver在CPU侧根据应用设置的各种状态生成各种command list。</p>
+<p>b. GPU user space driver在CPU侧通过compiler把shader源代码生成对应的gpu shader core指令. 这个shader core指令也是保存在memory中，driver会把其地址保存在某一个command结构体中。</p>
+<p>c. GPU user space driver把前面生成的内容发送到GPU kernel space driver中。GPU kernel space driver启动gpu硬件读取command list的内容。</p>
+<p>d. GPU中的command executor开始消费command，根据command的内容驱动gpu硬件中各个不同的模块协同工作。当需要shader core执行的时候，从相应的memory buffer中读取GPU指令，shader core根据GPU指令完成相应的shader操作。当需要读取Vertex和Texture内容的时候，从相应的command找到对应的buffer地址，然后读取相应的内容。<br>上面提到的流程说明可以简单地用下图所示。<br><img src="/2019/07/13/Deep about Intel Gen Driver/general structure of gpu.svg" alt=""></p>
+<p>本文后面用一个简单的三角形绘制测试程序说明一下GPU driver是如何工作的。这里的GPU driver主要是指开源的User space driver实现mesa。</p>
+<p>这个测试程序的流程如下图所示。<br><img src="/2019/07/13/Deep about Intel Gen Driver/triangle test.svg" alt=""></p>
+<h1 id="0x2-Shader编译"><a href="#0x2-Shader编译" class="headerlink" title="0x2 Shader编译"></a>0x2 Shader编译</h1><p>下面说明一下mesa driver中Intel Gen shader编译过程。</p>
+<p>Vertex Shader的编译过程如下。</p>
+<p>对应的GLSL source code如下所示。<br>这个shader只是把外部设置的attribute信息Position设置到gl_Position中。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">attribute vec4 vPosition;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    gl_Position = vPosition;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>编译的第一阶段是完成词法分析，语法分析，生成对应的抽象语法树AST。<br>然后根据AST生成Mesa内部的中间表示NIR。然后在NIR上执行各种编译器优化。每执行一次优化称为一个Pass。<br>经过多个Pass优化以后，最后生成的NIR代码如下所示。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">NIR (final form) <span class="keyword">for</span> vertex shader:</div><div class="line">shader: MESA_SHADER_VERTEX</div><div class="line">name: GLSL3</div><div class="line">inputs: <span class="number">1</span></div><div class="line">outputs: <span class="number">1</span></div><div class="line">uniforms: <span class="number">0</span></div><div class="line">shared: <span class="number">0</span></div><div class="line"><span class="function">decl_var shader_in INTERP_MODE_NONE highp vec4 <span class="title">vPosition</span> <span class="params">(VERT_ATTRIB_GENERIC0.xyzw, <span class="number">16</span>, <span class="number">0</span>)</span></span></div><div class="line">decl_var shader_out INTERP_MODE_NONE highp vec4 <span class="title">gl_Position</span> <span class="params">(VARYING_SLOT_POS.xyzw, <span class="number">0</span>, <span class="number">0</span>)</span></div><div class="line">decl_function <span class="title">main</span> <span class="params">(<span class="number">0</span> params)</span></div><div class="line"></div><div class="line">impl main &#123;</div><div class="line">    block block_0:</div><div class="line">    <span class="comment">/* preds: */</span></div><div class="line">    vec1 <span class="number">32</span> ssa_0 = load_const (<span class="number">0x00000000</span> <span class="comment">/* 0.000000 */</span>)</div><div class="line">    vec4 <span class="number">32</span> ssa_1 = intrinsic load_input (ssa_0) (<span class="number">0</span>, <span class="number">0</span>, <span class="number">160</span>, <span class="number">144</span>) <span class="comment">/* base=0 */</span> <span class="comment">/* component=0 */</span> <span class="comment">/* dest_type=float32 */</span> <span class="comment">/* location=16 slots=1 */</span></div><div class="line">    intrinsic store_output (ssa_1, ssa_0) (<span class="number">0</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">160</span>, <span class="number">128</span>) <span class="comment">/* base=0 */</span> <span class="comment">/* wrmask=xyzw */</span> <span class="comment">/* component=0 */</span> <span class="comment">/* src_type=float32 */</span> <span class="comment">/* location=0 slots=1 */</span> <span class="comment">/* gl_Position */</span></div><div class="line">    <span class="comment">/* succs: block_1 */</span></div><div class="line">    block block_1:</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>下面开始执行编译器后端，生成具体的GPU shader core指令。这里shader core也就是前面提到的EU，所以我们也就是要生成EU code。<br>这里面也用到了传统的编译器后端技术，如图着色寄存器分配等。<br>最后生成的EU code如下所示。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">Native code for unnamed vertex shader GLSL3 (sha1 15358268e6b3974dafb7512e3bdaa7c4c81a9394)</div><div class="line">SIMD8 shader: 6 instructions. 0 loops. 20 cycles. 0:0 spills:fills, 1 sends, scheduled with mode top-down. Promoted 0 constants. Compacted 96 to 64 bytes (33%)</div><div class="line">   START B0 (20 cycles)</div><div class="line">mov(8)          g122&lt;1&gt;UD       g1&lt;8,8,1&gt;UD                     &#123; align1 WE_all 1Q compacted &#125;;</div><div class="line">mov(8)          g123&lt;1&gt;F        g2&lt;8,8,1&gt;F                      &#123; align1 1Q compacted &#125;;</div><div class="line">mov(8)          g124&lt;1&gt;F        g3&lt;8,8,1&gt;F                      &#123; align1 1Q compacted &#125;;</div><div class="line">mov(8)          g125&lt;1&gt;F        g4&lt;8,8,1&gt;F                      &#123; align1 1Q compacted &#125;;</div><div class="line">mov(8)          g126&lt;1&gt;F        g5&lt;8,8,1&gt;F                      &#123; align1 1Q compacted &#125;;</div><div class="line">send(8)         null&lt;1&gt;F        g122&lt;8,8,1&gt;F    0x8a080017</div><div class="line">                            urb MsgDesc: 1 SIMD8 write mlen 5 rlen 0        &#123; align1 1Q EOT &#125;;</div><div class="line">   END B0</div></pre></td></tr></table></figure></p>
+<p>Fragment Shader的编译过程如下。<br>具体的流程和Vertex Shader的编译过程类似。详细的过程不介绍了，下面只是列出各个编译阶段的结果。</p>
+<p>GLSL source code<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">precision mediump <span class="keyword">float</span>;</div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">main</span><span class="params">()</span>                                 </span></div><div class="line">&#123;                                            </div><div class="line">    gl_FragColor = vec4 ( <span class="number">1.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">1.0</span> );</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>NIR code</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">NIR (final form) <span class="keyword">for</span> fragment shader:</div><div class="line">shader: MESA_SHADER_FRAGMENT</div><div class="line">name: GLSL3</div><div class="line">inputs: <span class="number">0</span></div><div class="line">outputs: <span class="number">1</span></div><div class="line">uniforms: <span class="number">0</span></div><div class="line">shared: <span class="number">0</span></div><div class="line"><span class="function">decl_var shader_out INTERP_MODE_NONE mediump vec4 <span class="title">gl_FragColor</span> <span class="params">(FRAG_RESULT_COLOR.xyzw, <span class="number">4</span>, <span class="number">0</span>)</span></span></div><div class="line">decl_function <span class="title">main</span> <span class="params">(<span class="number">0</span> params)</span></div><div class="line"></div><div class="line">impl main &#123;</div><div class="line">    block block_0:</div><div class="line">    <span class="comment">/* preds: */</span></div><div class="line">    vec4 <span class="number">32</span> ssa_0 = load_const (<span class="number">0x3f800000</span> <span class="comment">/* 1.000000 */</span>, <span class="number">0x00000000</span> <span class="comment">/* 0.000000 */</span>, <span class="number">0x00000000</span> <span class="comment">/* 0.000000 */</span>, <span class="number">0x3f800000</span> <span class="comment">/* 1.000000 */</span>)</div><div class="line">    vec1 <span class="number">32</span> ssa_1 = load_const (<span class="number">0x00000000</span> <span class="comment">/* 0.000000 */</span>)</div><div class="line">    intrinsic store_output (ssa_0, ssa_1) (<span class="number">4</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">160</span>, <span class="number">8388738</span>) <span class="comment">/* base=4 */</span> <span class="comment">/* wrmask=xyzw */</span> <span class="comment">/* component=0 */</span> <span class="comment">/* src_type=float32 */</span> <span class="comment">/* location=2 slots=1 mediump */</span> <span class="comment">/* gl_FragColor */</span></div><div class="line">    <span class="comment">/* succs: block_1 */</span></div><div class="line">    block block_1:</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>EU code</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">Native code for unnamed fragment shader GLSL3 (sha1 f7554fd836ad71e30768cdc6b984e294b8f2fae5)</div><div class="line">SIMD8 shader: 5 instructions. 0 loops. 18 cycles. 0:0 spills:fills, 1 sends, scheduled with mode top-down. Promoted 0 constants. Compacted 80 to 64 bytes (20%)</div><div class="line">   START B0 (18 cycles)</div><div class="line">mov(8)          g123&lt;1&gt;F        0x3f800000F      /* 1F */       &#123; align1 1Q &#125;;</div><div class="line">mov(8)          g124&lt;1&gt;F        0x0VF           /* [0F, 0F, 0F, 0F]VF */ &#123; align1 1Q compacted &#125;;</div><div class="line">mov(8)          g125&lt;1&gt;F        0x0VF           /* [0F, 0F, 0F, 0F]VF */ &#123; align1 1Q compacted &#125;;</div><div class="line">mov(8)          g126&lt;1&gt;F        0x3f800000F      /* 1F */       &#123; align1 1Q &#125;;</div><div class="line">sendc(8)        null&lt;1&gt;UW       g123&lt;0,1,0&gt;UD   0x88031400</div><div class="line">                            render MsgDesc: RT write SIMD8 LastRT Surface = 0 mlen 4 rlen 0 &#123; align1 1Q EOT &#125;;</div><div class="line">   END B0</div></pre></td></tr></table></figure>
+<h1 id="0x3-Command生成"><a href="#0x3-Command生成" class="headerlink" title="0x3 Command生成"></a>0x3 Command生成</h1><p>Command Stream Unit是Gen GPU内部用来管理3D pipeline或者Media单元的模块，通过配置不同的Command Stream命令，我们可以精细地控制3D pipeline的运行。<br>Command Stream Unit还提供了URB分配和管理的功能。URB可以理解成是用来在各个Pipeline阶段(如VS, Rasterizer, Clipper, PS等)之间传递参数的buffer。</p>
+<p>对Command Stream的编程，简单地理解就是把Graphics API的状态配置转换成Command Stream的命令。不同API函数执行的时候需要配置不同的Command Stream命令，我们可以通过command stream dump机制把生成command保存下来，然后通过可视化的工具分析出现时问题。mesa提供了可视化的viewer工具来分析生成的每个command。</p>
+<p>对于Broadcom GPU来说，和Command Stream类似的概念叫做Control List，执行Control List的硬件模块叫做Control List Executor。Broadcom GPU驱动也需要配置Control List来驱动GPU的执行。</p>
+<p>下面来说明一下一个简单的OpenGL ES应用执行的时候需要配置哪些Command Stream命令。</p>
+<p>eglCreateContext调用以后，会执行driver初始化动作。需要配置下面这些Command。</p>
+<p>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL<br>GEN9_PIPELINE_SELECT<br>state GEN9_L3CNTLREG<br>GEN9_MI_LOAD_REGISTER_IMM<br>GEN9_PIPE_CONTROL<br>GEN9_STATE_BASE_ADDRESS<br>GEN9_PIPE_CONTROL<br>state GEN9_CS_DEBUG_MODE2<br>GEN9_MI_LOAD_REGISTER_IMM<br>state GEN9_CACHE_MODE_1<br>GEN9_MI_LOAD_REGISTER_IMM<br>GEN9_3DSTATE_DRAWING_RECTANGLE<br>GEN9_3DSTATE_SAMPLE_PATTERN<br>GEN9_3DSTATE_AA_LINE_PARAMETERS<br>GEN9_3DSTATE_WM_CHROMAKEY<br>GEN9_3DSTATE_WM_HZ_OP<br>GEN9_3DSTATE_POLY_STIPPLE_OFFSET<br>GEN9_3DSTATE_PUSH_CONSTANT_ALLOC_VS<br>GEN9_3DSTATE_PUSH_CONSTANT_ALLOC_VS<br>GEN9_3DSTATE_PUSH_CONSTANT_ALLOC_VS<br>GEN9_3DSTATE_PUSH_CONSTANT_ALLOC_VS<br>GEN9_3DSTATE_PUSH_CONSTANT_ALLOC_VS<br>GEN9_3DSTATE_CC_STATE_POINTERS<br>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL<br>GEN9_PIPELINE_SELECT<br>state GEN9_L3CNTLREG<br>GEN9_MI_LOAD_REGISTER_IMM<br>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL<br>GEN9_STATE_BASE_ADDRESS<br>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL</p>
+<p>eglMakeCurrent调用以后，需要给frame buffer分配Gem buffer。</p>
+<p>glShaderSource/glCompileShader创建shader对象，把glsl source code设置到gpu driver中。</p>
+<p>glLinkProgram调用以后，执行glsl的编译动作，把glsl source code编译成glsl AST，然后转换成NIR。</p>
+<p>glClear调用以后，mesa driver会通过Blit engine来执行clear操作，这个时候需要给Blit engine生成EU code。所以这个时候会生成glsl fragment shader code，再转换成NIR，再生成EU code。这个时候需要配置下面这些Command。</p>
+<p>state GEN9_GT_MODE<br>GEN9_PIPE_CONTROL<br>GEN9_MI_LOAD_REGISTER_IMM</p>
+<p>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL</p>
+<p>GEN9_PIPE_CONTROL<br>GEN9_STATE_BASE_ADDRESS<br>GEN9_PIPE_CONTROL</p>
+<p>这边再说明一下，给Blit engine生成的fragment shader的NIR和EU code如下所示<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">NIR (final form) <span class="keyword">for</span> fragment shader:</div><div class="line">shader: MESA_SHADER_FRAGMENT</div><div class="line">name: BLORP-clear</div><div class="line">inputs: <span class="number">0</span></div><div class="line">outputs: <span class="number">0</span></div><div class="line">uniforms: <span class="number">0</span></div><div class="line">shared: <span class="number">0</span></div><div class="line"><span class="function">decl_var shader_in INTERP_MODE_FLAT vec4 <span class="title">clear_color</span> <span class="params">(VARYING_SLOT_VAR0.xyzw, <span class="number">32</span>, <span class="number">0</span>)</span></span></div><div class="line">decl_var shader_out INTERP_MODE_NONE vec4 <span class="title">gl_FragColor</span> <span class="params">(FRAG_RESULT_COLOR.xyzw, <span class="number">4</span>, <span class="number">0</span>)</span></div><div class="line">decl_function <span class="title">main</span> <span class="params">(<span class="number">0</span> params)</span></div><div class="line"></div><div class="line">impl main &#123;</div><div class="line">        block block_0:</div><div class="line">        <span class="comment">/* preds: */</span></div><div class="line">        vec1 <span class="number">32</span> ssa_0 = load_const (<span class="number">0x00000000</span> <span class="comment">/* 0.000000 */</span>)</div><div class="line">        vec4 <span class="number">32</span> ssa_1 = intrinsic load_input (ssa_0) (<span class="number">32</span>, <span class="number">0</span>, <span class="number">160</span>, <span class="number">160</span>) <span class="comment">/* base=32 */</span> <span class="comment">/* component=0 */</span> <span class="comment">/* dest_type=float32 */</span> <span class="comment">/* location=32 slots=1 */</span> <span class="comment">/* clear_color */</span></div><div class="line">        intrinsic store_output (ssa_1, ssa_0) (<span class="number">4</span>, <span class="number">15</span>, <span class="number">0</span>, <span class="number">160</span>, <span class="number">130</span>) <span class="comment">/* base=4 */</span> <span class="comment">/* wrmask=xyzw */</span> <span class="comment">/* component=0 */</span> <span class="comment">/* src_type=float32 */</span> <span class="comment">/* location=2 slots=1 */</span>       <span class="comment">/* gl_FragColor */</span></div><div class="line">        <span class="comment">/* succs: block_1 */</span></div><div class="line">        block block_1:</div><div class="line">&#125;</div><div class="line"></div><div class="line">Native code <span class="keyword">for</span> unnamed fragment shader BLORP-clear (sha1 <span class="number">867</span>c2b9794cc6654dbcf091d8a21323f01e0d409)</div><div class="line">SIMD16 shader: <span class="number">2</span> instructions. <span class="number">0</span> loops. <span class="number">12</span> cycles. <span class="number">0</span>:<span class="number">0</span> spills:fills, <span class="number">1</span> sends, scheduled with mode (null). Promoted <span class="number">0</span> constants. Compacted <span class="number">32</span> to <span class="number">32</span> bytes (<span class="number">0</span>%)</div><div class="line">   START B0 (<span class="number">12</span> cycles)</div><div class="line">mov(<span class="number">4</span>)          g114&lt;<span class="number">1</span>&gt;F        g2<span class="number">.3</span>&lt;<span class="number">8</span>,<span class="number">2</span>,<span class="number">4</span>&gt;F                    &#123; align1 WE_all <span class="number">1</span>N &#125;;</div><div class="line">sendc(<span class="number">16</span>)       null&lt;<span class="number">1</span>&gt;UW       g114&lt;<span class="number">0</span>,<span class="number">1</span>,<span class="number">0</span>&gt;F    <span class="number">0x82031100</span></div><div class="line">                            render MsgDesc: RT write SIMD16/RepData LastRT Surface = <span class="number">0</span> mlen <span class="number">1</span> rlen <span class="number">0</span> &#123; align1 <span class="number">1</span>H EOT &#125;;</div><div class="line">   END B0</div></pre></td></tr></table></figure></p>
+<p>然后通过下面代码加载Vertex数据。<br>   glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vVertices );<br>   glEnableVertexAttribArray ( 0 );</p>
+<p>调用下面的函数执行Draw操作。<br>    glDrawArrays ( GL_TRIANGLES, 0, 3 );<br>这个时候才会把对应shader的NIR代码转换成EU code。注意前面执行glCompileShader的时候只是生成了NIR，没有完成EU code的生成，也就是说编译器的后端到这个时候才开始工作。</p>
+<p>先生成fragment shader的EU code，然后把EU code配置到下面的command中。<br>其中GEN9_3DSTATE_PS有一个分量会指明PS对应的EU Code保存地址。<br>  GEN9_3DSTATE_PS<br>  GEN9_3DSTATE_PS_EXTRA</p>
+<p>然后生成vertex shader的EU code，然后把EU code配置到下面的command中。<br>其中GEN9_3DSTATE_VS有一个分量会指明VS对应的EU Code保存地址。<br>  GEN9_3DSTATE_STREAMOUT<br>  GEN9_3DSTATE_SO_DECL_LIST<br>  GEN9_3DSTATE_VS</p>
+<p>然后继续配置如下的command。其中GEN9_3DPRIMITIVE用来说明了需要参加绘制的Vertex数目。<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>state GEN9_BLEND_STATE_ENTRY<br>GEN9_3DSTATE_PS_BLEND<br>state GEN9_BLEND_STATE<br>GEN9_3DSTATE_SF<br>GEN9_3DSTATE_RASTER<br>GEN9_3DSTATE_CLIP<br>GEN9_3DSTATE_WM<br>GEN9_3DSTATE_LINE_STIPPLE<br>GEN9_3DSTATE_VERTEX_ELEMENTS<br>state GEN9_VERTEX_ELEMENT_STATE<br>GEN9_3DSTATE_VF_INSTANCING<br>state GEN9_VERTEX_ELEMENT_STATE<br>GEN9_3DSTATE_VF_INSTANCING<br>state GEN9_VERTEX_BUFFER_STATE<br>GEN9_PIPE_CONTROL<br>state GEN9_CS_CHICKEN1<br>GEN9_MI_LOAD_REGISTER_IMM<br>state GEN9_CC_VIEWPORT<br>GEN9_3DSTATE_VIEWPORT_STATE_POINTERS_CC<br>state GEN9_SF_CLIP_VIEWPORT<br>GEN9_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP<br>GEN9_3DSTATE_URB_VS<br>GEN9_3DSTATE_URB_VS<br>GEN9_3DSTATE_URB_VS<br>GEN9_3DSTATE_URB_VS<br>state GEN9_BLEND_STATE<br>GEN9_3DSTATE_BLEND_STATE_POINTERS<br>state GEN9_COLOR_CALC_STATE<br>GEN9_3DSTATE_CC_STATE_POINTERS<br>GEN9_3DSTATE_CONSTANT_VS<br>GEN9_3DSTATE_CONSTANT_VS<br>GEN9_3DSTATE_BINDING_TABLE_POINTERS_VS<br>GEN9_3DSTATE_BINDING_TABLE_POINTERS_VS<br>GEN9_3DSTATE_BINDING_TABLE_POINTERS_VS<br>GEN9_3DSTATE_BINDING_TABLE_POINTERS_VS<br>GEN9_3DSTATE_BINDING_TABLE_POINTERS_VS<br>GEN9_3DSTATE_SAMPLER_STATE_POINTERS_VS<br>GEN9_3DSTATE_SAMPLER_STATE_POINTERS_VS<br>GEN9_3DSTATE_MULTISAMPLE<br>GEN9_3DSTATE_SAMPLE_MASK<br>GEN9_3DSTATE_HS<br>GEN9_3DSTATE_TE<br>GEN9_3DSTATE_DS<br>GEN9_3DSTATE_GS<br>GEN9_3DSTATE_PS<br>GEN9_3DSTATE_PS_EXTRA<br>GEN9_3DSTATE_STREAMOUT<br>GEN9_3DSTATE_CLIP<br>GEN9_3DSTATE_SF<br>GEN9_3DSTATE_WM<br>GEN9_3DSTATE_SBE<br>GEN9_3DSTATE_SBE_SWIZ<br>GEN9_3DSTATE_PS_BLEND<br>GEN9_3DSTATE_WM_DEPTH_STENCIL<br>GEN9_3DSTATE_SCISSOR_STATE_POINTERS<br>GEN9_3DSTATE_CLEAR_PARAMS<br>GEN9_3DSTATE_POLY_STIPPLE_PATTERN<br>GEN9_3DSTATE_VF_TOPOLOGY<br>GENX(3DSTATE_VERTEX_BUFFERS)<br>GEN9_3DSTATE_VF_SGVS<br>GEN9_3DSTATE_VF<br>GEN9_3DSTATE_VF_STATISTICS<br>GEN9_3DPRIMITIVE</p>
+<p>最后执行eglSwapBuffers，把前面生成的command都送到GPU kernel driver中，然后启动GPU硬件完成绘制。<br>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL<br>GEN9_PIPE_CONTROL</p>
+<h1 id="0x4-Mesa中Command配置的编程实现"><a href="#0x4-Mesa中Command配置的编程实现" class="headerlink" title="0x4 Mesa中Command配置的编程实现"></a>0x4 Mesa中Command配置的编程实现</h1><p>这里以Vulkan driver中的Command配置实现为例说明Mesa中Gen gpu的command是如何配置的。对OpenGL driver来说，这部分实现也是很类似的。</p>
+<p>通过xml配置文件来保存Command Streamer的结构体信息，然后在编译的时候通过python代码把xml文件转换成对应的配置头文件。这个过程如下图所示。<br><img src="/2019/07/13/Deep about Intel Gen Driver/genXml.svg" alt=""></p>
+<p>例如对应PIPE_CONTROL的配置，xml文件内容如下所示。</p>
+<p>xml的内容是参考下面两个文档来生成的。</p>
+<p>Intel® Iris® Plus Graphics and UHD Graphics Open Source<br>Programmer’s Reference Manual<br>For the 2019 10th Generation Intel CoreTM Processors based on the<br>“Ice Lake” Platform<br>Volume 2a - Command Reference: Instructions (Command Opcodes)</p>
+<p>Intel® Iris® Plus Graphics and UHD Graphics Open<br>Source<br>Programmer’s Reference Manual<br>For the 2019 10th Generation Intel CoreTM Processors<br>based on the “Ice Lake” Platform<br>Volume 8: Command Stream Programming</p>
+<p>下面截取了部分xml内容如下所示。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line">&lt;instruction name=<span class="string">"PIPE_CONTROL"</span> bias=<span class="string">"2"</span> length=<span class="string">"6"</span> engine=<span class="string">"render"</span>&gt;</div><div class="line">  &lt;field name=<span class="string">"DWord Length"</span> start=<span class="string">"0"</span> end=<span class="string">"7"</span> type=<span class="string">"uint"</span> <span class="keyword">default</span>=<span class="string">"4"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"3D Command Sub Opcode"</span> start=<span class="string">"16"</span> end=<span class="string">"23"</span> type=<span class="string">"uint"</span> <span class="keyword">default</span>=<span class="string">"0"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"3D Command Opcode"</span> start=<span class="string">"24"</span> end=<span class="string">"26"</span> type=<span class="string">"uint"</span> <span class="keyword">default</span>=<span class="string">"2"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Command SubType"</span> start=<span class="string">"27"</span> end=<span class="string">"28"</span> type=<span class="string">"uint"</span> <span class="keyword">default</span>=<span class="string">"3"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Command Type"</span> start=<span class="string">"29"</span> end=<span class="string">"31"</span> type=<span class="string">"uint"</span> <span class="keyword">default</span>=<span class="string">"3"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Depth Cache Flush Enable"</span> start=<span class="string">"32"</span> end=<span class="string">"32"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Stall At Pixel Scoreboard"</span> start=<span class="string">"33"</span> end=<span class="string">"33"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"State Cache Invalidation Enable"</span> start=<span class="string">"34"</span> end=<span class="string">"34"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Constant Cache Invalidation Enable"</span> start=<span class="string">"35"</span> end=<span class="string">"35"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"VF Cache Invalidation Enable"</span> start=<span class="string">"36"</span> end=<span class="string">"36"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"DC Flush Enable"</span> start=<span class="string">"37"</span> end=<span class="string">"37"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Pipe Control Flush Enable"</span> start=<span class="string">"39"</span> end=<span class="string">"39"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Notify Enable"</span> start=<span class="string">"40"</span> end=<span class="string">"40"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Indirect State Pointers Disable"</span> start=<span class="string">"41"</span> end=<span class="string">"41"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Texture Cache Invalidation Enable"</span> start=<span class="string">"42"</span> end=<span class="string">"42"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Instruction Cache Invalidate Enable"</span> start=<span class="string">"43"</span> end=<span class="string">"43"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Render Target Cache Flush Enable"</span> start=<span class="string">"44"</span> end=<span class="string">"44"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Depth Stall Enable"</span> start=<span class="string">"45"</span> end=<span class="string">"45"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Post Sync Operation"</span> start=<span class="string">"46"</span> end=<span class="string">"47"</span> type=<span class="string">"uint"</span>&gt;</div><div class="line">    &lt;value name=<span class="string">"No Write"</span> value=<span class="string">"0"</span>/&gt;</div><div class="line">    &lt;value name=<span class="string">"Write Immediate Data"</span> value=<span class="string">"1"</span>/&gt;</div><div class="line">    &lt;value name=<span class="string">"Write PS Depth Count"</span> value=<span class="string">"2"</span>/&gt;</div><div class="line">    &lt;value name=<span class="string">"Write Timestamp"</span> value=<span class="string">"3"</span>/&gt;</div><div class="line">  &lt;/field&gt;</div><div class="line">  &lt;field name=<span class="string">"Generic Media State Clear"</span> start=<span class="string">"48"</span> end=<span class="string">"48"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"TLB Invalidate"</span> start=<span class="string">"50"</span> end=<span class="string">"50"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Global Snapshot Count Reset"</span> start=<span class="string">"51"</span> end=<span class="string">"51"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Command Streamer Stall Enable"</span> start=<span class="string">"52"</span> end=<span class="string">"52"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Store Data Index"</span> start=<span class="string">"53"</span> end=<span class="string">"53"</span> type=<span class="string">"uint"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"LRI Post Sync Operation"</span> start=<span class="string">"55"</span> end=<span class="string">"55"</span> type=<span class="string">"uint"</span>&gt;</div><div class="line">    &lt;value name=<span class="string">"No LRI Operation"</span> value=<span class="string">"0"</span>/&gt;</div><div class="line">    &lt;value name=<span class="string">"MMIO Write Immediate Data"</span> value=<span class="string">"1"</span>/&gt;</div><div class="line">  &lt;/field&gt;</div><div class="line">  &lt;field name=<span class="string">"Destination Address Type"</span> start=<span class="string">"56"</span> end=<span class="string">"56"</span> type=<span class="string">"uint"</span> prefix=<span class="string">"DAT"</span>&gt;</div><div class="line">    &lt;value name=<span class="string">"PPGTT"</span> value=<span class="string">"0"</span>/&gt;</div><div class="line">    &lt;value name=<span class="string">"GGTT"</span> value=<span class="string">"1"</span>/&gt;</div><div class="line">  &lt;/field&gt;</div><div class="line">  &lt;field name=<span class="string">"Flush LLC"</span> start=<span class="string">"58"</span> end=<span class="string">"58"</span> type=<span class="string">"bool"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Address"</span> start=<span class="string">"66"</span> end=<span class="string">"111"</span> type=<span class="string">"address"</span>/&gt;</div><div class="line">  &lt;field name=<span class="string">"Immediate Data"</span> start=<span class="string">"128"</span> end=<span class="string">"191"</span> type=<span class="string">"uint"</span>/&gt;</div><div class="line">&lt;/instruction&gt;</div></pre></td></tr></table></figure>
+<p>把xml内容转换后头文件内容如下。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">define</span> GEN9_PIPE_CONTROL_length               6</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> GEN9_PIPE_CONTROL_length_bias          2</span></div><div class="line"><span class="comment">// 定义Command的头信息</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> GEN9_PIPE_CONTROL_header                \</span></div><div class="line">   .DWordLength                         =      4,  \</div><div class="line">   ._3DCommandSubOpcode                 =      0,  \</div><div class="line">   ._3DCommandOpcode                    =      2,  \</div><div class="line">   .CommandSubType                      =      3,  \</div><div class="line">   .CommandType                         =      3</div><div class="line"></div><div class="line"><span class="comment">// 定义Command的结构体信息</span></div><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">GEN9_PIPE_CONTROL</span> &#123;</span></div><div class="line">   <span class="keyword">uint32_t</span>                             DWordLength;</div><div class="line">   <span class="keyword">uint32_t</span>                             _3DCommandSubOpcode;</div><div class="line">   <span class="keyword">uint32_t</span>                             _3DCommandOpcode;</div><div class="line">   <span class="keyword">uint32_t</span>                             CommandSubType;</div><div class="line">   <span class="keyword">uint32_t</span>                             CommandType;</div><div class="line">   <span class="keyword">bool</span>                                 DepthCacheFlushEnable;</div><div class="line">   <span class="keyword">bool</span>                                 StallAtPixelScoreboard;</div><div class="line">   <span class="keyword">bool</span>                                 StateCacheInvalidationEnable;</div><div class="line">   <span class="keyword">bool</span>                                 ConstantCacheInvalidationEnable;</div><div class="line">   <span class="keyword">bool</span>                                 VFCacheInvalidationEnable;</div><div class="line">   <span class="keyword">bool</span>                                 DCFlushEnable;</div><div class="line">   <span class="keyword">bool</span>                                 PipeControlFlushEnable;</div><div class="line">   <span class="keyword">bool</span>                                 NotifyEnable;</div><div class="line">   <span class="keyword">bool</span>                                 IndirectStatePointersDisable;</div><div class="line">   <span class="keyword">bool</span>                                 TextureCacheInvalidationEnable;</div><div class="line">   <span class="keyword">bool</span>                                 InstructionCacheInvalidateEnable;</div><div class="line">   <span class="keyword">bool</span>                                 RenderTargetCacheFlushEnable;</div><div class="line">   <span class="keyword">bool</span>                                 DepthStallEnable;</div><div class="line">   <span class="keyword">uint32_t</span>                             PostSyncOperation;</div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> NoWrite                                  0</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> WriteImmediateData                       1</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> WritePSDepthCount                        2</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> WriteTimestamp                           3</span></div><div class="line">   <span class="keyword">bool</span>                                 GenericMediaStateClear;</div><div class="line">   <span class="keyword">bool</span>                                 TLBInvalidate;</div><div class="line">   <span class="keyword">bool</span>                                 GlobalSnapshotCountReset;</div><div class="line">   <span class="keyword">bool</span>                                 CommandStreamerStallEnable;</div><div class="line">   <span class="keyword">uint32_t</span>                             StoreDataIndex;</div><div class="line">   <span class="keyword">uint32_t</span>                             LRIPostSyncOperation;</div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> NoLRIOperation                           0</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> MMIOWriteImmediateData                   1</span></div><div class="line">   <span class="keyword">uint32_t</span>                             DestinationAddressType;</div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> DAT_PPGTT                                0</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> DAT_GGTT                                 1</span></div><div class="line">   <span class="keyword">bool</span>                                 FlushLLC;</div><div class="line">   __gen_address_type                   Address;</div><div class="line">   <span class="keyword">uint64_t</span>                             ImmediateData;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>Command配置的宏定义如下。<br>该宏定义包括了所有Command的配置。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">define</span> __anv_cmd_header(cmd) cmd ## _header</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> __anv_cmd_pack(cmd) cmd ## _pack</span></div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> anv_batch_emit(batch, cmd, name)                            \</span></div><div class="line">   for (struct cmd name = &#123; __anv_cmd_header(cmd) &#125;,                    \</div><div class="line">        *_dst = anv_batch_emit_dwords(batch, __anv_cmd_length(cmd));    \</div><div class="line">        __builtin_expect(_dst != NULL, 1);                              \</div><div class="line">        (&#123; __anv_cmd_pack(cmd)(batch, _dst, &amp;name);                     \</div><div class="line">           printf(<span class="meta-string">"%s\n"</span>, #cmd);                                        \</div><div class="line">           VG(VALGRIND_CHECK_MEM_IS_DEFINED(_dst, __anv_cmd_length(cmd) * 4)); \</div><div class="line">           _dst = NULL;                                                 \</div><div class="line">         &#125;))</div></pre></td></tr></table></figure></p>
+<p>上面的宏定义是通过实现各个不同Command的pack函数(也是通过前面的genXml自动生成的)来实现不同Command的配置的。</p>
+<p>例如，下面的函数实现了PIPE_CONTROL Command的结构体信息配置。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div></pre></td><td class="code"><pre><div class="line">static inline __attribute__((always_inline)) void</div><div class="line">GEN9_PIPE_CONTROL_pack(__attribute__((unused)) __gen_user_data *data,</div><div class="line">                       __attribute__((unused)) void * restrict dst,</div><div class="line">                       __attribute__((unused)) const struct GEN9_PIPE_CONTROL * restrict values)</div><div class="line">&#123;</div><div class="line">   uint32_t * restrict dw = (uint32_t * restrict) dst;</div><div class="line"></div><div class="line">   dw[0] =</div><div class="line">      __gen_uint(values-&gt;DWordLength, 0, 7) |</div><div class="line">      __gen_uint(values-&gt;_3DCommandSubOpcode, 16, 23) |</div><div class="line">      __gen_uint(values-&gt;_3DCommandOpcode, 24, 26) |</div><div class="line">      __gen_uint(values-&gt;CommandSubType, 27, 28) |</div><div class="line">      __gen_uint(values-&gt;CommandType, 29, 31);</div><div class="line"></div><div class="line">   dw[1] =</div><div class="line">      __gen_uint(values-&gt;DepthCacheFlushEnable, 0, 0) |</div><div class="line">      __gen_uint(values-&gt;StallAtPixelScoreboard, 1, 1) |</div><div class="line">      __gen_uint(values-&gt;StateCacheInvalidationEnable, 2, 2) |</div><div class="line">      __gen_uint(values-&gt;ConstantCacheInvalidationEnable, 3, 3) |</div><div class="line">      __gen_uint(values-&gt;VFCacheInvalidationEnable, 4, 4) |</div><div class="line">      __gen_uint(values-&gt;DCFlushEnable, 5, 5) |</div><div class="line">      __gen_uint(values-&gt;PipeControlFlushEnable, 7, 7) |</div><div class="line">      __gen_uint(values-&gt;NotifyEnable, 8, 8) |</div><div class="line">      __gen_uint(values-&gt;IndirectStatePointersDisable, 9, 9) |</div><div class="line">      __gen_uint(values-&gt;TextureCacheInvalidationEnable, 10, 10) |</div><div class="line">      __gen_uint(values-&gt;InstructionCacheInvalidateEnable, 11, 11) |</div><div class="line">      __gen_uint(values-&gt;RenderTargetCacheFlushEnable, 12, 12) |</div><div class="line">      __gen_uint(values-&gt;DepthStallEnable, 13, 13) |</div><div class="line">      __gen_uint(values-&gt;PostSyncOperation, 14, 15) |</div><div class="line">      __gen_uint(values-&gt;GenericMediaStateClear, 16, 16) |</div><div class="line">      __gen_uint(values-&gt;TLBInvalidate, 18, 18) |</div><div class="line">      __gen_uint(values-&gt;GlobalSnapshotCountReset, 19, 19) |</div><div class="line">      __gen_uint(values-&gt;CommandStreamerStallEnable, 20, 20) |</div><div class="line">      __gen_uint(values-&gt;StoreDataIndex, 21, 21) |</div><div class="line">      __gen_uint(values-&gt;LRIPostSyncOperation, 23, 23) |</div><div class="line">      __gen_uint(values-&gt;DestinationAddressType, 24, 24) |</div><div class="line">      __gen_uint(values-&gt;FlushLLC, 26, 26);</div><div class="line"></div><div class="line">   const uint64_t v2_address =</div><div class="line">      __gen_combine_address(data, &amp;dw[2], values-&gt;Address, 0);</div><div class="line">   dw[2] = v2_address;</div><div class="line">   dw[3] = v2_address &gt;&gt; 32;</div><div class="line"></div><div class="line">   const uint64_t v4 =</div><div class="line">      __gen_uint(values-&gt;ImmediateData, 0, 63);</div><div class="line">   dw[4] = v4;</div><div class="line">   dw[5] = v4 &gt;&gt; 32;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>在Vulkan驱动中通过类似的配置的调用代码来设置具体的Command信息。<br>最后调用的函数是前面实现的GEN9_PIPE_CONTROL_pack()。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">anv_batch_emit(&amp;cmd_buffer-&gt;batch, GENX(PIPE_CONTROL), pc) &#123;</div><div class="line">    pc.DCFlushEnable = <span class="literal">true</span>;</div><div class="line">    pc.RenderTargetCacheFlushEnable = <span class="literal">true</span>;</div><div class="line">    pc.CommandStreamerStallEnable = <span class="literal">true</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/GPU-driver/" rel="tag"># GPU driver</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/01/Graphics buffer Summary/" rel="next" title="Graphics buffer总结">
+                <i class="fa fa-chevron-left"></i> Graphics buffer总结
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/13/About Video Codec Optimization/" rel="prev" title="About Video Codec Optimization">
+                About Video Codec Optimization <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">39</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-总体流程"><span class="nav-number">1.</span> <span class="nav-text">0x1 总体流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-Shader编译"><span class="nav-number">2.</span> <span class="nav-text">0x2 Shader编译</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-Command生成"><span class="nav-number">3.</span> <span class="nav-text">0x3 Command生成</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-Mesa中Command配置的编程实现"><span class="nav-number">4.</span> <span class="nav-text">0x4 Mesa中Command配置的编程实现</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
