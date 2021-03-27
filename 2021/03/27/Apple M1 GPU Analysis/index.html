@@ -1,0 +1,829 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="GPU driver," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="0x1 介绍随着Apple M1 Soc的问世，大家对其集成的GPU也是充满了好奇，根据专业软件的评测，该GPU的性能也是相当强悍。但是秉承Apple封闭的特性，人们很难直接对其有更深入的了解。但是这个阻挡不了hacker借助各种手段来对其进行逆向分析。本文就是对目前Apple M1 GPU的逆向分析进展的一个总结。 我们知道Mesa是Linux上开源的图形驱动，支持了Intel，AMD，Broa">
+<meta name="keywords" content="GPU driver">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Apple M1 GPU分析">
+<meta property="og:url" content="http://yoursite.com/2021/03/27/Apple M1 GPU Analysis/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="0x1 介绍随着Apple M1 Soc的问世，大家对其集成的GPU也是充满了好奇，根据专业软件的评测，该GPU的性能也是相当强悍。但是秉承Apple封闭的特性，人们很难直接对其有更深入的了解。但是这个阻挡不了hacker借助各种手段来对其进行逆向分析。本文就是对目前Apple M1 GPU的逆向分析进展的一个总结。 我们知道Mesa是Linux上开源的图形驱动，支持了Intel，AMD，Broa">
+<meta property="og:image" content="http://yoursite.com/2021/03/27/Apple%20M1%20GPU%20Analysis/gpu%20driver%20reverse%20engineering.png">
+<meta property="og:image" content="http://yoursite.com/2021/03/27/Apple%20M1%20GPU%20Analysis/wrap.png">
+<meta property="og:updated_time" content="2021-03-27T09:32:12.853Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Apple M1 GPU分析">
+<meta name="twitter:description" content="0x1 介绍随着Apple M1 Soc的问世，大家对其集成的GPU也是充满了好奇，根据专业软件的评测，该GPU的性能也是相当强悍。但是秉承Apple封闭的特性，人们很难直接对其有更深入的了解。但是这个阻挡不了hacker借助各种手段来对其进行逆向分析。本文就是对目前Apple M1 GPU的逆向分析进展的一个总结。 我们知道Mesa是Linux上开源的图形驱动，支持了Intel，AMD，Broa">
+<meta name="twitter:image" content="http://yoursite.com/2021/03/27/Apple%20M1%20GPU%20Analysis/gpu%20driver%20reverse%20engineering.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/03/27/Apple M1 GPU Analysis/"/>
+
+
+
+
+
+  <title>Apple M1 GPU分析 | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/03/27/Apple M1 GPU Analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Apple M1 GPU分析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-03-27T18:20:31+09:00">
+                2021-03-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2021/03/27/Apple M1 GPU Analysis/" class="leancloud_visitors" data-flag-title="Apple M1 GPU分析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="0x1-介绍"><a href="#0x1-介绍" class="headerlink" title="0x1 介绍"></a>0x1 介绍</h1><p>随着Apple M1 Soc的问世，大家对其集成的GPU也是充满了好奇，根据专业软件的评测，该GPU的性能也是相当强悍。<br>但是秉承Apple封闭的特性，人们很难直接对其有更深入的了解。但是这个阻挡不了hacker借助各种手段来对其进行逆向分析。<br>本文就是对目前Apple M1 GPU的逆向分析进展的一个总结。</p>
+<p>我们知道Mesa是Linux上开源的图形驱动，支持了Intel，AMD，Broadcom VideoCore，Qualcomm Adreno, ARM Mali, Vivante等厂家的GPU驱动，对了，好像被你看出来了少了谁，这就是Imagination GPU，是的Imagination内部支持Mesa的工程师跳槽到Intel以后，mesa中Imagination GPU的支持就一直没有进展。</p>
+<p>Mesa开发模式简单说来有两种，一种是企业支持的开发，如Intel Open source center是Mesa最大的贡献者，开发了Mesa框架，编译器，Intel Gen GPU驱动等。Broadcom也支持了内部工程师来开发Mesa中有关VideoCore GPU的驱动。采用这种模式开发的话可以访问该公司内部完整的技术文档，包括GPU spec，GPU ISA document等。这种开发模式基本是follow对应closed source的GPU驱动流程，根据内部的GPU参考代码，在Mesa中做移植，没有涉及到逆向工程的概念。</p>
+<p>另外一种是独立开发模式，这种主要通过逆向工程来分析GPU的特征。这种模式开发的驱动，一看这个取名就很有意思，freedreno，etnaviv，lima，一看就是野路子，就是把人家的名字反过来叫。采用这种模式开发的GPU驱动是在没有参考代码对GPU的特性做逆向分析，然后归纳总结出QPU驱动的流程来，需要完成GPU ISA的总结，开发GPU ISA编译器后端，开发GPU command stream的构造器。使其可以对接到kernel驱动中。采用这种模式开发可以参考的是GPU kernel driver的代码，因为Linux kernel driver代码一般是GPL协议的，可以在网上找到对应的源代码。下面要说的Apple M1 GPU就是通过这种方式开发的。通过了解这个过程，我们可以知道怎样通过逆向分析来完成一个GPU用户态驱动的开发。</p>
+<p>这个逆向分析过程由Alyssa Rosenzweig提供，Alyssa Rosenzweig因为负责Mesa中Mali GPU(Panfrost)驱动的逆向开发工作而获得了2021年度的杰出自由软件贡献者奖。</p>
+<p>其开发过程如下。</p>
+<p>   <img src="/2021/03/27/Apple M1 GPU Analysis/gpu driver reverse engineering.png" alt=""></p>
+<p>开发Linux or Android逆向GPU驱动的过程如下。<br>写一个hook库，该hook库用来hook ioctl和mmap接口，然后通过LD_PRELOAD加载进测试程序中，然后在hook的ioctl和mmap函数中分析GPU用户态发送到<br>内核态的内容，一旦“submit command buffer”被触发，就把内存中的内容dump到文件中，可以用来做进一步分析。</p>
+<p>Apple系统上逆向过程如下。<br>M1 GPU的逆向分析过程也和上面的过程类似，只是macOS上没有LD_PRELOAD，只有类似的机制DYLD_INSERT_LIBRARIES，另外ioctl也是没有的，需要用<br>macOS上的IOKit framework来代替。IOKit framework是macOS上GPU用户态驱动到内核态驱动的桥梁，其中和ioctl类似的入口函数是IOConnectCallMethod。</p>
+<p>下面来详细介绍一下这个逆向过程</p>
+<ol>
+<li><p>提供对IOKit中函数IOConnectCallMethod的包装，也就是说对IOKit进行了hook。</p>
+</li>
+<li><p>重点关注下面三处调用。memory allocation, command buffer creation, and command buffer submission</p>
+</li>
+<li><p>把上面的hook接好了以后，就可以利用上面的hook机制来分析驱动了。下面说了这个标准过程，就是利用一个简单的Metal测试程序，<br>然后在hook中dump驱动的二进制输出，然后对Metal测试程序做一个小修改，然后dump驱动的二进制输出，并和修改前的dump输出进行比较，从而推断出某一个二进制GPU指令对应的含义。</p>
+</li>
+<li><p>通过上面的分析，可以得出M1 GPU的大概特性。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">One, the architecture is scalar. Unlike some GPUs that are scalar for 32-bits but vectorized for 16-bits, </div><div class="line">     the M1’s GPU is scalar at all bit sizes. Yet Metal optimization resources imply 16-bit arithmetic </div><div class="line">     should be significantly faster, in addition to a reduction of register usage leading to higher thread </div><div class="line">     count (occupancy). This suggests the hardware is superscalar, with more 16-bit ALUs than 32-bit ALUs, </div><div class="line">     allowing the part to benefit from low-precision graphics shaders much more than competing chips can, </div><div class="line">     while removing a great deal of complexity from the compiler.</div><div class="line"></div><div class="line">Two, the architecture seems to handle scheduling in hardware, common among desktop GPUs but less so in the embedded space. </div><div class="line">     This again makes the compiler simpler at the expense of more hardware. Instructions seem to have minimal encoding </div><div class="line">     overhead, unlike other architectures which need to pad out instructions with nop’s to accommodate highly constrained</div><div class="line">     instruction sets.</div><div class="line"></div><div class="line">Three, various modifiers are supported. Floating-point ALUs can do clamps (saturate), negates, and absolute value </div><div class="line">       modifiers “for free”, a common shader architecture trait. Further, most (all?) instructions can type-convert</div><div class="line">       between 16-bit and 32-bit “for free” on both the destination and the sources, which allows the compiler</div><div class="line">       to be much more aggressive about using 16-bit operations without risking conversion overheads. </div><div class="line">       On the integer side, various bitwise complements and shifts are allowed on certain instructions for free. </div><div class="line">       None of this is unique to Apple’s design, but it’s worth noting all the same.</div><div class="line"></div><div class="line">Finally, not all ALU instructions have the same timing. Instructions like imad, used to multiply two integers and</div><div class="line">         add a third, are avoided in favour of repeated iadd integer addition instructions where possible. </div><div class="line">         This also suggests a superscalar architecture; software-scheduled designs like those I work on for my day</div><div class="line">         job cannot exploit differences in pipeline length, inadvertently slowing down simple instructions to match</div><div class="line">         the speed of complex ones.</div></pre></td></tr></table></figure>
+</li>
+<li><p>分析command stream的构建过程，完成以后，我们可以编写一个简单的测试程序跑起来。</p>
+</li>
+</ol>
+<h1 id="0x2-GPU驱动分析"><a href="#0x2-GPU驱动分析" class="headerlink" title="0x2 GPU驱动分析"></a>0x2 GPU驱动分析</h1><p>下面来介绍一下这个通过逆向分析得到的GPU驱动。</p>
+<h2 id="0x21-wrap"><a href="#0x21-wrap" class="headerlink" title="0x21 wrap"></a>0x21 wrap</h2><p>   <img src="/2021/03/27/Apple M1 GPU Analysis/wrap.png" alt=""></p>
+<p>wrap模块定义了下面hook导出函数供应用程序调用，用来接管IOKit中对应的函数。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallMethod, IOConnectCallMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallAsyncMethod, IOConnectCallAsyncMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallStructMethod, IOConnectCallStructMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallAsyncStructMethod, IOConnectCallAsyncStructMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallScalarMethod, IOConnectCallScalarMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectCallAsyncScalarMethod, IOConnectCallAsyncScalarMethod);</div><div class="line">DYLD_INTERPOSE(wrap_IOConnectSetNotificationPort, IOConnectSetNotificationPort);</div><div class="line"><span class="comment">//DYLD_INTERPOSE(wrap_IOSetNotificationPort, IOSetNotificationPort);</span></div><div class="line">DYLD_INTERPOSE(wrap_IONotificationPortCreate, IONotificationPortCreate);</div><div class="line">DYLD_INTERPOSE(wrap_IONotificationPortSetDispatchQueue, IONotificationPortSetDispatchQueue);</div><div class="line">DYLD_INTERPOSE(wrap_IODataQueueAllocateNotificationPort, IODataQueueAllocateNotificationPort);</div><div class="line">DYLD_INTERPOSE(wrap_IODataQueueSetNotificationPort, IODataQueueSetNotificationPort);</div></pre></td></tr></table></figure>
+<p>然后在图形测试程序运行的时候，会先调用到wrap实现的hook函数中，然后在hook中内存分配(AGX_SELECTOR_ALLOCATE_MEM)和cmd buffer创建(AGX_SELECTOR_CREATE_CMDBUF)被调用的时候记录相应的buffer内存地址，在command命令提交的时候(AGX_SELECTOR_SUBMIT_COMMAND_BUFFERS)把前面保存的buffer保存到文件中。hook函数在完成前述的hook任务以后，再调用真正的IOKit函数，完成对MacOS系统GPU kernel驱动的调用。</p>
+<h2 id="0x22-disasm"><a href="#0x22-disasm" class="headerlink" title="0x22 disasm"></a>0x22 disasm</h2><p>前面已经把所有包含GPU渲染命令的buffer都保存到文件了，下一步就是要分析这些文件了，这个时候需要disasm发挥作用了。<br>我们知道M1 GPU是没有公开的文档，开发disasm也是需要反复修改测试程序，然后通过wrap收集到修改后测试程序的命令。通过仔细比较差异来推测这些buffer里面对应的二进制的含义。目前disasm只是对部分GPU ISA进行了解析，对command stream部分的解析没有完成。<br>目前已经分析出来的部分GPU ISA的opcode如下所示。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">enum</span> agx_opcodes &#123;</div><div class="line">    OPC_FFMA_CMPCT_16 = <span class="number">0x36</span>,</div><div class="line">    OPC_FFMA_CMPCT_SAT_16 = <span class="number">0x76</span>,</div><div class="line">    OPC_FMUL_16 = <span class="number">0x96</span>,</div><div class="line">    OPC_FADD_16 = <span class="number">0xA6</span>,</div><div class="line">    OPC_FFMA_16 = <span class="number">0xB6</span>,</div><div class="line">    OPC_FMUL_SAT_16 = <span class="number">0xD6</span>,</div><div class="line">    OPC_FADD_SAT_16 = <span class="number">0xE6</span>,</div><div class="line">    OPC_FFMA_SAT_16 = <span class="number">0xF6</span>,</div><div class="line"></div><div class="line">    OPC_FROUND_32 = <span class="number">0x0A</span>,</div><div class="line">    OPC_FFMA_CMPCT_32 = <span class="number">0x3A</span>,</div><div class="line">    OPC_FFMA_CMPCT_SAT_32 = <span class="number">0x7A</span>,</div><div class="line">    OPC_FMUL_32 = <span class="number">0x9A</span>,</div><div class="line">    OPC_FADD_32 = <span class="number">0xAA</span>,</div><div class="line">    OPC_FFMA_32 = <span class="number">0xBA</span>,</div><div class="line">    OPC_FMUL_SAT_32 = <span class="number">0xDA</span>,</div><div class="line">    OPC_FADD_SAT_32 = <span class="number">0xEA</span>,</div><div class="line">    OPC_FFMA_SAT_32 = <span class="number">0xFA</span>,</div><div class="line"></div><div class="line">    OPC_IADD = <span class="number">0x0E</span>,</div><div class="line">    OPC_IMAD = <span class="number">0x1E</span>,</div><div class="line">    OPC_ISHL = <span class="number">0x2E</span>,</div><div class="line">    <span class="comment">/* 0x3e seen with reverse_bits, and used in clz */</span></div><div class="line">    OPC_IADDSAT = <span class="number">0x4E</span>,</div><div class="line">    OPC_ISHR = <span class="number">0xAE</span>,</div><div class="line">    OPC_I2F = <span class="number">0xBE</span>,</div><div class="line"></div><div class="line">    OPC_LOAD = <span class="number">0x05</span>, <span class="comment">// todo</span></div><div class="line">    OPC_STORE = <span class="number">0x45</span>, <span class="comment">// todo</span></div><div class="line">    OPC_FCSEL = <span class="number">0x02</span>,</div><div class="line">    OPC_ICSEL = <span class="number">0x12</span>,</div><div class="line">    OPC_MOVI = <span class="number">0x62</span>,</div><div class="line">    OPC_LD_COMPUTE = <span class="number">0x72</span>,</div><div class="line">    OPC_BITOP = <span class="number">0x7E</span>,</div><div class="line">    OPC_UNK38 = <span class="number">0x38</span>, <span class="comment">// seen after loads?</span></div><div class="line">    OPC_STOP = <span class="number">0x08</span>,</div><div class="line"></div><div class="line">    OPC_LD_VAR_NO_PERSPECTIVE = <span class="number">0xA1</span>,</div><div class="line">    OPC_LD_VAR = <span class="number">0xE1</span>, <span class="comment">// perspective</span></div><div class="line">    OPC_ST_VAR = <span class="number">0x11</span>,</div><div class="line">    OPC_UNKB1 = <span class="number">0xB1</span>, <span class="comment">// seen in aux frag shader</span></div><div class="line">    OPC_UNK48 = <span class="number">0x48</span>, <span class="comment">// seen before blending</span></div><div class="line">    OPC_BLEND = <span class="number">0x09</span>,</div><div class="line"></div><div class="line">    <span class="comment">// branching instructions, not understood</span></div><div class="line">    OPC_UNKD2 = <span class="number">0xD2</span>,</div><div class="line">    OPC_UNK42 = <span class="number">0x42</span>,</div><div class="line">    OPC_UNK52 = <span class="number">0x52</span>,</div><div class="line"></div><div class="line">    <span class="comment">// not sure what this does, but appears to be 4 bytes</span></div><div class="line">    OPC_UNK80 = <span class="number">0x80</span>,</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
+<h2 id="0x23-demo"><a href="#0x23-demo" class="headerlink" title="0x23 demo"></a>0x23 demo</h2><p>demo是hack一个简单的测试程序，来驱动M1 GPU kernel driver完成绘制工作。我们前面的wrap有点类似record的意思，这个demo是把record的东西playback出来，playback的输入有些是直接从record的buffer中得到的，有些是通过分析已经大概知道了命令的格式，可以自由地配置出来。</p>
+<p>demo启动后首先要通过open类似的接口IOServiceOpen()打开GPU kernel驱动，然后就可以往kernel driver发送内容了。<br>发送渲染内容到kernel driver的完整代码如下。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">demo</span><span class="params">(<span class="keyword">mach_port_t</span> connection, <span class="keyword">bool</span> offscreen)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_command_queue</span> <span class="title">command_queue</span> = <span class="title">agx_create_command_queue</span>(<span class="title">connection</span>);</span></div><div class="line"></div><div class="line">    <span class="comment">// <span class="doctag">XXX:</span> why do BO ids below 6 mess things up..?</span></div><div class="line">    <span class="keyword">for</span> (<span class="keyword">unsigned</span> i = <span class="number">0</span>; i &lt; <span class="number">6</span>; ++i) &#123;</div><div class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">dummy</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 4096, <span class="title">AGX_MEMORY_TYPE_FRAMEBUFFER</span>, <span class="title">false</span>);</span></div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">shader</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 0<span class="title">x10000</span>, <span class="title">AGX_MEMORY_TYPE_SHADER</span>, <span class="title">false</span>);</span></div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocator</span> <span class="title">shader_pool</span> = &#123;</span> .backing = shader, &#125;;</div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">bo</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 1920*1080*4*2, <span class="title">AGX_MEMORY_TYPE_FRAMEBUFFER</span>, <span class="title">false</span>);</span></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocator</span> <span class="title">allocator</span> = &#123;</span> .backing = bo &#125;;</div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">vsbuf</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 0<span class="title">x8000</span>, <span class="title">AGX_MEMORY_TYPE_CMDBUF_32</span>, <span class="title">false</span>);</span></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">fsbuf</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 0<span class="title">x8000</span>, <span class="title">AGX_MEMORY_TYPE_CMDBUF_32</span>, <span class="title">false</span>);</span></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">framebuffer</span> = <span class="title">agx_alloc_mem</span>(<span class="title">connection</span>, 1024 * 1024 * 4, <span class="title">AGX_MEMORY_TYPE_FRAMEBUFFER</span>, <span class="title">false</span>);</span></div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">cmdbuf</span> = <span class="title">agx_alloc_cmdbuf</span>(<span class="title">connection</span>, 0<span class="title">x4000</span>, <span class="title">true</span>);</span></div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">memmap</span> = <span class="title">agx_alloc_cmdbuf</span>(<span class="title">connection</span>, 0<span class="title">x4000</span>, <span class="title">false</span>);</span></div><div class="line"></div><div class="line">    <span class="keyword">uint32_t</span> unk6 = agx_cmdbuf_unk6(connection);</div><div class="line"></div><div class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">agx_allocation</span> <span class="title">allocs</span>[] = &#123;</span></div><div class="line">        shader,</div><div class="line">        bo,</div><div class="line">        vsbuf,</div><div class="line">        fsbuf,</div><div class="line">        framebuffer</div><div class="line">    &#125;;</div><div class="line"></div><div class="line">    demo_mem_map(memmap.<span class="built_in">map</span>, allocs, <span class="keyword">sizeof</span>(allocs) / <span class="keyword">sizeof</span>(allocs[<span class="number">0</span>]), unk6 + <span class="number">1</span>);</div><div class="line"></div><div class="line">    <span class="keyword">uint32_t</span> *linear = <span class="built_in">malloc</span>(<span class="number">800</span> * <span class="number">600</span> * <span class="number">4</span>);</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (!offscreen)</div><div class="line">        slowfb_init((<span class="keyword">uint8_t</span> *) linear, <span class="number">800</span>, <span class="number">600</span>);</div><div class="line"></div><div class="line">    <span class="keyword">for</span> (;;) &#123;</div><div class="line">        demo_cmdbuf(cmdbuf.<span class="built_in">map</span>, &amp;allocator, &amp;vsbuf, &amp;fsbuf, &amp;framebuffer, &amp;shader_pool);</div><div class="line">        agx_submit_cmdbuf(connection, &amp;cmdbuf, &amp;memmap, command_queue.id);</div><div class="line"></div><div class="line">        <span class="comment">/* Block until it's done */</span></div><div class="line">        IOReturn ret = IODataQueueWaitForAvailableData(command_queue.notif.<span class="built_in">queue</span>, command_queue.notif.port);</div><div class="line">        <span class="keyword">while</span> (IODataQueueDataAvailable(command_queue.notif.<span class="built_in">queue</span>))</div><div class="line">            ret = IODataQueueDequeue(command_queue.notif.<span class="built_in">queue</span>, <span class="literal">NULL</span>, <span class="number">0</span>);</div><div class="line"></div><div class="line">        <span class="comment">/* Dump the framebuffer */</span></div><div class="line">        ash_detile(framebuffer.<span class="built_in">map</span>, linear,</div><div class="line">                <span class="number">800</span>, <span class="number">32</span>, <span class="number">800</span>,</div><div class="line">                <span class="number">0</span>, <span class="number">0</span>, <span class="number">800</span>, <span class="number">600</span>);</div><div class="line"></div><div class="line">        shader_pool.offset = <span class="number">0</span>;</div><div class="line">        allocator.offset = <span class="number">0</span>;</div><div class="line"></div><div class="line">        <span class="keyword">if</span> (offscreen) &#123;</div><div class="line">            FILE *fp = fopen(<span class="string">"fb.bin"</span>, <span class="string">"wb"</span>);</div><div class="line">            fwrite(linear, <span class="number">1</span>, <span class="number">800</span> * <span class="number">600</span> * <span class="number">4</span>, fp);</div><div class="line">            fclose(fp);</div><div class="line"></div><div class="line">            <span class="keyword">break</span>;</div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">            slowfb_update(<span class="number">800</span>, <span class="number">600</span>);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>上述过程简单说明如下。</p>
+<p>a. 通过AGX_SELECTOR_CREATE_COMMAND_QUEUE创建command queue。<br>b. 通过AGX_SELECTOR_ALLOCATE_MEM分配buffer，包括AGX_MEMORY_TYPE_FRAMEBUFFER，AGX_MEMORY_TYPE_SHADER，AGX_MEMORY_TYPE_CMDBUF_32等类型的buffer。<br>c. 通过AGX_SELECTOR_CREATE_CMDBUF分配cmd buffer。<br>d. 下面开始往前面分配的buffer中填充具体的渲染数据了。这些渲染数据有的是前面通过wrap方式保存下来的，有的是分析后知道格式后自己配置的。这些渲染数据包括shader数据，其中包括了GPU指令，另外就是command stream控制命令。<br>e. 数据都准备好了，下面就是可以调用AGX_SELECTOR_SUBMIT_COMMAND_BUFFERS提交到GPU执行了。<br>f. 等等GPU执行完成以后，就可以把framebuffer中的内容读取出来了，直接读取framebuffer.map地址所对应的内容即可，需要注意的是framebuffer里面的内容是tile格式的，需要完成到raster格式的转换才能正确地显示出来。</p>
+<h1 id="0x3-总结"><a href="#0x3-总结" class="headerlink" title="0x3  总结"></a>0x3  总结</h1><p>目前的驱动基本上是record + playback + kernel的模式，对Shader source code -&gt; GPU ISA的生成和Command Stream的动态配置没有涉及到。其实是为后续通过逆向分析来开发GPU ISA和Command Stream的动态生成提供了框架。后续的开发工作可以在这个框架的基础上继续开发。</p>
+<h1 id="0x4-参考"><a href="#0x4-参考" class="headerlink" title="0x4 参考"></a>0x4 参考</h1><p><a href="https://rosenzweig.io/blog/asahi-gpu-part-1.html" target="_blank" rel="external">asahi-gpu-part-1</a><br><a href="https://rosenzweig.io/blog/asahi-gpu-part-2.html" target="_blank" rel="external">asahi-gpu-part-2</a><br><a href="https://www.fsf.org/news/free-software-awards-winners-announced-civicrm-bradley-kuhn-and-alyssa-rosenzweig" target="_blank" rel="external">free-software-awards-winners</a><br><a href="https://github.com/AsahiLinux/gpu" target="_blank" rel="external">AsahiLinux GPU</a><br><a href="https://dougallj.github.io/applegpu/docs.html" target="_blank" rel="external">Apple GPU M1 ISA</a><br><a href="https://developer.apple.com/library/archive/documentation/DeviceDrivers/Conceptual/AccessingHardware/AH_IOKitLib_API/AH_IOKitLib_API.html" target="_blank" rel="external">IOKit参考</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/GPU-driver/" rel="tag"># GPU driver</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/10/07/Neural network coding tool in VVC/" rel="next" title="Neural network coding tool in VVC">
+                <i class="fa fa-chevron-left"></i> Neural network coding tool in VVC
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x1-介绍"><span class="nav-number">1.</span> <span class="nav-text">0x1 介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x2-GPU驱动分析"><span class="nav-number">2.</span> <span class="nav-text">0x2 GPU驱动分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#0x21-wrap"><span class="nav-number">2.1.</span> <span class="nav-text">0x21 wrap</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x22-disasm"><span class="nav-number">2.2.</span> <span class="nav-text">0x22 disasm</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#0x23-demo"><span class="nav-number">2.3.</span> <span class="nav-text">0x23 demo</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x3-总结"><span class="nav-number">3.</span> <span class="nav-text">0x3  总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x4-参考"><span class="nav-number">4.</span> <span class="nav-text">0x4 参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
