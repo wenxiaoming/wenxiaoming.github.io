@@ -254,6 +254,155 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/" itemprop="url">How stencil buffer work in graphics pipeline</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-23T20:15:30+09:00">
+                2019-02-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/" class="leancloud_visitors" data-flag-title="How stencil buffer work in graphics pipeline">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-总体介绍"><a href="#0x1-总体介绍" class="headerlink" title="0x1 总体介绍"></a>0x1 总体介绍</h1><p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
+<p>Stencil Test的作用可以把绘制限定在特定的区域，这点和scissor test类似，但是stencil test支持不规则的区域，而scissor test做不到这一点。</p>
+<p>Stencil Test是通过stencil buffer中记录的模板信息来完成的，stencil buffer中保存着每个位置的fragment对应的mask值，当graphics pipeline执行stencil test的时候，把通过api设定的模板参考值与相应位置的fragment对应的mask值进行比较，如果不符合条件则被丢弃，反之则进行绘制。</p>
+<p>Stencil Test的使用可以看成两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。</p>
+<h1 id="0x2-从GPU硬件的角度理解Stencil-test"><a href="#0x2-从GPU硬件的角度理解Stencil-test" class="headerlink" title="0x2 从GPU硬件的角度理解Stencil test"></a>0x2 从GPU硬件的角度理解Stencil test</h1><p>下面介绍Stencil test是如何在gpu hardware pipeline中执行的。</p>
+<p>下图是broadcom <a href="https://docs.broadcom.com/docs-and-downloads/docs/support/videocore/VideoCoreIV-AG100-R.pdf" target="_blank" rel="external">v3d</a> system block图。</p>
+<p>v3d是tile buffer rendering的gpu，其渲染分成两个阶段，第一阶段是计算出每个tile中有哪些triangle需要绘制，第二阶段是遍历所有的tile，对每个tile执行真正的绘制工作。</p>
+<p>如下图所示，stencil buffer是gpu hardware中tile buffer的一部分，这是gpu硬件中单独的一块buffer，用来保存当前渲染过程中使用到的stencil值。</p>
+<p>在每个tile的绘制过程中，都需要根据tile坐标取得stencil buffer中对应的stencil mask, 然后执行stencil test, 执行完了以后，如果必要，还需要更新stencil buffer中对应的stencil值。</p>
+<p><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/v3d_system_block.png" alt="v3d system block"></p>
+<h1 id="0x3-Stencil-test测试程序"><a href="#0x3-Stencil-test测试程序" class="headerlink" title="0x3 Stencil test测试程序"></a>0x3 Stencil test测试程序</h1><p>这个Stencil test测试程序分成两步操作。</p>
+<p>第一步只是生成stencil buffer的内容，该过程不输出color，只更新stencil buffer的内容。</p>
+<p>更新stencil buffer的策略通过下面的api来控制。<br>glStencilOp(GL_KEEP, GL_INCR, GL_INCR);</p>
+<p>第一个参数是stencil test fail的时候更新stencil buffer的操作，这里的GL_KEEP表明stencil test fail时不对stencil buffer进行更新。</p>
+<p>第二个参数表明stencil test pass但depth test fail的时候更新stencil buffer的操作，这里的GL_INCR表明此时对stencil buffer的相应位加1.</p>
+<p>第三个参数表明stencil test pass而且depth test pass的时候更新stencil buffer的操作，这里的GL_INCR表明此时对stencil buffer的相应位加1.</p>
+<p>以上的设置表明只要stencil test pass的话就对stencil buffer的相应位加1，不管depth test是pass或者fail.</p>
+<p>绘制triangle1的代码<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">glEnable(GL_STENCIL_TEST);</div><div class="line">glStencilFunc(GL_ALWAYS, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line">glStencilOp(GL_KEEP, GL_INCR, GL_INCR);</div><div class="line">glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);</div><div class="line"></div><div class="line">glUseProgram(gProgram);</div><div class="line"></div><div class="line"><span class="comment">// draw triangle 1</span></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor);</div><div class="line"></div><div class="line">glDrawArrays(GL_TRIANGLES, <span class="number">0</span>, <span class="number">3</span>);</div></pre></td></tr></table></figure></p>
+<p>绘制triangle2的代码<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// draw triangl2</span></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData1);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor1);</div><div class="line"></div><div class="line">glDrawArrays(GL_TRIANGLES, <span class="number">0</span>, <span class="number">3</span>);</div></pre></td></tr></table></figure></p>
+<p>第二步是根据stencil buffer中的内容为mask来绘制triangle1和triangle2的重叠区域，这个时候发送给opengles的绘制区域可以设置成整个屏幕的大小，但是只有相应的位符合stencil buffer中的条件才能使stencil test通过，这个时候才能输出color。</p>
+<p>这个控制相应的位符合stencil buffer中条件的代码如下所示，也就是说stencil buffer相应的位的值需要为0x02，也就是说这个点绘制过两次（triangle1和triangle2都绘制过）。</p>
+<p>glStencilFunc(GL_NOTEQUAL, 0, 0xf8 | 0x02);</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">glDisable(GL_DEPTH_TEST);</div><div class="line"></div><div class="line">glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);</div><div class="line"></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData2);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor2);</div><div class="line"></div><div class="line"><span class="comment">// draw the area with blue color</span></div><div class="line">glColorMask(GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);</div><div class="line">glStencilFunc(GL_NOTEQUAL, <span class="number">0</span>, <span class="number">0xf8</span> | <span class="number">0x02</span>);</div><div class="line">  </div><div class="line">glDrawArrays(GL_TRIANGLE_STRIP, <span class="number">0</span>, <span class="number">4</span>);</div></pre></td></tr></table></figure>
+<h1 id="0x4-程序运行效果"><a href="#0x4-程序运行效果" class="headerlink" title="0x4 程序运行效果"></a>0x4 程序运行效果</h1><p>triangle1单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1.png" alt="draw_triangle1"></p>
+<p>triangle2单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle2.png" alt="draw_triangle2"></p>
+<p>triangle1和triangle2同时绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1_triangle2.png" alt="draw_triangle1_triangle2"></p>
+<p>triangle1和triangle2同时绘制但不更新color buffer, 然后根据stencil buffer绘制triangle1和triangle2相交区域的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/drawing_with_stencil_buffer.png" alt="drawing_with_stencil_buffer"></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/16/Mesh-support-in-Escher/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1591,148 +1740,11 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/01/learning-rate-in-neural-network/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/04/01/learning-rate-in-neural-network/" itemprop="url">learning rate in neural network</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-01T20:58:40+09:00">
-                2018-04-01
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2018/04/01/learning-rate-in-neural-network/" class="leancloud_visitors" data-flag-title="learning rate in neural network">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-学习率简介"><a href="#0x1-学习率简介" class="headerlink" title="0x1 学习率简介"></a>0x1 学习率简介</h1><p>学习率是一个重要的超参数，在大多数神经网络优化算法（如SGD、Adam）中都会用到，它控制着我们基于损失梯度调整神经网络权值的速度。如果学习率过大，可能会错过最小值，并且可能造成不能收敛，损失在某一个值附近反复震荡。如果学习率过小，我们沿着损失梯度下降的速度就很慢，收敛的速度也很慢。</p>
-<p>神经网络优化算法的功能是，控制方差，寻找最小值，更新模型参数，最终使模型收敛。<br>神经网络更新参数的公式为：θ=θ−η×∇(θ).J(θ)，其中η是学习率，∇(θ).J(θ)是损失函数J(θ)的梯度。</p>
-<p>学习率是神经网络中难以设置的超参数之一，它对模型的性能有很大的影响。目前出现了很多自适应学习率算法，如下文测试中用到的Adam。在下面的测试中发现，虽然Adam会在优化的过程中动态调整学习率，初始的学习率设置还是会对模型的准确率有很大影响。</p>
-<h1 id="0x2-构造计算图"><a href="#0x2-构造计算图" class="headerlink" title="0x2 构造计算图"></a>0x2 构造计算图</h1><p>用python编写tensorflow测试代码，构造如下图所示的卷积神经网络，用来对MNIST数据集进行0～9分类。</p>
-<p>从下图神经网络图可知，首先载入MNIST数据，然后进行处理，包括卷积层layer1, 卷积层layer2, 接下来是一个全连接层fc_layer, 接下来是dropout层，最后连接上softmax层layer3, 得到概率输出。</p>
-<p>优化算法采用Adam，在设置Adam优化器的时候设置需要初始学习率，其代码如下。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)</div></pre></td></tr></table></figure></p>
-<p>总体网络图如下<br><img src="/2018/04/01/learning-rate-in-neural-network/computation graph.png" alt="computation_graph"><br>layer1内部结构如下所示<br>首先初始化权重和偏置参数。然后使用conv2d进行卷积操作并加上偏置，卷积参数为[5, 5, 1, 32], 代表卷积核的大小为5x5, 1个颜色通道，32个不同的卷积核。然后使用relu激活函数进行非线性化处理。然后使用池化函数对卷积的结果进行1/2下采样处理，MNIST数据中图片大小为28x28，经过下采样以后变为14x14。<br><img src="/2018/04/01/learning-rate-in-neural-network/layer1.png" alt="layer1"><br>layer2内部结构如下所示<br>和layer1结构类似，只是卷积参数设置为[5, 5, 32, 64]，因为layer1中经过32个不同卷积核的处理，所以每个数据的通道变成了32，另外卷积核的数量变成64，经过池化函数以后，数据由14x14变成7x7。<br><img src="/2018/04/01/learning-rate-in-neural-network/layer2.png" alt="layer2"><br>后面再连接一个全连接层fc_layer，输出为1024个隐含节点，并使用relu激活函数。</p>
-<p>下面是dropout层，使用keep_prob参数来控制以减轻过拟合。</p>
-<p>接下来是layer3层，首先把1024个隐含节点通过矩阵变换转换成10个节点，矩阵变换的参数是权重参数和偏置参数，然后再连接softmax函数，得到对应数字0~9的概率输出。</p>
-<p>优化器是Adam，该优化器对定义好的损失函数进行优化。</p>
-<h1 id="0x3-高学习率的测试结果"><a href="#0x3-高学习率的测试结果" class="headerlink" title="0x3 高学习率的测试结果"></a>0x3 高学习率的测试结果</h1><p>这个时候初始学习率被设置为0.5，从训练集上的测试准确率上来看，准确率是很低的，在0.05～0.15之间来回震荡。<br><img src="/2018/04/01/learning-rate-in-neural-network/high_learning_rate.png" alt="high_learning_rate"></p>
-<h1 id="0x4-低学习率的测试结果"><a href="#0x4-低学习率的测试结果" class="headerlink" title="0x4 低学习率的测试结果"></a>0x4 低学习率的测试结果</h1><p>这个时候初始学习率被设置为0.001，从训练集上的测试准确率上来看，准确率是慢慢升高的，最后稳定在0.95以上。<br><img src="/2018/04/01/learning-rate-in-neural-network/low_learning_rate.png" alt="low_learning_rate"></p>
-<h1 id="0x5-Adam优化器"><a href="#0x5-Adam优化器" class="headerlink" title="0x5 Adam优化器"></a>0x5 Adam优化器</h1><p>通过gdb调试可知，tensorflow中Adam优化器调用堆栈如下。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#0  tensorflow::functor::ApplyAdamNonCuda&lt;Eigen::ThreadPoolDevice, float&gt;::operator()(Eigen::ThreadPoolDevice const&amp;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::TensorFixedSize&lt;float const, Eigen::Sizes&lt;&gt;, 1, long&gt;, 16, Eigen::MakePointer&gt;, Eigen::TensorMap&lt;Eigen::Tensor&lt;float const, 1, 1, long&gt;, 16, Eigen::MakePointer&gt;, bool) (this=0x7fffc58d8260, d=..., var=..., m=..., v=..., beta1_power=..., </div><div class="line">    beta2_power=..., lr=..., beta1=..., beta2=..., epsilon=..., grad=..., use_nesterov=false) at tensorflow/core/kernels/training_ops.cc:293</div><div class="line">#1  0x00007fffede52e6d in tensorflow::ApplyAdamOp&lt;Eigen::ThreadPoolDevice, float&gt;::Compute (this=0x555558f61cf0, ctx=0x7fffc58d8840)</div><div class="line">    at tensorflow/core/kernels/training_ops.cc:2523</div><div class="line">#2  0x00007fffe6a2e91b in tensorflow::ThreadPoolDevice::Compute (this=0x555557f25fa0, op_kernel=0x555558f61cf0, context=0x7fffc58d8840)</div><div class="line">    at tensorflow/core/common_runtime/threadpool_device.cc:59</div><div class="line">#3  0x00007fffe69c9c0a in tensorflow::(anonymous namespace)::ExecutorState::Process (this=0x55555945b6c0, tagged_node=..., scheduled_usec=0)</div><div class="line">    at tensorflow/core/common_runtime/executor.cc:1652</div><div class="line">#4  0x00007fffe69d81a7 in std::_Mem_fn_base&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long), true&gt;::operator()&lt;tensorflow::(anonymous namespace)::ExecutorState::TaggedNode&amp;, long long&amp;, void&gt; (</div><div class="line">    this=0x7fff8c04b440, __object=0x55555945b6c0) at /usr/include/c++/5/functional:600</div><div class="line">#5  0x00007fffe69d7c62 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::__call&lt;void, 0ul, 1ul, 2ul&gt;(&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;, std::_Index_tuple&lt;0ul, 1ul, 2ul&gt;) (this=0x7fff8c04b440, </div><div class="line">    __args=&lt;unknown type in /home/kevin/anaconda3/lib/python3.6/site-packages/tensorflow/python/../libtensorflow_framework.so, CU 0x314f884, DIE 0x31e50c1&gt;) at /usr/include/c++/5/functional:1074</div><div class="line">#6  0x00007fffe69d5a06 in std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;::operator()&lt;, void&gt;(void) (this=0x7fff8c04b440) at /usr/include/c++/5/functional:1133</div><div class="line">#7  0x00007fffe69d32ac in std::_Function_handler&lt;void(), std::_Bind&lt;std::_Mem_fn&lt;void (tensorflow::(anonymous namespace)::ExecutorState::*)(tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt;(tensorflow::(anonymous namespace)::ExecutorState*, tensorflow::(anonymous namespace)::ExecutorState::TaggedNode, long long int)&gt; &gt;::_M_invoke(const std::_Any_data &amp;) (__functor=...)</div><div class="line">    at /usr/include/c++/5/functional:1871</div><div class="line">#8  0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x7fff8c04a930) at /usr/include/c++/5/functional:2267</div><div class="line">#9  0x00007fffe64afb9e in tensorflow::thread::EigenEnvironment::ExecuteTask (this=0x555557f5ca48, t=...)</div><div class="line">    at tensorflow/core/lib/core/threadpool.cc:81</div><div class="line">#10 0x00007fffe64b265c in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::WorkerLoop (this=0x555557f5ca40, </div><div class="line">    thread_id=1) at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:232</div><div class="line">#11 0x00007fffe64b0aae in Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;::operator()() const ()</div><div class="line">    at external/eigen_archive/unsupported/Eigen/CXX11/src/ThreadPool/NonBlockingThreadPool.h:65</div><div class="line">#12 0x00007fffe64b3c7c in std::_Function_handler&lt;void (), Eigen::NonBlockingThreadPoolTempl&lt;tensorflow::thread::EigenEnvironment&gt;::NonBlockingThreadPoolTempl(int, bool, tensorflow::thread::EigenEnvironment)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...)</div><div class="line">    at /usr/include/c++/5/functional:1871</div><div class="line">#13 0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x555557f6d0b0) at /usr/include/c++/5/functional:2267</div><div class="line">#14 0x00007fffe64af907 in tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;::operator()() const (</div><div class="line">    __closure=0x555557f6d0b0) at tensorflow/core/lib/core/threadpool.cc:56</div><div class="line">#15 0x00007fffe64b18d8 in std::_Function_handler&lt;void (), tensorflow::thread::EigenEnvironment::CreateThread(std::function&lt;void ()&gt;)::&#123;lambda()#1&#125;&gt;::_M_invoke(std::_Any_data const&amp;) (__functor=...) at /usr/include/c++/5/functional:1871</div><div class="line">#16 0x00007fffe6297984 in std::function&lt;void ()&gt;::operator()() const (this=0x555557f6d108) at /usr/include/c++/5/functional:2267</div><div class="line">#17 0x00007fffe64f4f38 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::_M_invoke&lt;&gt;(std::_Index_tuple&lt;&gt;) (this=0x555557f6d108)</div><div class="line">    at /usr/include/c++/5/functional:1531</div><div class="line">#18 0x00007fffe64f4ea1 in std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt;::operator()() (this=0x555557f6d108)</div><div class="line">    at /usr/include/c++/5/functional:1520</div><div class="line">#19 0x00007fffe64f4e40 in std::thread::_Impl&lt;std::_Bind_simple&lt;std::function&lt;void ()&gt; ()&gt; &gt;::_M_run() (this=0x555557f6d0f0)</div><div class="line">    at /usr/include/c++/5/thread:115</div><div class="line">#20 0x00007fffe5067c80 in ?? () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6</div><div class="line">#21 0x00007ffff7bc16ba in start_thread (arg=0x7fffc58d9700) at pthread_create.c:333</div><div class="line">#22 0x00007ffff78f741d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109</div></pre></td></tr></table></figure></p>
-<p>tensorflow中Adam优化器更新参数的代码如下。<br>tensorflow/core/kernels/training_ops.cc<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">template</span> &lt;<span class="keyword">typename</span> Device, <span class="keyword">typename</span> T&gt;</div><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ApplyAdamNonCuda</span> &#123;</span></div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">operator</span><span class="params">()</span><span class="params">(<span class="keyword">const</span> Device&amp; d, <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat var,</span></span></div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat m, <span class="keyword">typename</span> TTypes&lt;T&gt;::Flat v,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta1_power,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta2_power,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar lr,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta1,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar beta2,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstScalar epsilon,</div><div class="line">                  <span class="keyword">typename</span> TTypes&lt;T&gt;::ConstFlat grad, <span class="keyword">bool</span> use_nesterov) &#123;</div><div class="line">    <span class="keyword">const</span> T alpha = lr() * Eigen::numext::<span class="built_in">sqrt</span>(T(<span class="number">1</span>) - beta2_power()) /</div><div class="line">                    (T(<span class="number">1</span>) - beta1_power());</div><div class="line">    <span class="comment">// beta1 == μ</span></div><div class="line">    <span class="comment">// beta2 == ν</span></div><div class="line">    <span class="comment">// v     == n</span></div><div class="line">    <span class="comment">// var   == θ</span></div><div class="line"></div><div class="line">    m.device(d) += (grad - m) * (T(<span class="number">1</span>) - beta1());</div><div class="line">    v.device(d) += (grad.square() - v) * (T(<span class="number">1</span>) - beta2());</div><div class="line">    <span class="keyword">if</span> (use_nesterov) &#123;</div><div class="line">      var.device(d) -= ((grad * (T(<span class="number">1</span>) - beta1()) + beta1() * m) * alpha) /</div><div class="line">                       (v.<span class="built_in">sqrt</span>() + epsilon());</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      var.device(d) -= (m * alpha) / (v.<span class="built_in">sqrt</span>() + epsilon());</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
-<p>算法描述如下<br>如下所示，虽然在Adam算法中，学习率lr_t是动态调整的，但是也是和初始设置的学习率learning_rate有关，如果learning_rate设置不当，也会影响训练模型的收敛。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">t &lt;- t + 1</div><div class="line">lr_t &lt;- learning_rate * sqrt(1 - beta2^t) / (1 - beta1^t)//计算动态学习率</div><div class="line"></div><div class="line">m_t &lt;- beta1 * m_&#123;t-1&#125; + (1 - beta1) * g</div><div class="line">v_t &lt;- beta2 * v_&#123;t-1&#125; + (1 - beta2) * g * g</div><div class="line">variable &lt;- variable - lr_t * m_t / (sqrt(v_t) + epsilon)//更新参数</div></pre></td></tr></table></figure></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 
@@ -1777,7 +1789,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">41</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1790,7 +1802,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-count">19</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

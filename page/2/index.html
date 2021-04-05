@@ -254,6 +254,159 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/17/Understanding of eglSwapBuffers/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/11/17/Understanding of eglSwapBuffers/" itemprop="url">Understanding of eglSwapBuffers</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-17T20:00:30+09:00">
+                2019-11-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/11/17/Understanding of eglSwapBuffers/" class="leancloud_visitors" data-flag-title="Understanding of eglSwapBuffers">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-eglSwapBuffers在图形系统中的作用"><a href="#0x1-eglSwapBuffers在图形系统中的作用" class="headerlink" title="0x1 eglSwapBuffers在图形系统中的作用"></a>0x1 eglSwapBuffers在图形系统中的作用</h1><p>在开发图形程序的时候，经常有同事问是不是调用eglSwapBuffers函数以后就可以输出显示了，如果简单来说可以这么理解，但是实际上gpu驱动中eglSwapBuffers函数执行以后只是提示上层模块该输出buffer可以使用了，这个时候是把输出buffer显示到屏幕上还是输出到文件中，或者是通过网络发送到远程终端上，取决于上层图形系统的设计。另外eglSwapBuffers函数需要配合上层模块(如Android上的Surface)完成buffer管理的工作。<br>本文详细介绍了eglSwapBuffers函数在图形系统中是如何配合上层buffer管理模块，完成从应用绘制到屏幕显示的完整流程的。</p>
+<p>在典型图形系统中，一般包括了如下图所示的几个模块，应用程序绘制UI，合成器把多个UI合成为一帧图像，然后Frame buffer driver把合成好的图像绘制到屏幕硬件上。</p>
+<p><img src="/2019/11/17/Understanding of eglSwapBuffers/eglswapbuffers.png" alt=""></p>
+<p>这里有几个生产者-消费者模型，<br>App1/App2是UI内容的生产者，Compositor是App1/App2生产出来的UI内容的消费者，Compositor本身又是Frame buffer driver输入buffer的生产者。Frame buffer driver是Compositor生产出的buffer内容的消费者。</p>
+<p>App1分配了三块buffer供gpu绘制使用，buffer的管理可以通过BufferQueue的模块来管理，在App1的绘制线程中调用gpu driver的eglSwapBuffers函数，eglSwapBuffers函数在执行的时候首先需要从BufferQueue中取得一块可以供GPU写入的buffer，如果这个时候没有空闲的buffer，gpu driver会在这里等待，如果发生这种情况，在性能分析的时候，我们可以在systrace上看到eglSwapBuffers占用的时间较长，从上面分析的buffer模型可以看出，出现没有空闲的buffer可能是Compositor执行太慢，三块buffer都被Compositor占用了，另外的原因可能是App1中gpu driver绘制执行时间太长，三块buffer都还在等待gpu硬件的写入完成。</p>
+<p>eglSwapBuffers申请到了空闲的buffer以后，就可以把空闲buffer的地址设置给GPU硬件，并根据App1的其他设置驱动GPU硬件开始工作。这个时候eglSwapBuffers是否需要等待GPU硬件把完整的一帧绘制完成才返回呢?答案是不需要等待，但是会给这块buffer设置相应的fence，然后把这块buffer送给后续的Compositor来使用，Compositor在需要读取这块buffer内容之前，GPU硬件可以继续完成该buffer的绘制工作，达到CPU处理(Compositor的处理流程)和GPU处理的并行，Compositor在执行到了必须读取这块buffer内容的时候，会去检查buffer对应的fence的状态，如果还没有被signal，则需要等待，直至GPU绘制完成后singal对应的fence。</p>
+<h1 id="0x2-应用进程使用eglSwapBuffers"><a href="#0x2-应用进程使用eglSwapBuffers" class="headerlink" title="0x2 应用进程使用eglSwapBuffers"></a>0x2 应用进程使用eglSwapBuffers</h1><p>App1执行流程如下所示。</p>
+<p><img src="/2019/11/17/Understanding of eglSwapBuffers/app_draw.svg" alt=""></p>
+<ol>
+<li>应用程序调用createBufferQueue创建BufferQueue，其中包括Buffer的Producer和Consumer。Producer是buffer的生产者，Consumer是buffer的消费者。这样应用中的渲染线程相当于Producer，合成器是Consumer，是buffer的消费者。</li>
+<li>BufferQueue通过合成器进程创建buffer队列，一般创建3个buffer。</li>
+<li>渲染线程把Producer包装成Surface，然后把Surface作为参数去调用eglCreateWindowSurface。这样GPU driver相当于Producer，负责生产buffer。</li>
+<li>应用程序调用draw命令，渲染线程调用eglSwapBuffers。</li>
+<li>eglSwapBuffers通过dequeue()查找BufferQueue中空闲的buffer，如果没有空闲的buffer则需要等待。</li>
+<li>eglSwapBuffers把空闲的buffer的地址设置给GPU硬件，并设置其他参数，驱动GPU硬件工作。</li>
+<li>eglSwapBuffers通过queue()把前面GPU的写入buffer返回给BufferQueue，并设置相应的fence。</li>
+<li>BufferQueue通过Consumer接口通知合成器有新的buffer到来，可以进行合成工作。</li>
+</ol>
+<h1 id="0x3-合成器进程使用eglSwapBuffers"><a href="#0x3-合成器进程使用eglSwapBuffers" class="headerlink" title="0x3 合成器进程使用eglSwapBuffers"></a>0x3 合成器进程使用eglSwapBuffers</h1><p>Compositor执行流程如下所示。<br>这里我们只讨论采用GPU来做合成的情况，如采用2D加速硬件来做合成的话就不会在合成器中调用eglSwapBuffers。</p>
+<p><img src="/2019/11/17/Understanding of eglSwapBuffers/compositor_draw.svg" alt=""></p>
+<ol>
+<li>应用程序创建的时候会在合成器中创建相应的Layer，这样应用程序的绘制输出就可以通知到对应的Layer。</li>
+<li>创建相应的DisplayDevice，在创建DisplayDevice的时候创建BufferQueue，这里Producer是合成器线程，Consumer是后面连接的Frame buffer driver。</li>
+<li>应用程序通过其渲染线程中的eglSwapBuffers通知合成器有新的buffer到来，需要进行合成工作。</li>
+<li>合成器线程准备开始合成，等待应用渲染线程中的buffer被GPU硬件绘制完成。</li>
+<li>合成器线程调用eglSwapBuffers。</li>
+<li>eglSwapBuffers通过dequeue()查找BufferQueue中空闲的buffer，如果没有空闲的buffer则需要等待。</li>
+<li>eglSwapBuffers通过queue()把前面GPU的写入buffer返回给BufferQueue，并设置相应的fence。</li>
+<li>BufferQueue通过Consumer接口通知Frame buffer driver有新的buffer到来，可以把buffer内容绘制到屏幕硬件上。</li>
+</ol>
+<h1 id="0x4-图形系统中buffer管理的特点"><a href="#0x4-图形系统中buffer管理的特点" class="headerlink" title="0x4 图形系统中buffer管理的特点"></a>0x4 图形系统中buffer管理的特点</h1><p>上面分析基本是基于Android系统的，从上面的流程可知，buffer的分配是在合成器进程中分配的，然后返回给应用进程使用。<br>如果是采用wayland协议的weston图形系统中，buffer的分配是在应用进程中进行的，然后把相应的buffer handle传给weston进程，作为weston合成的输入buffer使用。</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/10/13/About Video Codec Optimization/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1617,160 +1770,11 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/" itemprop="url">How stencil buffer work in graphics pipeline</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-02-23T20:15:30+09:00">
-                2019-02-23
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/" class="leancloud_visitors" data-flag-title="How stencil buffer work in graphics pipeline">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-总体介绍"><a href="#0x1-总体介绍" class="headerlink" title="0x1 总体介绍"></a>0x1 总体介绍</h1><p>下图是Stencil Test在在post fragment pipeline中的位置。<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/post_shader_fragment_pipeline.png" alt="post_shader_fragment_pipeline"></p>
-<p>Stencil Test的作用可以把绘制限定在特定的区域，这点和scissor test类似，但是stencil test支持不规则的区域，而scissor test做不到这一点。</p>
-<p>Stencil Test是通过stencil buffer中记录的模板信息来完成的，stencil buffer中保存着每个位置的fragment对应的mask值，当graphics pipeline执行stencil test的时候，把通过api设定的模板参考值与相应位置的fragment对应的mask值进行比较，如果不符合条件则被丢弃，反之则进行绘制。</p>
-<p>Stencil Test的使用可以看成两步操作，第一步是生成stencil buffer，通过渲染几何体并指定stencil buffer的更新方式来实现。第二步是使用stencil buffer中的内容来控制最终颜色缓存区的渲染。</p>
-<h1 id="0x2-从GPU硬件的角度理解Stencil-test"><a href="#0x2-从GPU硬件的角度理解Stencil-test" class="headerlink" title="0x2 从GPU硬件的角度理解Stencil test"></a>0x2 从GPU硬件的角度理解Stencil test</h1><p>下面介绍Stencil test是如何在gpu hardware pipeline中执行的。</p>
-<p>下图是broadcom <a href="https://docs.broadcom.com/docs-and-downloads/docs/support/videocore/VideoCoreIV-AG100-R.pdf" target="_blank" rel="external">v3d</a> system block图。</p>
-<p>v3d是tile buffer rendering的gpu，其渲染分成两个阶段，第一阶段是计算出每个tile中有哪些triangle需要绘制，第二阶段是遍历所有的tile，对每个tile执行真正的绘制工作。</p>
-<p>如下图所示，stencil buffer是gpu hardware中tile buffer的一部分，这是gpu硬件中单独的一块buffer，用来保存当前渲染过程中使用到的stencil值。</p>
-<p>在每个tile的绘制过程中，都需要根据tile坐标取得stencil buffer中对应的stencil mask, 然后执行stencil test, 执行完了以后，如果必要，还需要更新stencil buffer中对应的stencil值。</p>
-<p><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/v3d_system_block.png" alt="v3d system block"></p>
-<h1 id="0x3-Stencil-test测试程序"><a href="#0x3-Stencil-test测试程序" class="headerlink" title="0x3 Stencil test测试程序"></a>0x3 Stencil test测试程序</h1><p>这个Stencil test测试程序分成两步操作。</p>
-<p>第一步只是生成stencil buffer的内容，该过程不输出color，只更新stencil buffer的内容。</p>
-<p>更新stencil buffer的策略通过下面的api来控制。<br>glStencilOp(GL_KEEP, GL_INCR, GL_INCR);</p>
-<p>第一个参数是stencil test fail的时候更新stencil buffer的操作，这里的GL_KEEP表明stencil test fail时不对stencil buffer进行更新。</p>
-<p>第二个参数表明stencil test pass但depth test fail的时候更新stencil buffer的操作，这里的GL_INCR表明此时对stencil buffer的相应位加1.</p>
-<p>第三个参数表明stencil test pass而且depth test pass的时候更新stencil buffer的操作，这里的GL_INCR表明此时对stencil buffer的相应位加1.</p>
-<p>以上的设置表明只要stencil test pass的话就对stencil buffer的相应位加1，不管depth test是pass或者fail.</p>
-<p>绘制triangle1的代码<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">glEnable(GL_STENCIL_TEST);</div><div class="line">glStencilFunc(GL_ALWAYS, <span class="number">0</span>, <span class="number">0</span>);</div><div class="line">glStencilOp(GL_KEEP, GL_INCR, GL_INCR);</div><div class="line">glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);</div><div class="line"></div><div class="line">glUseProgram(gProgram);</div><div class="line"></div><div class="line"><span class="comment">// draw triangle 1</span></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor);</div><div class="line"></div><div class="line">glDrawArrays(GL_TRIANGLES, <span class="number">0</span>, <span class="number">3</span>);</div></pre></td></tr></table></figure></p>
-<p>绘制triangle2的代码<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// draw triangl2</span></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData1);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor1);</div><div class="line"></div><div class="line">glDrawArrays(GL_TRIANGLES, <span class="number">0</span>, <span class="number">3</span>);</div></pre></td></tr></table></figure></p>
-<p>第二步是根据stencil buffer中的内容为mask来绘制triangle1和triangle2的重叠区域，这个时候发送给opengles的绘制区域可以设置成整个屏幕的大小，但是只有相应的位符合stencil buffer中的条件才能使stencil test通过，这个时候才能输出color。</p>
-<p>这个控制相应的位符合stencil buffer中条件的代码如下所示，也就是说stencil buffer相应的位的值需要为0x02，也就是说这个点绘制过两次（triangle1和triangle2都绘制过）。</p>
-<p>glStencilFunc(GL_NOTEQUAL, 0, 0xf8 | 0x02);</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">glDisable(GL_DEPTH_TEST);</div><div class="line"></div><div class="line">glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);</div><div class="line"></div><div class="line">glVertexAttribPointer(gfPositionHandle, <span class="number">3</span>, GL_FLOAT, GL_FALSE,</div><div class="line">	TRIANGLE_VERTICES_DATA_STRIDE_BYTES, gTriangleVerticesData2);</div><div class="line"></div><div class="line">glEnableVertexAttribArray(gfPositionHandle);</div><div class="line"></div><div class="line">glUniform4fv(gfColor, <span class="number">1</span>, gColor2);</div><div class="line"></div><div class="line"><span class="comment">// draw the area with blue color</span></div><div class="line">glColorMask(GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);</div><div class="line">glStencilFunc(GL_NOTEQUAL, <span class="number">0</span>, <span class="number">0xf8</span> | <span class="number">0x02</span>);</div><div class="line">  </div><div class="line">glDrawArrays(GL_TRIANGLE_STRIP, <span class="number">0</span>, <span class="number">4</span>);</div></pre></td></tr></table></figure>
-<h1 id="0x4-程序运行效果"><a href="#0x4-程序运行效果" class="headerlink" title="0x4 程序运行效果"></a>0x4 程序运行效果</h1><p>triangle1单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1.png" alt="draw_triangle1"></p>
-<p>triangle2单独绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle2.png" alt="draw_triangle2"></p>
-<p>triangle1和triangle2同时绘制的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/draw_triangle1_triangle2.png" alt="draw_triangle1_triangle2"></p>
-<p>triangle1和triangle2同时绘制但不更新color buffer, 然后根据stencil buffer绘制triangle1和triangle2相交区域的效果<br><img src="/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/drawing_with_stencil_buffer.png" alt="drawing_with_stencil_buffer"></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right"></i></a>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 
@@ -1815,7 +1819,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-count">41</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1828,7 +1832,7 @@
             
             <div class="site-state-item site-state-tags">
               
-                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-count">19</span>
                 <span class="site-state-item-name">标签</span>
               
             </div>

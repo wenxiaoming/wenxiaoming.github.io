@@ -1,0 +1,847 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="video codec," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="1. 目前VVC Codec现状VVC标准已经于2020年正式成为国际标准，我们很想知道到目前为至VVC codec在产业界和学术界的实现情况是怎样的呢？最新的JVET-V0021文档列举了VVC标准的最新实现进展。下面选取了JVET-V0021文档中对这部分的总结介绍, 更详细的信息请参考该文档。 1.1 Publicly available software source code1) JVE">
+<meta name="keywords" content="video codec">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VVC Decoder Analysis">
+<meta property="og:url" content="http://yoursite.com/2021/04/06/VVC Decoder Analysis/index.html">
+<meta property="og:site_name" content="Kevin Wen&#39;s Blog">
+<meta property="og:description" content="1. 目前VVC Codec现状VVC标准已经于2020年正式成为国际标准，我们很想知道到目前为至VVC codec在产业界和学术界的实现情况是怎样的呢？最新的JVET-V0021文档列举了VVC标准的最新实现进展。下面选取了JVET-V0021文档中对这部分的总结介绍, 更详细的信息请参考该文档。 1.1 Publicly available software source code1) JVE">
+<meta property="og:image" content="http://yoursite.com/2021/04/06/VVC%20Decoder%20Analysis/ctu%20task.svg">
+<meta property="og:image" content="http://yoursite.com/2021/04/06/VVC%20Decoder%20Analysis/splitted%20tasks.svg">
+<meta property="og:image" content="http://yoursite.com/2021/04/06/VVC%20Decoder%20Analysis/threadpool.svg">
+<meta property="og:image" content="http://yoursite.com/2021/04/06/VVC%20Decoder%20Analysis/thread%20flow.svg">
+<meta property="og:updated_time" content="2021-04-05T12:01:51.653Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="VVC Decoder Analysis">
+<meta name="twitter:description" content="1. 目前VVC Codec现状VVC标准已经于2020年正式成为国际标准，我们很想知道到目前为至VVC codec在产业界和学术界的实现情况是怎样的呢？最新的JVET-V0021文档列举了VVC标准的最新实现进展。下面选取了JVET-V0021文档中对这部分的总结介绍, 更详细的信息请参考该文档。 1.1 Publicly available software source code1) JVE">
+<meta name="twitter:image" content="http://yoursite.com/2021/04/06/VVC%20Decoder%20Analysis/ctu%20task.svg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/04/06/VVC Decoder Analysis/"/>
+
+
+
+
+
+  <title>VVC Decoder Analysis | Kevin Wen's Blog</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Kevin Wen's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/04/06/VVC Decoder Analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">VVC Decoder Analysis</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-04-06T19:20:30+09:00">
+                2021-04-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2021/04/06/VVC Decoder Analysis/" class="leancloud_visitors" data-flag-title="VVC Decoder Analysis">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="1-目前VVC-Codec现状"><a href="#1-目前VVC-Codec现状" class="headerlink" title="1. 目前VVC Codec现状"></a>1. 目前VVC Codec现状</h1><p>VVC标准已经于2020年正式成为国际标准，我们很想知道到目前为至VVC codec在产业界和学术界的实现情况是怎样的呢？<br>最新的JVET-V0021文档列举了VVC标准的最新实现进展。下面选取了JVET-V0021文档中对这部分的总结介绍, 更详细的信息请参考该文档。</p>
+<h2 id="1-1-Publicly-available-software-source-code"><a href="#1-1-Publicly-available-software-source-code" class="headerlink" title="1.1 Publicly available software source code"></a>1.1 Publicly available software source code</h2><p>1) JVET has developed the VVC Test Model (VTM) as its reference software encoder and decoder codebase [5]. It is intended primarily to demonstrate coding efficiency capability and proper interpretation of the syntax and decoding process specified in the standard (but not as a speed-optimized implementation), and is intended to be usable as a starting basis for product implementations. The software is available under a BSD copyright licence.</p>
+<p>2) InterDigital developed a multi-threaded VTM decoder, and reported 6–10× speed-up relative to the single-threaded reference software [6]. It is intended to support all features of the VTM. The software was later placed in an accessible repository, and it is available under the same BSD copyright licence as the VTM software [7].</p>
+<p>3) Fraunhofer HHI announced the VVenC encoder and VVdeC decoder open-source software (release 0.1) in September 2020 [8][9][10][11][12]. It includes support for multithreading operation, single-pass rate control, perceptual QP adaptation, and motion-compensated temporal filtering (MCTF). The software has four defined presets for quality/speed tradeoff (called “slow”, “medium”, “fast”, and “faster”). Subjective testing reported in October 2020 indicated that the VVenC encoder had about the same or better subjective compression performance as the VTM encoder when operating in its “medium” speed configuration (operating with MCTF and QP adaptation disabled in the VTM and enabled in VVenC and with rate control disabled in both) with encoding speed more than 100× that of the VTM, for 4K UHD SDR video content [12][13]. As of December 2020, a “slower” preset was added, along with an improved single-pass rate control and a new two-pass rate control [14]. The “slower” preset mode reportedly achieves approximately the same BD-rate coding efficiency as the VTM while providing a speedup of more than 8.6x for UHD and 5.2x for HD sequences relative to the VTM. As of December 2020, with release 0.2, the software is available under a BSD copyright licence. Release 0.3 of March 2021 includes substantial further speed and multithreading improvements [15].</p>
+<p>4) Friedrich–Alexander University Erlangen–Nürnberg released an open-source bitstream analyser as an add-on for the VTM decoder [16][17]. The analyzer counts the occurrence of coding tools and coding modes used in a decoded bitstream and can be used for evaluating the decoding energy and time demands of VVC features. The software is available under a BSD copyright licence.</p>
+<h2 id="1-2-Software-decoders"><a href="#1-2-Software-decoders" class="headerlink" title="1.2 Software decoders"></a>1.2 Software decoders</h2><p>1) Sharp announced a real-time software decoder in June 2020, and issued a corresponding press release in December 2020 [18][19]. As of June 2020, it was reportedly capable of decoding 4K CTC UHD bitstreams at up to 40 Mbps at more than 60 fps.</p>
+<p>2) Tencent announced its O266dec software decoder with SIMD and multithreading support and an associated FFmpeg/VLC-based video player in October 2020 [12][20][21]. As of December 2020, it is reportedly more than 3× the speed of the VTM reference software decoder when tested under VVC common test conditions (CTC) in single-threaded operation and about 20× the VTM decoder speed in 8-thread operation. It could reportedly decode UHD video at more than 60 fps at up to 40 Mbps and decode full HD video at more than 200 fps. In December 2020, a version with mobile platform support based on Arm Neon technology was reported. On an Apple A14 processor (iPhone 12pro) in single-threaded operation, it could reportedly decode 8-bit 1080p CTC bitstreams at more than 50 fps, and in multi-threaded operation it could decode such bitstreams at more than 100 fps and could decode 8-bit 4K UHD bitstreams at more than 30 fps in the RA configuration [22]. Although 8-bit operation was more optimized, the decoder also supports 10-bit operation.</p>
+<p>3) Alibaba announced its Ali266 decoder for mobile devices (e.g., Android and iPhone) in December 2020 [23]. It includes optimizations for multi-threading, ARM assembly, cache efficiency, and memory usage, particularly for 8 bit video content. Real-time speed is reported for 8 bit 720p, 1080p (using 2–4 threads for up to 60 fps) and 4K (up to 7 Mbps) video content with the ALF feature disabled.</p>
+<h2 id="1-3-Bitstream-analyser-products"><a href="#1-3-Bitstream-analyser-products" class="headerlink" title="1.3 Bitstream analyser products"></a>1.3 Bitstream analyser products</h2><p>1) Elecard announced support for VVC in its StreamEye and StreamAnalyzer products in April 2020 [24].</p>
+<p>2) ViCueSoft supports VVC in its VQ Analyzer bitstream analysis product, as of late 2020 [25].</p>
+<h2 id="1-4-Conformance-test-sets"><a href="#1-4-Conformance-test-sets" class="headerlink" title="1.4 Conformance test sets"></a>1.4 Conformance test sets</h2><p>1)  A conformance test set is under development by JVET. It reached the CD stage of the ISO/IEC approval process in October 2020 [26].</p>
+<p>2)  Allegro DVT began offering a conformance test set for VVC as early as January 2020 (i.e., initially in preliminary form before the finalization of the standard) [27][28][29].</p>
+<h2 id="1-5-Encoding-products-and-services"><a href="#1-5-Encoding-products-and-services" class="headerlink" title="1.5 Encoding products and services"></a>1.5 Encoding products and services</h2><p>1)  KDDI Research announced a real-time VVC encoder with 4K @60 fps capability in September 2020 [30].</p>
+<p>2)  Ateme launched support for VVC in its Titan family of products, and demonstrated the technology in an OTT channel launched in November 2020 [31].</p>
+<p>3)  Bitmovin, in partnership with Fraunhofer HHI based on VVencC as described in item 3, announced support of VVC in its video encoding platform in November 2020 [32].</p>
+<h1 id="2-VVDec流程介绍"><a href="#2-VVDec流程介绍" class="headerlink" title="2. VVDec流程介绍"></a>2. VVDec流程介绍</h1><p>VVDec是Fraunhofer HHI开发的VVC解码器，实现了VVC解码器和进一步的优化，包括多线程优化和x86 SIMD优化。本文后面部分重点介绍一下VVDec中有关多线程解码的部分。</p>
+<h2 id="2-1-解码流程介绍"><a href="#2-1-解码流程介绍" class="headerlink" title="2.1 解码流程介绍"></a>2.1 解码流程介绍</h2><p>VVC codec标准也是采用了传统的编解码器框架，由帧内预测，帧间预测，变换编码，量化，熵编码，环内滤波等子算法组成。VVC能提升编码压缩率的原因是对上述的子算法都进行了fine tuned，采用了复杂度更高，计算量更大的方法来提高压缩率。<br>VVC decoder的解码过程也是和传统的video decoder框架一致。首先是parser阶段，采用熵解码对基本的语法元素进行解码，然后是反量化过程，反量化的结果作为变换解码的输入，变换解码输出为残差值。这个残差值和解码得到的预测值相加就得到了解码数据。预测值解码数据又分成帧内预测解码和帧间预测解码两种，分别从时间域和空间域得到相应的预测数据。解码数据最后还需要进行滤波处理才能作为最后的解码输出和帧间预测解码的输入数据。</p>
+<h2 id="2-2-CTU粒度多线程解码"><a href="#2-2-CTU粒度多线程解码" class="headerlink" title="2.2 CTU粒度多线程解码"></a>2.2 CTU粒度多线程解码</h2><p>我们知道video decoder的并行处理方式有GOP并行，frame并行，slice并行等。这些并行处理方式的实现相对简单，也是比较通用，不同的codec可以采取类似的机制来实现，如ffmpeg就把frame并行和slice并行做成了简单的框架，然后各个codec再调用这个通用的框架来实现并行处理。前面说的并行处理的缺点是并行处理的任务分配可能不均匀，不能很好地利用目前CPU多核的架构来进行充分地codec优化。VVdec实现的是另外一种并行处理机制。该机制把一帧图片的解码分别分成几部分并行执行，每个部分对应一个CTU行或者几个CTU行。我们把这个并行出来任务称为CTU task。这种并行处理方式粒度更小，更能充分利用多核的能力。<br>CTU task的划分如下图所示。<br><img src="/2021/04/06/VVC Decoder Analysis/ctu task.svg" alt=""><br>每个CTU task的解码过程再分成下面这些子任务。</p>
+<pre><code><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">enum</span> TaskType</div><div class="line">&#123;</div><div class="line">    <span class="comment">/*TRAFO=-1,*/</span> MIDER, LF_INIT, INTER, INTRA, RSP, LF_V, LF_H, PRESAO, SAO, ALF, DONE, DMVR</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
+</code></pre><p> <img src="/2021/04/06/VVC Decoder Analysis/splitted tasks.svg" alt=""></p>
+<p>每个子任务开始之前都需要检查当前子任务的依赖是否已经执行完。如果依赖已经完成，则继续往下执行。如果依赖没有完成，则把该任务重新放入线程池中等待下次调度。在任务执行的每个阶段开始执行的时候都需要判断当前阶段对应的依赖有没有完成，如果没有，则退出当前任务执行，把任务重新放入线程池中等待下次调度。这个过程如下图所示。</p>
+<p>下面来看一下这些子任务的依赖分别是什么。首先把图片划分成多个ctu task, 每个ctu task包括若干个ctu。每个ctu task是一个线程执行任务的最小单位。每个ctu task都有一个对应的TaskType来表示当前task对应解码状态，也就是说表示当前解码进行到哪一步了。这样我们可以通过比较依赖ctutask的TaskType来判断当前ctu task的依赖条件是否满足。</p>
+<ol>
+<li><p>INTER的依赖<br>数组thisLine和lineAbove分别表示当前ctu task行和上一个ctu task行的子任务状态。下面的代码表示当前ctu task需要等待</p>
+   <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span>( <span class="built_in">std</span>::all_of( cs.picture-&gt;slices.begin(), cs.picture-&gt;slices.end(), []( <span class="keyword">const</span> Slice* pcSlice ) &#123; <span class="keyword">return</span> pcSlice-&gt;isIntra(); &#125; ) )</div><div class="line">&#123;</div><div class="line">  <span class="comment">// not really necessary, but only for optimizing the wave-fronts</span></div><div class="line">  <span class="keyword">if</span>( col &gt; <span class="number">1</span> &amp;&amp; thisLine[col - <span class="number">2</span>] &lt;= INTER )</div><div class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">  <span class="keyword">if</span>( line &gt; <span class="number">0</span> &amp;&amp; lineAbove[col] &lt;= INTER )</div><div class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">&#125;</div><div class="line"><span class="keyword">if</span>( <span class="built_in">std</span>::any_of( cs.picture-&gt;refPicExtDepBarriers.cbegin(), cs.picture-&gt;refPicExtDepBarriers.cend(), []( <span class="keyword">const</span> Barrier* b ) &#123; <span class="keyword">return</span> b-&gt;isBlocked(); &#125; ) )</div><div class="line">&#123;</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+<li><p>INTRA的依赖<br> 数组thisLine和lineAbove分别表示当前ctu task行和上一个ctu task行的子任务状态。下面的代码表示当前ctu task需要等待左边和右上的ctu task执行完成INTRA子任务才能开始执行(好像漏了正上方ctu task的判断？后续需要进一步确认)。</p>
+   <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span>( col &gt; <span class="number">0</span> &amp;&amp; thisLine[col - <span class="number">1</span>] &lt;= INTRA )</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line"><span class="keyword">if</span>( line &gt; <span class="number">0</span> &amp;&amp; lineAbove[<span class="built_in">std</span>::min( col + <span class="number">1</span>, widthInCtus - <span class="number">1</span> )] &lt;= INTRA )</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div></pre></td></tr></table></figure>
+</li>
+<li><p>LF_V的依赖<br>垂直滤波需要等待左边ctu task完成了INTRA才能开始。</p>
+ <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span>( col &gt; <span class="number">0</span> &amp;&amp; thisLine[col - <span class="number">1</span>] &lt; LF_V )</div><div class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</div></pre></td></tr></table></figure>
+</li>
+<li><p>LF_H的依赖<br>水平滤波需要等待右边，上边和右上的ctu task完成了垂直滤波才能开始。</p>
+ <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span>( line &gt; <span class="number">0</span> &amp;&amp; lineAbove[col] &lt; LF_H )</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line"><span class="keyword">if</span>( line &gt; <span class="number">0</span> &amp;&amp; col + <span class="number">1</span> &lt; widthInCtus &amp;&amp; lineAbove[col + <span class="number">1</span>] &lt; LF_H )</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line"><span class="keyword">if</span>( col + <span class="number">1</span> &lt; widthInCtus &amp;&amp; thisLine[col + <span class="number">1</span>] &lt; LF_H )</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="2-3-ThreadPool的设计"><a href="#2-3-ThreadPool的设计" class="headerlink" title="2.3 ThreadPool的设计"></a>2.3 ThreadPool的设计</h2><p><img src="/2021/04/06/VVC Decoder Analysis/threadpool.svg" alt="">  </p>
+<p>为了实现CTU task的并行，vvdec中设计了一个ThreadPool来完成线程的调度和执行。这个ThreadPool初始化的时候创建N个执行线程，N通常设置为通过std::thread::hardware_concurrency()得到的CPU核数。为了完成无锁化设计，这个线程池提供了类似Fence的机制Barrier来保证前后task之间的依赖关系。也就是说一个task被push到线程池中来执行的时候，其带有特定的Barrier，这个Barrier就是该task执行之前需要保证的条件。<br>ThreadPool的定义如下所示。<br>下面来简单介绍一下这个类的定义。</p>
+<ol>
+<li>ChunkedTaskQueue是用来保存task的队列。每个task的定义保存在结构体Slot中。task的func是需要真正执行任务的回调函数。readyCheck是task任务执行之前用来判断是否前置条件是否ready的回调函数。barriers也是task执行之前需要满足的前置条件。也就是说task可以被执行的前置条件是readyCheck回调函数需要返回true，加上barriers不能是block的。<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">using</span> TaskFunc = <span class="keyword">bool</span> ( * )( <span class="keyword">int</span>, <span class="keyword">void</span> * );</div><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Slot</span></span></div><div class="line">&#123;</div><div class="line">  TaskFunc               func      &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">  TaskFunc               readyCheck&#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">  <span class="keyword">void</span>*                  param     &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">  WaitCounter*           counter   &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">  Barrier*               done      &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">  CBarrierVec            barriers;</div><div class="line">  <span class="built_in">std</span>::atomic&lt;TaskState&gt; state     &#123; FREE &#125;;</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>ChunkedTaskQueue的定义如下。<br>先定义了一个包含128的Slot结构体数组的Chunk来保存task。在定义一个指向Chunk的单链表来把更多的task任务链接到一起。<br>   <figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"> <span class="class"><span class="keyword">class</span> <span class="title">ChunkedTaskQueue</span></span></div><div class="line"> &#123;</div><div class="line">  <span class="keyword">constexpr</span> <span class="keyword">static</span> <span class="keyword">int</span> ChunkSize = <span class="number">128</span>;</div><div class="line">  <span class="class"><span class="keyword">class</span> <span class="title">Chunk</span></span></div><div class="line">  &#123;</div><div class="line">    <span class="built_in">std</span>::<span class="built_in">array</span>&lt;Slot, ChunkSize&gt; m_slots;</div><div class="line">    <span class="built_in">std</span>::atomic&lt;Chunk*&gt;         m_next&#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    Chunk&amp;                      m_firstChunk;</div><div class="line">    Chunk( Chunk* firstPtr ) : m_firstChunk&#123; *firstPtr &#125; &#123;&#125;</div><div class="line">    <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">ChunkedTaskQueue</span>;</span></div><div class="line">  &#125;;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">  Chunk  m_firstChunk&#123; &amp;m_firstChunk &#125;;</div><div class="line">  Chunk* m_lastChunk = &amp;m_firstChunk;</div><div class="line">  <span class="built_in">std</span>::mutex m_resizeMutex;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>完整的ThreadPool接口定义如下。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadPool</span></span></div><div class="line">&#123;</div><div class="line">  <span class="keyword">typedef</span> <span class="keyword">enum</span></div><div class="line">  &#123;</div><div class="line">    FREE = <span class="number">0</span>,</div><div class="line">    PREPARING,</div><div class="line">    WAITING,</div><div class="line">    RUNNING</div><div class="line">  &#125; TaskState;</div><div class="line">  <span class="keyword">using</span> TaskFunc = <span class="keyword">bool</span> ( * )( <span class="keyword">int</span>, <span class="keyword">void</span> * );</div><div class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">Slot</span></span></div><div class="line">  &#123;</div><div class="line">    TaskFunc               func      &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    TaskFunc               readyCheck&#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    <span class="keyword">void</span>*                  param     &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    WaitCounter*           counter   &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    Barrier*               done      &#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">    CBarrierVec            barriers;</div><div class="line">    <span class="built_in">std</span>::atomic&lt;TaskState&gt; state     &#123; FREE &#125;;</div><div class="line">  &#125;;</div><div class="line">  <span class="class"><span class="keyword">class</span> <span class="title">ChunkedTaskQueue</span></span></div><div class="line">  &#123;</div><div class="line">    <span class="keyword">constexpr</span> <span class="keyword">static</span> <span class="keyword">int</span> ChunkSize = <span class="number">128</span>;</div><div class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Chunk</span></span></div><div class="line">    &#123;</div><div class="line">      <span class="built_in">std</span>::<span class="built_in">array</span>&lt;Slot, ChunkSize&gt; m_slots;</div><div class="line">      <span class="built_in">std</span>::atomic&lt;Chunk*&gt;         m_next&#123; <span class="literal">nullptr</span> &#125;;</div><div class="line">      Chunk&amp;                      m_firstChunk;</div><div class="line">      Chunk( Chunk* firstPtr ) : m_firstChunk&#123; *firstPtr &#125; &#123;&#125;</div><div class="line">      <span class="keyword">friend</span> <span class="class"><span class="keyword">class</span> <span class="title">ChunkedTaskQueue</span>;</span></div><div class="line">    &#125;;</div><div class="line">  <span class="keyword">public</span>:</div><div class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Iterator</span> :</span> <span class="keyword">public</span> <span class="built_in">std</span>::iterator&lt;<span class="built_in">std</span>::forward_iterator_tag, Slot&gt;</div><div class="line">    &#123;</div><div class="line">      Slot*  m_slot  = <span class="literal">nullptr</span>;</div><div class="line">      Chunk* m_chunk = <span class="literal">nullptr</span>;</div><div class="line">    <span class="keyword">public</span>:</div><div class="line">      Iterator() = <span class="keyword">default</span>;</div><div class="line">      Iterator( Slot* slot, Chunk* chunk ) : m_slot( slot ), m_chunk( chunk ) &#123;&#125;</div><div class="line">      Iterator&amp; <span class="keyword">operator</span>++();</div><div class="line">      <span class="comment">// increment iterator and wrap around, if end is reached</span></div><div class="line">      <span class="function">Iterator&amp; <span class="title">incWrap</span><span class="params">()</span></span>;</div><div class="line">      <span class="keyword">bool</span> <span class="keyword">operator</span>==( <span class="keyword">const</span> Iterator&amp; rhs ) <span class="keyword">const</span> &#123; <span class="keyword">return</span> m_slot == rhs.m_slot; &#125; <span class="comment">// don't need to compare m_chunk, because m_slot is a pointer</span></div><div class="line">      <span class="keyword">bool</span> <span class="keyword">operator</span>!=( <span class="keyword">const</span> Iterator&amp; rhs ) <span class="keyword">const</span> &#123; <span class="keyword">return</span> m_slot != rhs.m_slot; &#125; <span class="comment">// don't need to compare m_chunk, because m_slot is a pointer</span></div><div class="line">      Slot&amp; <span class="keyword">operator</span>*() &#123; <span class="keyword">return</span> *m_slot; &#125;</div><div class="line">      <span class="function"><span class="keyword">bool</span> <span class="title">isValid</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123; <span class="keyword">return</span> m_slot != <span class="literal">nullptr</span> &amp;&amp; m_chunk != <span class="literal">nullptr</span>; &#125;</div><div class="line">    &#125;;</div><div class="line">    ChunkedTaskQueue() = <span class="keyword">default</span>;</div><div class="line">    ~ChunkedTaskQueue();</div><div class="line">    ChunkedTaskQueue( <span class="keyword">const</span> ChunkedTaskQueue&amp; ) = <span class="keyword">delete</span>;</div><div class="line">    ChunkedTaskQueue( ChunkedTaskQueue&amp;&amp; )      = <span class="keyword">delete</span>;</div><div class="line">    <span class="comment">// grow the queue by adding a chunk and return an iterator to the first new task-slot</span></div><div class="line">    <span class="function">Iterator <span class="title">grow</span><span class="params">()</span></span>;</div><div class="line">    <span class="function">Iterator <span class="title">begin</span><span class="params">()</span> </span>&#123; <span class="keyword">return</span> Iterator&#123; &amp;m_firstChunk.m_slots.front(), &amp;m_firstChunk &#125;; &#125;</div><div class="line">    <span class="function">Iterator <span class="title">end</span><span class="params">()</span>   </span>&#123; <span class="keyword">return</span> Iterator&#123; <span class="literal">nullptr</span>, <span class="literal">nullptr</span> &#125;; &#125;</div><div class="line">  <span class="keyword">private</span>:</div><div class="line">    Chunk  m_firstChunk&#123; &amp;m_firstChunk &#125;;</div><div class="line">    Chunk* m_lastChunk = &amp;m_firstChunk;</div><div class="line">    <span class="built_in">std</span>::mutex m_resizeMutex;</div><div class="line">  &#125;;</div><div class="line"><span class="keyword">public</span>:</div><div class="line">  ThreadPool( <span class="keyword">int</span> numThreads = <span class="number">1</span>, <span class="keyword">const</span> <span class="keyword">char</span> *threadPoolName = <span class="literal">nullptr</span> );</div><div class="line">  ~ThreadPool();</div><div class="line">  <span class="keyword">template</span>&lt;<span class="class"><span class="keyword">class</span> <span class="title">TParam</span>&gt;</span></div><div class="line">  <span class="title">bool</span> <span class="title">addBarrierTask</span>( <span class="title">bool</span>       ( *<span class="title">func</span> )( <span class="title">int</span>, <span class="title">TParam</span>* ),</div><div class="line">                       <span class="title">TParam</span>*       <span class="title">param</span>,</div><div class="line">                       <span class="title">WaitCounter</span>*  <span class="title">counter</span>                      = <span class="title">nullptr</span>,</div><div class="line">                       <span class="title">Barrier</span>*      <span class="title">done</span>                         = <span class="title">nullptr</span>,</div><div class="line">                       <span class="title">CBarrierVec</span>&amp;&amp; <span class="title">barriers</span>                     = &#123;&#125;,</div><div class="line">                       <span class="keyword">bool</span>       ( *readyCheck )( <span class="keyword">int</span>, TParam* ) = <span class="literal">nullptr</span> )</div><div class="line">  &#123;</div><div class="line">    <span class="keyword">if</span>( m_threads.empty() )</div><div class="line">    &#123;</div><div class="line">      <span class="comment">// in the single threaded case try to exectute the task directly</span></div><div class="line">      <span class="keyword">if</span>( bypassTaskQueue( (TaskFunc)func, param, counter, done, barriers, (TaskFunc)readyCheck ) )</div><div class="line">      &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">else</span></div><div class="line">    &#123;</div><div class="line">      checkAndThrowThreadPoolException();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">while</span>( <span class="literal">true</span> )</div><div class="line">    &#123;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ADD_TASK_THREAD_SAFE</span></div><div class="line">      <span class="built_in">std</span>::unique_lock&lt;<span class="built_in">std</span>::mutex&gt; l(m_nextFillSlotMutex);</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">      CHECKD( !m_nextFillSlot.isValid(), <span class="string">"Next fill slot iterator should always be valid"</span> );</div><div class="line">      <span class="keyword">const</span> <span class="keyword">auto</span> startIt = m_nextFillSlot;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ADD_TASK_THREAD_SAFE</span></div><div class="line">      l.unlock();</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">      <span class="keyword">bool</span> first = <span class="literal">true</span>;</div><div class="line">      <span class="keyword">for</span>( <span class="keyword">auto</span> it = startIt; it != startIt || first; it.incWrap() )</div><div class="line">      &#123;</div><div class="line">        first = <span class="literal">false</span>;</div><div class="line">        <span class="keyword">auto</span>&amp; t = *it;</div><div class="line">        <span class="keyword">auto</span> expected = FREE;</div><div class="line">        <span class="keyword">if</span>( t.state.load( <span class="built_in">std</span>::memory_order_relaxed ) == FREE &amp;&amp; t.state.compare_exchange_strong( expected, PREPARING ) )</div><div class="line">        &#123;</div><div class="line">          <span class="keyword">if</span>( counter )</div><div class="line">          &#123;</div><div class="line">            counter-&gt;<span class="keyword">operator</span>++();</div><div class="line">          &#125;</div><div class="line">          t.func       = (TaskFunc)func;</div><div class="line">          t.readyCheck = (TaskFunc)readyCheck;</div><div class="line">          t.param      = param;</div><div class="line">          t.done       = done;</div><div class="line">          t.counter    = counter;</div><div class="line">          t.barriers   = <span class="built_in">std</span>::move( barriers );</div><div class="line">          t.state      = WAITING;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ADD_TASK_THREAD_SAFE</span></div><div class="line">          l.lock();</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">          m_nextFillSlot.incWrap();</div><div class="line">          m_poolPause.unpauseIfPaused();</div><div class="line">          <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ADD_TASK_THREAD_SAFE</span></div><div class="line">      l.lock();</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">      m_nextFillSlot = m_tasks.grow();</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">  &#125;</div><div class="line">  <span class="function"><span class="keyword">bool</span> <span class="title">processTasksOnMainThread</span><span class="params">()</span></span>;</div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">checkAndThrowThreadPoolException</span><span class="params">()</span></span>;</div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">shutdown</span><span class="params">( <span class="keyword">bool</span> block )</span></span>;</div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">waitForThreads</span><span class="params">()</span></span>;</div><div class="line">  <span class="function"><span class="keyword">int</span> <span class="title">numThreads</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123; <span class="keyword">return</span> (<span class="keyword">int</span>)m_threads.size(); &#125;</div><div class="line"><span class="keyword">private</span>:</div><div class="line">  <span class="keyword">using</span> TaskIterator = ChunkedTaskQueue::Iterator;</div><div class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">TaskException</span>;</span></div><div class="line">  <span class="comment">// members</span></div><div class="line">  <span class="built_in">std</span>::<span class="built_in">string</span>              m_poolName;</div><div class="line">  <span class="built_in">std</span>::<span class="keyword">atomic_bool</span>         m_exitThreads&#123; <span class="literal">false</span> &#125;;</div><div class="line">  <span class="built_in">std</span>::<span class="built_in">vector</span>&lt;<span class="built_in">std</span>::thread&gt; m_threads;</div><div class="line">  ChunkedTaskQueue         m_tasks;</div><div class="line">  TaskIterator             m_nextFillSlot = m_tasks.begin();</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ADD_TASK_THREAD_SAFE</span></div><div class="line">  <span class="built_in">std</span>::mutex               m_nextFillSlotMutex;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">  <span class="built_in">std</span>::mutex               m_idleMutex;</div><div class="line">  <span class="built_in">std</span>::<span class="keyword">atomic_bool</span>         m_exceptionFlag&#123; <span class="literal">false</span> &#125;;</div><div class="line">  <span class="built_in">std</span>::exception_ptr       m_threadPoolException;</div><div class="line">  PoolPause m_poolPause;</div><div class="line">  <span class="comment">// internal functions</span></div><div class="line">  <span class="function"><span class="keyword">void</span>         <span class="title">threadProc</span>     <span class="params">( <span class="keyword">int</span> threadId )</span></span>;</div><div class="line">  <span class="function"><span class="keyword">static</span> <span class="keyword">bool</span>  <span class="title">checkTaskReady</span> <span class="params">( <span class="keyword">int</span> threadId, CBarrierVec&amp; barriers, TaskFunc readyCheck, <span class="keyword">void</span>* taskParam )</span></span>;</div><div class="line">  <span class="function">TaskIterator <span class="title">findNextTask</span>   <span class="params">( <span class="keyword">int</span> threadId, TaskIterator startSearch )</span></span>;</div><div class="line">  <span class="function"><span class="keyword">static</span> <span class="keyword">bool</span>  <span class="title">processTask</span>    <span class="params">( <span class="keyword">int</span> threadId, Slot&amp; task )</span></span>;</div><div class="line">  <span class="function"><span class="keyword">bool</span>         <span class="title">bypassTaskQueue</span><span class="params">( TaskFunc func, <span class="keyword">void</span>* param, WaitCounter* counter, Barrier* done, CBarrierVec&amp; barriers, TaskFunc readyCheck )</span></span>;</div><div class="line">  <span class="function"><span class="keyword">static</span> <span class="keyword">void</span>  <span class="title">handleTaskException</span><span class="params">( <span class="keyword">const</span> <span class="built_in">std</span>::exception_ptr e, Barrier* done, WaitCounter* counter, <span class="built_in">std</span>::atomic&lt;TaskState&gt;* slot_state )</span></span>;</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
+<p>其中的核心函数定义如下。<br>addBarrierTask()提供接口把外部任务push到ThreadPool中来异步执行。</p>
+<p>threadProc()是每个线程的loop执行函数，每个线程创建好了以后，threadProc就会在一个while循环中不停地从queue中取出task(如果有的话)来执行。如果queue里面没有task需要执行了，threadProc会进入等待状态。</p>
+<p>findNextTask()用于从queue找到一个可以被执行的task。其会调用checkTaskReady()函数用来确保task可以被执行。</p>
+<p>checkTaskReady()函数用于检查Barrier和readCheck是否已经准备好。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">bool</span> ThreadPool::checkTaskReady( <span class="keyword">int</span> threadId, CBarrierVec&amp; barriers, ThreadPool::TaskFunc readyCheck, <span class="keyword">void</span>* taskParam )</div><div class="line">&#123;</div><div class="line">    <span class="keyword">if</span>( !barriers.empty() )</div><div class="line">    &#123;</div><div class="line">        <span class="comment">// don't break early, because isBlocked() also checks exception state</span></div><div class="line">        <span class="keyword">if</span>( <span class="built_in">std</span>::count_if( barriers.cbegin(), barriers.cend(), []( <span class="keyword">const</span> Barrier* b ) &#123; <span class="keyword">return</span> b &amp;&amp; b-&gt;isBlocked(); &#125; ) )</div><div class="line">        &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="comment">// don't clear the barriers, even if they are all unlocked, because exceptions could still be singalled through them</span></div><div class="line">    <span class="comment">// barriers.clear();</span></div><div class="line">    <span class="keyword">if</span>( readyCheck &amp;&amp; readyCheck( threadId, taskParam ) == <span class="literal">false</span> )</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>processTask()用来调用task的执行回调函数执行真正的任务。如果任务没有执行完成(返回false)，则该task会重新送入queue中等待下一步再被调用到来执行回调函数。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">bool</span> ThreadPool::processTask( <span class="keyword">int</span> threadId, ThreadPool::Slot&amp; task )</div><div class="line">&#123;</div><div class="line">    <span class="keyword">try</span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">const</span> <span class="keyword">bool</span> success = task.func( threadId, task.param );</div><div class="line">        <span class="keyword">if</span>( !success )</div><div class="line">        &#123;</div><div class="line">            task.state = WAITING;</div><div class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">if</span>( task.done != <span class="literal">nullptr</span> )</div><div class="line">        &#123;</div><div class="line">            task.done-&gt;unlock();</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">if</span>( task.counter != <span class="literal">nullptr</span> )</div><div class="line">        &#123;</div><div class="line">            --(*task.counter);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">catch</span>( ... )</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">throw</span> TaskException( <span class="built_in">std</span>::current_exception(), task );</div><div class="line">    &#125;</div><div class="line">    task.state = FREE;</div><div class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>下面这个图详细说明了ctu解码过程中是如何利用thread pool进行task的调度的。<br>DecLibRecon把ctu task push到threadpool中的queue中，这些task都带有前置条件。<br>threadpool中的线程启动loop函数threadProc, threadProc会去queue中取task。如果取得的task的前置条件都满足，则该thread可以去执行对应的task。在执行的过程中某一个子任务完成后会去更新task type。并判断下一步的子任务是否可以启动，如果不行的话该线程退出执行任务，并把任务重新push到queue中，如果可以下一步的子任务可以启动则继续往下执行直至该任务完全结束。</p>
+<p><img src="/2021/04/06/VVC Decoder Analysis/thread flow.svg" alt=""> </p>
+<h1 id="3-参考"><a href="#3-参考" class="headerlink" title="3 参考"></a>3 参考</h1><p><a href="https://jvet-experts.org/doc_end_user/documents/20_Teleconference/wg11/JVET-T2001-v2.zip" target="_blank" rel="external">JVET-V0021-v1, Deployment status of the VVC standard</a><br><a href="https://github.com/fraunhoferhhi/vvdec" target="_blank" rel="external">vvdec</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/video-codec/" rel="tag"># video codec</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/03/27/Apple M1 GPU Analysis/" rel="next" title="Apple M1 GPU分析">
+                <i class="fa fa-chevron-left"></i> Apple M1 GPU分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="Kevin Wen" />
+          <p class="site-author-name" itemprop="name">Kevin Wen</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              
+                <span class="site-state-item-count">19</span>
+                <span class="site-state-item-name">标签</span>
+              
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-目前VVC-Codec现状"><span class="nav-number">1.</span> <span class="nav-text">1. 目前VVC Codec现状</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-Publicly-available-software-source-code"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 Publicly available software source code</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2-Software-decoders"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 Software decoders</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-3-Bitstream-analyser-products"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 Bitstream analyser products</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-4-Conformance-test-sets"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 Conformance test sets</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-5-Encoding-products-and-services"><span class="nav-number">1.5.</span> <span class="nav-text">1.5 Encoding products and services</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-VVDec流程介绍"><span class="nav-number">2.</span> <span class="nav-text">2. VVDec流程介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-解码流程介绍"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 解码流程介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-CTU粒度多线程解码"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 CTU粒度多线程解码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-ThreadPool的设计"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 ThreadPool的设计</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-参考"><span class="nav-number">3.</span> <span class="nav-text">3 参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Kevin Wen</span>
+</div>
+
+
+<div> <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+访问量 <span id="busuanzi_value_site_pv"></span>
+访问人数 <span id="busuanzi_value_site_uv"></span>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("orq8xxsDQDXKiHdqSRcjlflB-gzGzoHsz", "ecCFdIcWDfbJKQOCiLFf1EBm");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
