@@ -254,6 +254,182 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/14/Analysis of mali kernel driver/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/12/14/Analysis of mali kernel driver/" itemprop="url">Analysis of mali kernel driver</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-12-14T20:18:31+09:00">
+                2019-12-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/12/14/Analysis of mali kernel driver/" class="leancloud_visitors" data-flag-title="Analysis of mali kernel driver">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-硬件模块"><a href="#0x1-硬件模块" class="headerlink" title="0x1 硬件模块"></a>0x1 硬件模块</h1><p>分析Mali kernel driver代码，我们可以知道Mali Midgard硬件中包括下图所示的这些模块。下面简单介绍一下这些模块。</p>
+<p>Shader Core指的是执行Shader的ALU单元，是可编程的运算单元。</p>
+<p>Fixed Function Operator指的是Graphics Pipeline中诸如插值，光栅化等不可编程的硬件模块。</p>
+<p>MMU是GPU中执行虚拟地址到物理地址转换的硬件模块。</p>
+<p>Tiler指的是Tile Based Render中执行Tile划分的硬件模块。</p>
+<p>Power Manager指管理GPU中各个硬件子模块的Power的硬件模块。</p>
+<p>Job Executor，GPU User space driver根据应用执行的Graphics API来生成的Job，Job Executor是消费这些Job来驱动GPU硬件执行的状态机。</p>
+<p>Cache，和CPU中的Cache类似，GPU中的cache也是为了提高GPU访问内存的速度与效率。<br><img src="/2019/12/14/Analysis of mali kernel driver/architecture.png" alt=""></p>
+<h1 id="0x2-Power-Manager"><a href="#0x2-Power-Manager" class="headerlink" title="0x2 Power Manager"></a>0x2 Power Manager</h1><p>Mali Midgard中的Power Manager模块和SOC中的Power Manager模块关系如下图所示。<br><img src="/2019/12/14/Analysis of mali kernel driver/power_manager.png" alt=""></p>
+<p>SoC中的Power Manager提供GPU硬件的Power输入。在SoC bring up阶段，经常会出现GPU不能工作的情况，这个时候需要和硬件工程师配合，检查SoC的Power输出到GPU的Power输入有没有配置好，是否没有上电，电压是否符合要求。另外经常出现的功耗问题也和GPU的Power设置相关，如suspend以后没有关闭GPU的Power，这样测量出来的功耗数据会很高。</p>
+<p>如上图所示，GPU中包括三个可以独立控制Power的模块。分别是L2 cache，Shader cores和Tiler cores。<br>我们来想一下为什么要分成几个独立的Power模块呢？原因也是为了功耗的考虑。我们可以单独打开/关闭Shader cores的Power，同理对L2 cache和Tiler cores模块也是如此，这样可以根据GPU执行任务的情况灵活地控制这些模块Power的打开或者关闭。</p>
+<h1 id="0x3-内存分配和释放"><a href="#0x3-内存分配和释放" class="headerlink" title="0x3  内存分配和释放"></a>0x3  内存分配和释放</h1><p>下图说明了kernel driver中分配内存的执行流程。<br>这个流程是由gpu user space driver驱动的，最后调用alloc_pages从Linux系统的内存管理模块分配出内存，分配的内存返回给user space driver以后，可以写入GPU执行过程中需要的数据，包括Job数据，顶点数据，纹理数据等，注意这些数据的写入是由CPU来完成的。当数据在user space driver都准备好了以后，就可以trigger kernel driver来执行GPU硬件工作，这个时候GPU硬件需要读取前面准备好的数据，这时需要借助GPU MMU来完成地址的转换工作，否则GPU没有办法完成数据的正确读取。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/alloc_memory.svg" alt=""></p>
+<p>前面介绍了内存是如何分配的，下面解释一下分配好的内存在被gpu user space driver填充好需要的数据以后，又回到gpu kernel driver是如何执行的呢？下图说明了执行的流程。具体的gpu job相关处理会在后面的章节中介绍。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/use_memory.svg" alt=""></p>
+<h1 id="0x4-GPU-MMU"><a href="#0x4-GPU-MMU" class="headerlink" title="0x4 GPU MMU"></a>0x4 GPU MMU</h1><p>前面已经提到GPU MMU用于支持GPU对非连续内存的访问。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/mmu.png" alt=""></p>
+<p>GPU MMU的实现和CPU用来管理内存的MMU实现机制类似，也就是提供了虚拟地址到物理地址的转换。<br>如果GPU中没有MMU，则GPU需要访问的物理地址空间必须是连续的，这对系统的内存管理提出了很高的要求，如在Android系统中只能使用通过ion driver分配的cma buffer(当然也可以是系统启动时候预留出来的物理连续内存, 不过这种情况不常见)。处理不好的话，很大概率会出现内存不足OOM(Out of memory)的错误。</p>
+<p>驱动中提供了两种mmu的实现，根据硬件平台进行选择。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> (kbase_hw_has_feature(kbdev, BASE_HW_FEATURE_AARCH64_MMU))</div><div class="line">	kbdev-&gt;mmu_mode = kbase_mmu_mode_get_aarch64();</div><div class="line"><span class="keyword">else</span></div><div class="line">	kbdev-&gt;mmu_mode = kbase_mmu_mode_get_lpae();</div></pre></td></tr></table></figure></p>
+<p>每一种mmu的实现都实现了下面的结构体。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * struct kbase_mmu_mode - object containing pointer to methods invoked for</div><div class="line"> *                         programming the MMU, as per the MMU mode supported</div><div class="line"> *                         by Hw.</div><div class="line"> * @update:           enable &amp; setup/configure one of the GPU address space.</div><div class="line"> * @get_as_setup:     retrieve the configuration of one of the GPU address space.</div><div class="line"> * @disable_as:       disable one of the GPU address space.</div><div class="line"> * @pte_to_phy_addr:  retrieve the physical address encoded in the page table entry.</div><div class="line"> * @ate_is_valid:     check if the pte is a valid address translation entry</div><div class="line"> *                    encoding the physical address of the actual mapped page.</div><div class="line"> * @pte_is_valid:     check if the pte is a valid entry encoding the physical</div><div class="line"> *                    address of the next lower level page table.</div><div class="line"> * @entry_set_ate:    program the pte to be a valid address translation entry to</div><div class="line"> *                    encode the physical address of the actual page being mapped.</div><div class="line"> * @entry_set_pte:    program the pte to be a valid entry to encode the physical</div><div class="line"> *                    address of the next lower level page table.</div><div class="line"> * @entry_invalidate: clear out or invalidate the pte.</div><div class="line"> * @flags:            bitmask of MMU mode flags. Refer to KBASE_MMU_MODE_ constants.</div><div class="line"> */</div><div class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">kbase_mmu_mode</span> <span class="title">const</span> <span class="title">lpae_mode</span> = &#123;</span></div><div class="line">	.update = mmu_update,</div><div class="line">	.get_as_setup = mmu_get_as_setup,</div><div class="line">	.disable_as = mmu_disable_as,</div><div class="line">	.pte_to_phy_addr = pte_to_phy_addr,</div><div class="line">	.ate_is_valid = ate_is_valid,</div><div class="line">	.pte_is_valid = pte_is_valid,</div><div class="line">	.entry_set_ate = entry_set_ate,</div><div class="line">	.entry_set_pte = entry_set_pte,</div><div class="line">	.entry_invalidate = entry_invalidate,</div><div class="line">	.flags = <span class="number">0</span></div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>GPU MMU中的页表结构和CPU MMU的类似，也是采用了多级页表结构。</p>
+<p>GPU MMU中page fault的处理。<br>在MMU中断处理函数中判断是否发生了page fault，如果是则需要分配新的page给GPU，并把新分配的page信息更新到MMU中。</p>
+<h1 id="0x5-GPU-Cache"><a href="#0x5-GPU-Cache" class="headerlink" title="0x5 GPU Cache"></a>0x5 GPU Cache</h1><p>GPU Cache位于gpu和memory之间，用来提高内存访问速度和效率。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/cache.png" alt=""></p>
+<p>这里面涉及到CPU和GPU之间的cache coherency的概念，指的是硬件平台上CPU的cache和GPU的cache是否可以同步。<br>如上图所示，CPU需要对内存中地址为addr的内存进行写操作，如果CPU采用的是write through的cache机制，CPU对内存地址addr的修改会立即写入到内存中，如果在GPU的cache中原来保存有地址addr的cache，这个时候通过Coherent Connection机制来通知GPU，告知内存地址addr对应的cache失效了，下次GPU访问内存地址addr的内存，从GPU的cache中不能读取到内存地址addr对应的数据了(cache不命中)，需要重新从内存中读取才能得到正确数据。</p>
+<p>如果CPU采用的是write back的cache机制，CPU对地址addr修改以后不会立刻写回内存，这个时候可能大家觉得这样就没有办法通过到GPU了，其实还是有机制在这种情况下也是有办法来通过GPU去使对应的GPU cache失效的。这种机制叫“窥探（snooping）”协议，窥探协议的思想是，cache不仅仅在做内存传输的时候才和总线打交道，而是不停地在窥探总线上发生的数据交换，跟踪其他缓存在做什么。所以当CPU的cache代表CPU去读写内存时，GPU也会得到通知，这样CPU和GPU的缓存可以时刻保持同步。只要GPU或者CPU其中任何一方写了内存或者cache，对方马上就知道这块内存在它们自己的cache中对应的段已经失效，然后读取的时候需要从内存中读取。</p>
+<p>注意在支持cache coherency的硬件平台上，上述操作是不需要软件干涉的，都是通过硬件来保证的。指ARM平台上CPU和GPU是cache coherency的。</p>
+<p>但是如果CPU是x86的，GPU的mali的SoC平台中，要做到硬件的cache coherency比较困难，这个时候是需要软件来保证的。这样gpu driver的复杂度就增加了。</p>
+<p>在mali 驱动中有下面三种cache coherency的设置。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">define</span> COHERENCY_ACE_LITE 0</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> COHERENCY_ACE      1</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> COHERENCY_NONE     31</span></div></pre></td></tr></table></figure></p>
+<p>在驱动初始化函数kbase_device_coherency_init()中会设置cache coherency的类型。<br>如下所示，默认是设置成COHERENCY_NONE<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">kbdev-&gt;system_coherency = COHERENCY_NONE;</div></pre></td></tr></table></figure></p>
+<p>也可以通过dts来配置<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">coherency_override_dts = of_get_property(kbdev-&gt;dev-&gt;of_node,</div><div class="line">                        <span class="string">"system-coherency"</span>,</div><div class="line">                        <span class="literal">NULL</span>);</div><div class="line">override_coherency = be32_to_cpup(coherency_override_dts);</div><div class="line">kbdev-&gt;system_coherency = override_coherency;</div></pre></td></tr></table></figure></p>
+<p>如下代码中，在CPU更新完page directory以后，如果不是cache coherency平台，这个时候需要sync来保证cache的一致性。<br>注意这个时候page directoy是在CPU侧写入的，CPU写入有可能只是写到cache的write buffer中，并没有真正写入内存，需要通过dma_sync_single_for_device来保证cache的write buffer中的内容都<br>写入了memory，这样后续GPU访问page directoy的时候能取得正确的数据。<br>这里有一个疑问，就是如果GPU的cache中已经有了对应内存地址的缓存内容，在不是cache coherency的平台中，是如何通知到GPU，使其对应的cache失效的呢？这部分我的理解可能也是通过硬件总线来完成的。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * kbase_mmu_sync_pgd - sync page directory to memory</div><div class="line"> * This should be called after each page directory update.</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kbase_mmu_sync_pgd</span><span class="params">(struct kbase_device *kbdev,</span></span></div><div class="line">		<span class="keyword">dma_addr_t</span> handle, <span class="keyword">size_t</span> size)</div><div class="line">&#123;</div><div class="line">	<span class="comment">/* If page table is not coherent then ensure the gpu can read</span></div><div class="line">	 * the pages from memory</div><div class="line">	 */</div><div class="line">	<span class="keyword">if</span> (kbdev-&gt;system_coherency != COHERENCY_ACE)</div><div class="line">		dma_sync_single_for_device(kbdev-&gt;dev, handle, size,</div><div class="line">				DMA_TO_DEVICE);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>如下代码所示，在security模式下关闭cache coherent，保证内存数据读写的安全性。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kbase_gpu_disable_coherent</span><span class="params">(struct kbase_device *kbdev)</span></span></div><div class="line">&#123;</div><div class="line">	lockdep_assert_held(&amp;kbdev-&gt;hwaccess_lock);</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * When entering into protected mode, we must ensure that the</div><div class="line">	 * GPU is not operating in coherent mode as well. This is to</div><div class="line">	 * ensure that no protected memory can be leaked.</div><div class="line">	 */</div><div class="line">	<span class="keyword">if</span> (kbdev-&gt;system_coherency == COHERENCY_ACE)</div><div class="line">		kbase_cache_set_coherency_mode(kbdev, COHERENCY_ACE_LITE);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>我们可以从下面的代码来理解一下dma_sync_single_for_cpu和dma_sync_single_for_device的区别。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">kbasep_10969_workaround_clamp_coordinates</span><span class="params">(struct kbase_jd_atom *katom)</span></span></div><div class="line">&#123;</div><div class="line">    ......</div><div class="line">    <span class="comment">// DMA transfer is complete</span></div><div class="line">    copy_size = MIN(PAGE_SIZE - offset, JOB_HEADER_SIZE);</div><div class="line">    page_1 = kmap_atomic(p);</div><div class="line">    <span class="comment">/* page_1 is a u32 pointer, offset is expressed in bytes */</span></div><div class="line">    page_1 += offset&gt;&gt;<span class="number">2</span>;</div><div class="line">    kbase_sync_single_for_cpu(katom-&gt;kctx-&gt;kbdev,</div><div class="line">            kbase_dma_addr(p) + offset,</div><div class="line">            copy_size, DMA_BIDIRECTIONAL);</div><div class="line">    <span class="built_in">memcpy</span>(dst, page_1, copy_size);</div><div class="line">    ......</div><div class="line">    <span class="comment">/* Flush CPU cache to update memory for future GPU reads*/</span></div><div class="line">    <span class="built_in">memcpy</span>(page_1, dst, copy_size);</div><div class="line">    p = as_page(page_array[page_index]);</div><div class="line">    kbase_sync_single_for_device(katom-&gt;kctx-&gt;kbdev,</div><div class="line">            kbase_dma_addr(p) + offset,</div><div class="line">            copy_size, DMA_TO_DEVICE);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>kbase_sync_single_for_cpu等同于dma_sync_single_for_cpu。用于数据从GPU到内存的DMA传送刚刚完成的情况。当DMA传输完成时，GPU已经将数据传输到内存，但是cache中可能还有老数据，为了避免CPU读取还是cache中的老数据，需要调用dma_sync_single_for_cpu，在ARM平台上相当于”invalidate”操作，也就是使cache无效的操作。从上面的代码可以，DMA传输完成后，先是调用了dma_sync_single_for_cpu，CPU再从内存地址page_1中读取数据。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/dma_sync_single_for_cpu.png" alt=""></p>
+<p>kbase_sync_single_for_device等同于dma_sync_single_for_device。用于数据从内存到GPU的DMA传送开始之前的情况，在CPU往内存的DMA缓冲区写入数据之后，这个时候数据可能没有立即反映到内存的DMA缓冲区上，因为该DMA缓冲区可能带有write buffer，导致数据只是写到了write buffer中，没有写入内存的DMA缓冲区上（为什么没有立即写入到内存的DMA缓冲区上呢？ 是为了等write buffer达到一定的大小以后一次写入到内存，为了提高效率）。这个时候需要调用dma_sync_single_for_device来做flush/clean操作，这样后续GPU启动DMA传输的时候可以从DMA缓冲区得到正确的数据。<br>如上代码所示，dma_sync_single_for_device之前调用了memcpy把数据传输到DMA缓冲区中，然后执行dma_sync_single_for_device()flush<br>write buffer中的数据，保证后续GPU的操作能得到正确的DMA数据。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/dma_sync_single_for_device.png" alt=""></p>
+<h1 id="0x6-中断处理"><a href="#0x6-中断处理" class="headerlink" title="0x6 中断处理"></a>0x6 中断处理</h1><p>从下面代码中我们可以知道gpu kernel driver需要处理下面三种中断。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">static</span> <span class="keyword">irq_handler_t</span> kbase_handler_table[] = &#123;</div><div class="line">    [JOB_IRQ_TAG] = kbase_job_irq_handler,</div><div class="line">    [MMU_IRQ_TAG] = kbase_mmu_irq_handler,</div><div class="line">    [GPU_IRQ_TAG] = kbase_gpu_irq_handler,</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>下图是三种中断处理函数的执行流程。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/irq.png" alt=""></p>
+<p>中断的处理流程如下。</p>
+<ol>
+<li>调用request_irq注册中断。</li>
+<li>操作GPU register启动中断。</li>
+<li>GPU硬件执行完成，触发中断。</li>
+<li>处理中断处理函数，读取GPU register来判断硬件执行情况做进一步动作。</li>
+</ol>
+<h1 id="0x7-GPU-Job处理"><a href="#0x7-GPU-Job处理" class="headerlink" title="0x7. GPU Job处理"></a>0x7. GPU Job处理</h1><p>Mali GPU Job可以理解成GPU硬件能理解的IR(中间语言)。在Broadcom V3D中的CLE(control list executor)也是类似的概念。<br>gpu user space driver简单来说就是把上层应用的API调用转换成Job的描述。<br>kernel driver拿到这些Job以后，把Job的内存地址告诉GPU硬件，GPU硬件的Job Executor就开始parse这些Job，然后驱动GPU硬件的其他模块完成渲染或者计算工作。<br>Job可以组成Job chain的形式，Job chain中Job的执行可以有前后关系，如果该Job中需要读取texture信息，则Job中还包括texture存储位置的地址信息。</p>
+<p><img src="/2019/12/14/Analysis of mali kernel driver/job.png" alt=""></p>
+<p>下面的流程说明了GPU Job在kernel driver中是如何提交给GPU硬件的Job Executor的。<br><img src="/2019/12/14/Analysis of mali kernel driver/job_submit.svg" alt=""></p>
+<h1 id="0x8-GPU-DVFS"><a href="#0x8-GPU-DVFS" class="headerlink" title="0x8. GPU DVFS"></a>0x8. GPU DVFS</h1><p>这部分是根据GPU的loading进行动态调整GPU的运行频率，也可以动态调整GPU Power的电压。这部分的实现依赖于Linux kernel提供的DVFS（Dynamic Voltage and Frequency Scaling）机制。<br>当然GPU dvfs的启用与否是根据场景来的。在功耗不敏感的场景下，如汽车娱乐系统中，GPU DVFS一般是关闭的。</p>
+<h1 id="0x9-Reference"><a href="#0x9-Reference" class="headerlink" title="0x9 Reference"></a>0x9 Reference</h1><p><a href="https://developer.arm.com/tools-and-software/graphics-and-gaming/mali-drivers/midgard-kernel" target="_blank" rel="external">mali kernel driver source code</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/11/17/Understanding of eglSwapBuffers/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1610,166 +1786,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/02/The-overview-of-AV1-coding/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/03/02/The-overview-of-AV1-coding/" itemprop="url">The overview of AV1 coding</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-02T20:00:10+09:00">
-                2019-03-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2019/03/02/The-overview-of-AV1-coding/" class="leancloud_visitors" data-flag-title="The overview of AV1 coding">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Overview"><a href="#0x1-Overview" class="headerlink" title="0x1 Overview"></a>0x1 Overview</h1><p>AOMedia Video 1 (AV1) is an open, royalty-free video coding format, it was in particular motivated by the high cost and uncertainty of HEVC patent licensing, it aims to provide royalty-free and high compression ratio video codec.</p>
-<p>This blog will give us the overview of AV1 codec, this material is from the internet, you can find the link url in the reference part.</p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/The_Technology_Inside_Av1.svg" alt="ovewview"></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/codec_overview.png" alt="ovewview"></p>
-<h1 id="0x2-Partition"><a href="#0x2-Partition" class="headerlink" title="0x2 Partition"></a>0x2 Partition</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/partition1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/partition2.png" alt=""></p>
-<h1 id="0x3-Intra-Prediction"><a href="#0x3-Intra-Prediction" class="headerlink" title="0x3 Intra Prediction"></a>0x3 Intra Prediction</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/intra_preditction.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/smooth_intra_prediction_modes.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/chroma_from_luma.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/palette_mode.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/intra_block_copying.png" alt=""></p>
-<h1 id="0x04-Inter-Prediction"><a href="#0x04-Inter-Prediction" class="headerlink" title="0x04 Inter Prediction"></a>0x04 Inter Prediction</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/inter_prediction1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/inter_prediction2.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/extended_reference_frames.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/motion_vector_prediction.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/dynamic_motion_vector_referencing.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/obmc.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/masked_compound_prediction.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/warped_mc.png" alt=""></p>
-<h1 id="0x05-Transform-coding"><a href="#0x05-Transform-coding" class="headerlink" title="0x05 Transform coding"></a>0x05 Transform coding</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/transform1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform2.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform_kernel.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform_block_partitioning.png" alt=""></p>
-<h1 id="0x06-Quantization"><a href="#0x06-Quantization" class="headerlink" title="0x06 Quantization"></a>0x06 Quantization</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/quantization.png" alt=""></p>
-<h1 id="0x7-Entropy-coding"><a href="#0x7-Entropy-coding" class="headerlink" title="0x7 Entropy coding"></a>0x7 Entropy coding</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/entropy_coding1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/entropy_coding2.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/av1_symbol_coding.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/level-map coefficient coding.png" alt=""></p>
-<h1 id="0x8-Filter"><a href="#0x8-Filter" class="headerlink" title="0x8 Filter"></a>0x8 Filter</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/filtering1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/filtering2.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/cdef.png.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_filter.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_filter1.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_sp.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/film_grain_synthesis.png" alt=""></p>
-<h1 id="0x8-Efficiency-and-Complexity"><a href="#0x8-Efficiency-and-Complexity" class="headerlink" title="0x8 Efficiency and Complexity"></a>0x8 Efficiency and Complexity</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/compression_efficiency.png" alt=""></p>
-<p><img src="/2019/03/02/The-overview-of-AV1-coding/coding_complexity.png" alt=""></p>
-<h1 id="0x9-Reference"><a href="#0x9-Reference" class="headerlink" title="0x9 Reference"></a>0x9 Reference</h1><p><a href="https://www.youtube.com/watch?v=04lXWMcwdXA&amp;t=822s" target="_blank" rel="external">a technial overview of the AV1</a><br><a href="https://www.youtube.com/watch?v=qubPzBcYCTw&amp;t=1957s" target="_blank" rel="external">The AV1 Video Codec</a><br><a href="https://en.wikipedia.org/wiki/AV1" target="_blank" rel="external">AV1 wiki</a></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1819,7 +1835,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-count">42</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

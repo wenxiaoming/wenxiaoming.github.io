@@ -254,6 +254,150 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/04/design-monitor-interface-for-rsstreamer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/06/04/design-monitor-interface-for-rsstreamer/" itemprop="url">RsStreamer监控模块设计</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-04T09:19:08+09:00">
+                2017-06-04
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2017/06/04/design-monitor-interface-for-rsstreamer/" class="leancloud_visitors" data-flag-title="RsStreamer监控模块设计">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-需求分析"><a href="#0x1-需求分析" class="headerlink" title="0x1 需求分析"></a>0x1 需求分析</h1><h2 id="0x10-HTTP监控"><a href="#0x10-HTTP监控" class="headerlink" title="0x10 HTTP监控"></a>0x10 HTTP监控</h2><p>   RsStreamer作为P2P流媒体服务器，需要和很多并发连接的P2P播放器进行通讯，把媒体数据发送给这些P2P播放器进行播放，另外还需要和其他如认证服务器进行通讯，进行用户验证等操作.</p>
+<p>   RsStreamer在运行的过程中，很多内部状态需要及时地提供给用户，如统计有多少个用户观看了某部影片，提供某部影片流媒体服务的总带宽是多少，通过http服务的形式提供这些内部状态的监控信息，用户可以通过浏览器来直观地访问这些数据，从而了解系统运行的相关信息.</p>
+<p>   另外用户还可以通过浏览器来配置RsStreamer，如限制某个用户的带宽，对某个特定的媒体频道限制用户数目.</p>
+<p>   其他流媒体平台如helix server也提供网页形式的界面供用户查看运行状态和进行相关配置管理.</p>
+<p>   其他开源软件如nginx也有类似的功能.</p>
+<h2 id="0x11-数据分析"><a href="#0x11-数据分析" class="headerlink" title="0x11 数据分析"></a>0x11 数据分析</h2><p>   通过RsStreamer提供的http服务，把系统运行的相关信息通过RESTful接口的形式提供给数据分析系统(如elasticsearch)，进行分析以后，可以对用户播放流媒体影片的行为进行数据挖掘，训练影片推荐系统，从而提供更好的用户体验.</p>
+<p>   下面先分析一下haproxy系统中监控模块是如何实现的，然后再提出RsStreamer中监控模块的设计方案.</p>
+<h1 id="0x2-HAProxy的实现"><a href="#0x2-HAProxy的实现" class="headerlink" title="0x2 HAProxy的实现"></a>0x2 HAProxy的实现</h1><h2 id="0x20-总体结构"><a href="#0x20-总体结构" class="headerlink" title="0x20 总体结构"></a>0x20 总体结构</h2><p>haproxy中有关监控模块的总体结构图如下所示.<br><img src="/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats_architecture.png" alt="haproxy stats architecture"></p>
+<p>http service基于epoll对外提供http服务，接受浏览器的请求，建立和浏览器之间的tcp连接，根据运行状态生成对应的html格式数据，通过tcp把html数据发送给浏览器，浏览器接收到数据以后显示haproxy的运行状态.</p>
+<h2 id="0x21-代码流程"><a href="#0x21-代码流程" class="headerlink" title="0x21 代码流程"></a>0x21 代码流程</h2><h3 id="程序执行流程图如下"><a href="#程序执行流程图如下" class="headerlink" title="程序执行流程图如下"></a>程序执行流程图如下</h3><p><img src="/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats_sequence_diagram.png" alt="haproxy sequence"></p>
+<p>程序的执行从main函数开始，然后调用poller函数等待事件的触发.<br>有stats的请求到来，poller函数触发.<br>然后根据运行状态生成html格式数据，通过tcp发生给浏览器.<br>下面对这个流程图的执行过程进行进一步的分析.</p>
+<h2 id="0x22-相关代码模块分析"><a href="#0x22-相关代码模块分析" class="headerlink" title="0x22 相关代码模块分析"></a>0x22 相关代码模块分析</h2><h3 id="处理网络连接的主循环"><a href="#处理网络连接的主循环" class="headerlink" title="处理网络连接的主循环"></a>处理网络连接的主循环</h3><p>该循环调用poller的poll函数，检测是否有socket事件发生，用户在浏览器中输入<a href="http://127.0.0.1:1080/stats" target="_blank" rel="external">http://127.0.0.1:1080/stats</a>, haproxy收到请求，run_poll_loop()检测到有client来连接，建立tcp连接，然后调用applet_run_active()来处理这些事件.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/* Runs the polling loop */</span></div><div class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">run_poll_loop</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">while</span> (<span class="number">1</span>) &#123;</div><div class="line">		<span class="comment">/* Process a few tasks */</span></div><div class="line">		process_runnable_tasks();</div><div class="line"></div><div class="line">		<span class="comment">/* check if we caught some signals and process them */</span></div><div class="line">		signal_process_queue();</div><div class="line"></div><div class="line">		<span class="comment">/* Check if we can expire some tasks */</span></div><div class="line">		next = wake_expired_tasks();</div><div class="line"></div><div class="line">		<span class="comment">/* stop when there's nothing left to do */</span></div><div class="line">		<span class="keyword">if</span> (jobs == <span class="number">0</span>)</div><div class="line">			<span class="keyword">break</span>;</div><div class="line"></div><div class="line">		<span class="comment">/* expire immediately if events are pending */</span></div><div class="line">		<span class="keyword">if</span> (fd_cache_num || tasks_run_queue || signal_queue_len || applets_active_queue)</div><div class="line">			next = now_ms;</div><div class="line"></div><div class="line">		<span class="comment">/* The poller will ensure it returns around &lt;next&gt; */</span></div><div class="line">		cur_poller.poll(&amp;cur_poller, next);</div><div class="line">		fd_process_cached_events();</div><div class="line">		applet_run_active();</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="poller的poll-函数实现"><a href="#poller的poll-函数实现" class="headerlink" title="poller的poll()函数实现"></a>poller的poll()函数实现</h3><p>1.首先扫描fd更新列表fd_updt，找到需要处理的fd，再调用epoll_ctl()来往内核来注册epoll事件.<br>2.然后调用epoll_wait()等待事件的发生，事件触发以后，epoll_wait()函数返回，返回值是触发的事件数目.<br>3.再遍历已经触发的事件，根据是要读还是写分别调用fd_may_recv()和fd_may_send().<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">REGPRM2 <span class="keyword">static</span> <span class="keyword">void</span> _do_poll(struct poller *p, <span class="keyword">int</span> <span class="built_in">exp</span>)</div><div class="line">&#123;</div><div class="line">      ... ...</div><div class="line">      <span class="comment">/* first, scan the update list to find polling changes */</span></div><div class="line">      <span class="keyword">for</span> (updt_idx = <span class="number">0</span>; updt_idx &lt; fd_nbupdt; updt_idx++) &#123;</div><div class="line">          fd = fd_updt[updt_idx];</div><div class="line">          <span class="keyword">if</span> ((eo ^ en) &amp; FD_EV_POLLED_RW) &#123;</div><div class="line">             <span class="comment">/* poll status changed */</span></div><div class="line">             ... ...</div><div class="line">             epoll_ctl(epoll_fd, opcode, fd, &amp;ev);</div><div class="line">          &#125;</div><div class="line">      &#125;</div><div class="line">      ... ...</div><div class="line">      <span class="comment">/* now let's wait for polled events */</span></div><div class="line">      status = epoll_wait(epoll_fd, epoll_events, global.tune.maxpollevents, wait_time);</div><div class="line">      <span class="comment">/* process polled events */</span></div><div class="line">      <span class="keyword">for</span> (count = <span class="number">0</span>; count &lt; status; count++) &#123;</div><div class="line">              ... ...</div><div class="line">              fd = epoll_events[count].data.fd;</div><div class="line">              ... ...</div><div class="line">              <span class="keyword">if</span> (n &amp; (FD_POLL_IN | FD_POLL_HUP | FD_POLL_ERR))</div><div class="line">                      fd_may_recv(fd);</div><div class="line">              <span class="keyword">if</span> (n &amp; (FD_POLL_OUT | FD_POLL_ERR))</div><div class="line">                      fd_may_send(fd);</div><div class="line">      &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h3 id="applet-run-active-函数实现"><a href="#applet-run-active-函数实现" class="headerlink" title="applet_run_active()函数实现"></a>applet_run_active()函数实现</h3><p>从applet队列中找到需要执行的任务，调用相应的handler函数，对stats模块，其handler函数为http_stats_io_handler().</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">applet_run_active</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">       ... ...</div><div class="line">       <span class="keyword">while</span> (!LIST_ISEMPTY(&amp;applet_cur_queue)) &#123;</div><div class="line">             curr = LIST_ELEM(applet_cur_queue.n, typeof(curr), runq);</div><div class="line">             ... ...</div><div class="line">             si_applet_cant_get(si);</div><div class="line">             si_applet_stop_put(si);</div><div class="line">             curr-&gt;applet-&gt;fct(curr);</div><div class="line">             si_applet_wake_cb(si);</div><div class="line">             channel_release_buffer(si_ic(si), &amp;curr-&gt;buffer_wait);</div><div class="line">             ... ...</div><div class="line">       &#125;</div><div class="line"> &#125;</div></pre></td></tr></table></figure>
+<h3 id="stats模块在applet中的注册"><a href="#stats模块在applet中的注册" class="headerlink" title="stats模块在applet中的注册"></a>stats模块在applet中的注册</h3><p>把stats的处理函数http_stats_io_handler注册到applet中.<br>请注意关键字<strong>attribute</strong>((constructor))是gcc的关键字，表明这个函数是在main()函数执行之前被调用.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">truct applet http_stats_applet = &#123;</div><div class="line">         .obj_type = OBJ_TYPE_APPLET,</div><div class="line">         .name = <span class="string">"&lt;STATS&gt;"</span>, <span class="comment">/* used for logging */</span></div><div class="line">         .fct = http_stats_io_handler,</div><div class="line">         .release = <span class="literal">NULL</span>,</div><div class="line"> &#125;;</div><div class="line"></div><div class="line"> __attribute__((constructor))</div><div class="line"> <span class="keyword">static</span> <span class="keyword">void</span> __stat_init(<span class="keyword">void</span>)</div><div class="line"> &#123;</div><div class="line">         cli_register_kw(&amp;cli_kws);</div><div class="line"> &#125;</div></pre></td></tr></table></figure>
+<h3 id="生成html格式监控数据"><a href="#生成html格式监控数据" class="headerlink" title="生成html格式监控数据"></a>生成html格式监控数据</h3><p>生成html格式监控数据的调用堆栈如下.<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">(gdb) bt</div><div class="line">#0  stats_fill_be_stats (px=px@entry=0x74fc30, flags=flags@entry=17, stats=stats@entry=0x7328e0 &lt;stats&gt;, len=len@entry=83)</div><div class="line">    at src/stats.c:1725</div><div class="line">#1  0x000000000046d238 in stats_dump_be_stats (si=si@entry=0x7a1a50, px=px@entry=0x74fc30, flags=flags@entry=17)</div><div class="line">    at src/stats.c:1814</div><div class="line">#2  0x000000000046edff in stats_dump_proxy_to_buffer (si=si@entry=0x7a1a50, px=px@entry=0x74fc30, uri=uri@entry=0x751a60)</div><div class="line">    at src/stats.c:2112</div><div class="line">#3  0x000000000046f967 in stats_dump_stat_to_buffer (si=si@entry=0x7a1a50, uri=0x751a60) at src/stats.c:2570</div><div class="line">#4  0x000000000046ffe7 in http_stats_io_handler (appctx=0x7a1e00) at src/stats.c:3072</div><div class="line">#5  0x00000000004dc208 in applet_run_active () at src/applet.c:66</div><div class="line">#6  0x000000000040a3d8 in run_poll_loop () at src/haproxy.c:2194</div><div class="line">#7  main (argc=&lt;optimized out&gt;, argv=0x7fffffffddb8) at src/haproxy.c:2700</div></pre></td></tr></table></figure></p>
+<h2 id="0x23-监控相关配置"><a href="#0x23-监控相关配置" class="headerlink" title="0x23 监控相关配置"></a>0x23 监控相关配置</h2><p>在配置文件中加入下面的内容，然后启动haproxy，这样haproxy就支持状态监控了.<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">listen admin_stats  </div><div class="line">       <span class="built_in">bind</span> 0.0.0.0:1080               </div><div class="line">       mode http                       <span class="comment">#http的7层模式  </span></div><div class="line">       option httplog                  <span class="comment">#http日志格式  </span></div><div class="line">       maxconn 10                      <span class="comment">#最大连接数  </span></div><div class="line">       stats refresh 30s               <span class="comment">#自动刷新时间  </span></div><div class="line">       stats uri /stats                <span class="comment">#页面url  </span></div><div class="line">       stats auth admin:admin          <span class="comment">#设置监控页面的用户和密码:admin</span></div></pre></td></tr></table></figure></p>
+<h2 id="0x24-浏览器运行效果如下"><a href="#0x24-浏览器运行效果如下" class="headerlink" title="0x24 浏览器运行效果如下"></a>0x24 浏览器运行效果如下</h2><p>   从图中可以看到系统运行的状态.<br>   <img src="/2017/06/04/design-monitor-interface-for-rsstreamer/haproxy_stats.png" alt="haproxy stats"></p>
+<h1 id="0x3-系统设计"><a href="#0x3-系统设计" class="headerlink" title="0x3 系统设计"></a>0x3 系统设计</h1><p>   参考haproxy的监控模块，设计RssStreamer的监控模块如下图所示.<br>   http service基于st对外提供http服务，st是基于epoll来实现的, 接受浏览器的请求，建立和浏览器之间的tcp连接，state monitor负责收集系统各个模块的运行状态，html generator根据运行状态生成对应的html格式数据，通过tcp把html数据发送给浏览器，浏览器接收到数据以后显示RsStreamer的运行状态.<br>   <img src="/2017/06/04/design-monitor-interface-for-rsstreamer/rsstreamer_monitor_architecture.png" alt="rsstreamer stats architecture"></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2016/07/16/analysis-of-rtsp/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -433,7 +577,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-count">42</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

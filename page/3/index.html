@@ -254,6 +254,166 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/02/The-overview-of-AV1-coding/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/02/The-overview-of-AV1-coding/" itemprop="url">The overview of AV1 coding</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-02T20:00:10+09:00">
+                2019-03-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2019/03/02/The-overview-of-AV1-coding/" class="leancloud_visitors" data-flag-title="The overview of AV1 coding">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-Overview"><a href="#0x1-Overview" class="headerlink" title="0x1 Overview"></a>0x1 Overview</h1><p>AOMedia Video 1 (AV1) is an open, royalty-free video coding format, it was in particular motivated by the high cost and uncertainty of HEVC patent licensing, it aims to provide royalty-free and high compression ratio video codec.</p>
+<p>This blog will give us the overview of AV1 codec, this material is from the internet, you can find the link url in the reference part.</p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/The_Technology_Inside_Av1.svg" alt="ovewview"></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/codec_overview.png" alt="ovewview"></p>
+<h1 id="0x2-Partition"><a href="#0x2-Partition" class="headerlink" title="0x2 Partition"></a>0x2 Partition</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/partition1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/partition2.png" alt=""></p>
+<h1 id="0x3-Intra-Prediction"><a href="#0x3-Intra-Prediction" class="headerlink" title="0x3 Intra Prediction"></a>0x3 Intra Prediction</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/intra_preditction.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/smooth_intra_prediction_modes.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/chroma_from_luma.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/palette_mode.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/intra_block_copying.png" alt=""></p>
+<h1 id="0x04-Inter-Prediction"><a href="#0x04-Inter-Prediction" class="headerlink" title="0x04 Inter Prediction"></a>0x04 Inter Prediction</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/inter_prediction1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/inter_prediction2.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/extended_reference_frames.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/motion_vector_prediction.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/dynamic_motion_vector_referencing.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/obmc.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/masked_compound_prediction.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/warped_mc.png" alt=""></p>
+<h1 id="0x05-Transform-coding"><a href="#0x05-Transform-coding" class="headerlink" title="0x05 Transform coding"></a>0x05 Transform coding</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/transform1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform2.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform_kernel.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/transform_block_partitioning.png" alt=""></p>
+<h1 id="0x06-Quantization"><a href="#0x06-Quantization" class="headerlink" title="0x06 Quantization"></a>0x06 Quantization</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/quantization.png" alt=""></p>
+<h1 id="0x7-Entropy-coding"><a href="#0x7-Entropy-coding" class="headerlink" title="0x7 Entropy coding"></a>0x7 Entropy coding</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/entropy_coding1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/entropy_coding2.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/av1_symbol_coding.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/level-map coefficient coding.png" alt=""></p>
+<h1 id="0x8-Filter"><a href="#0x8-Filter" class="headerlink" title="0x8 Filter"></a>0x8 Filter</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/filtering1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/filtering2.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/cdef.png.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_filter.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_filter1.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/in_loop_sp.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/film_grain_synthesis.png" alt=""></p>
+<h1 id="0x8-Efficiency-and-Complexity"><a href="#0x8-Efficiency-and-Complexity" class="headerlink" title="0x8 Efficiency and Complexity"></a>0x8 Efficiency and Complexity</h1><p><img src="/2019/03/02/The-overview-of-AV1-coding/compression_efficiency.png" alt=""></p>
+<p><img src="/2019/03/02/The-overview-of-AV1-coding/coding_complexity.png" alt=""></p>
+<h1 id="0x9-Reference"><a href="#0x9-Reference" class="headerlink" title="0x9 Reference"></a>0x9 Reference</h1><p><a href="https://www.youtube.com/watch?v=04lXWMcwdXA&amp;t=822s" target="_blank" rel="external">a technial overview of the AV1</a><br><a href="https://www.youtube.com/watch?v=qubPzBcYCTw&amp;t=1957s" target="_blank" rel="external">The AV1 Video Codec</a><br><a href="https://en.wikipedia.org/wiki/AV1" target="_blank" rel="external">AV1 wiki</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/02/23/How-stencil-buffer_work-in-graphics-pipeline/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1602,144 +1762,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/08/How-swiftshader-supports-texture/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/04/08/How-swiftshader-supports-texture/" itemprop="url">How swiftshader supports texture</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-08T12:59:57+09:00">
-                2018-04-08
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2018/04/08/How-swiftshader-supports-texture/" class="leancloud_visitors" data-flag-title="How swiftshader supports texture">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Introduction"><a href="#0x1-Introduction" class="headerlink" title="0x1     Introduction"></a>0x1     Introduction</h1><p>Here is the OpenGL ES pipeline, the pink color box represents the data buffer in the pipeline, the gray blue box represents the operation in the pipeline.</p>
-<p>In the following of this article, I will show you how texture is used in the OpenGL ES pipeline. In order to explains it more clearly, I will dig into the texture support in Swiftshader, since Swiftshader is the software implementation of OpenGL ES pipeline, we can see the detail implementation of it.</p>
-<p><img src="/2018/04/08/How-swiftshader-supports-texture/pipeline.png" alt="pipeline"></p>
-<h1 id="0x2-Application-code"><a href="#0x2-Application-code" class="headerlink" title="0x2    Application code."></a>0x2    Application code.</h1><p>Here is the code for texture generation.<br>It generates and binds texture, and sets the parameter for it.<br>GL_TEXTURE_MAG_FILTER and GL_TEXTURE_MIN_FILTER is used to set up the filtering mode for mipmaps. GL_TEXTURE_WRAP_S and GL_TEXTURE_WRAP_T is used to set up texture wrap modes when texture coordinate is outside the range[0.0, 1.0].</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">glGenTextures(<span class="number">1</span>, mTexture, <span class="number">0</span>);</div><div class="line">glActiveTexture(GL_TEXTURE0);</div><div class="line">glBindTexture(GL_TEXTURE_2D, mTexture);</div><div class="line">glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);</div><div class="line">glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);</div><div class="line">glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);</div><div class="line">glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);</div></pre></td></tr></table></figure>
-<p>Here is the code for texture upload.<br>The texture’s content is passed by parameter pixel, the GPU driver will copy pixel into its managed internal buffer, If the GPU hardware supports tile rendering, typically there is a conversion from linear buffer to tile buffer at the same time.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">glBindTexture(GL_TEXTURE_2D, mTexture);</div><div class="line">glTexImage2D(GL_TEXTURE_2D,</div><div class="line">            <span class="number">0</span>,</div><div class="line">            GL_LUMINANCE,</div><div class="line">            width,</div><div class="line">            height,</div><div class="line">            <span class="number">0</span>,</div><div class="line">            GL_LUMINANCE,</div><div class="line">            GL_UNSIGNED_BYTE,</div><div class="line">            pixel);</div><div class="line"></div><div class="line">glUniform1i(mTextureHandle, i);</div></pre></td></tr></table></figure></p>
-<h1 id="0x3-Texture-in-Shader-code"><a href="#0x3-Texture-in-Shader-code" class="headerlink" title="0x3    Texture in Shader code."></a>0x3    Texture in Shader code.</h1><p>Here is one example of glsl shader code.<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">static const char simplevs[] =</div><div class="line">    attribute vec4 position;</div><div class="line">    attribute vec2 texCoords;</div><div class="line">    varying vec2 outTexCoords;</div><div class="line">    void main(void) &#123;</div><div class="line">        outTexCoords = texCoords;</div><div class="line">        gl_Position = position;</div><div class="line">    &#125;";</div><div class="line">static const char simplefs[] =</div><div class="line">    precision mediump float;</div><div class="line">    varying vec2 outTexCoords;</div><div class="line">    uniform sampler2D texture;</div><div class="line">    void main(void) &#123;</div><div class="line">        gl_FragColor = texture2D(texture, outTexCoords);</div><div class="line">    &#125;</div></pre></td></tr></table></figure></p>
-<p>In the vertex shader code, the texture’s coordinate is input by attribute texCoords, then it is output in vertex shader as outTexCoords,<br>Then in primitive assembly and rasterization stage, it is clipped and interpolated.<br>Then in fragment shader code, the clipped and interpolated texture coordinate is used to fetching specific position’s pixel from the texture.<br>Here is the diagram to explain the execution sequence.<br><img src="/2018/04/08/How-swiftshader-supports-texture/sequence.png" alt="sequence"></p>
-<h1 id="0x4-Texture-support-in-swiftshader"><a href="#0x4-Texture-support-in-swiftshader" class="headerlink" title="0x4    Texture support in swiftshader"></a>0x4    Texture support in swiftshader</h1><p>Let’s to see how texture is supported in swiftshader, Here is the draft diagram in swiftshader about texture support.</p>
-<p><img src="/2018/04/08/How-swiftshader-supports-texture/texture_in_swiftshader.png" alt="texture_in_swiftshader"></p>
-<h2 id="0x41-Set-texture-for-pipeline-in-glDrawXX"><a href="#0x41-Set-texture-for-pipeline-in-glDrawXX" class="headerlink" title="0x41 Set texture for pipeline in glDrawXX()"></a>0x41 Set texture for pipeline in glDrawXX()</h2><p>At this time, texture is uploaded through glTexImage2D(), glDrawXX() is triggered. applyTexture() is used to setup texture for current draw context.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> Context::applyTexture(sw::SamplerType type, <span class="keyword">int</span> index, Texture *baseTexture)</div><div class="line">&#123;</div><div class="line">        ……</div><div class="line">		<span class="keyword">switch</span>(baseTexture-&gt;getTarget())</div><div class="line">		&#123;</div><div class="line">		<span class="keyword">case</span> GL_TEXTURE_2D:</div><div class="line">		&#123;</div><div class="line">			Texture2D *texture = <span class="keyword">static_cast</span>&lt;Texture2D*&gt;(baseTexture);</div><div class="line"></div><div class="line">			<span class="keyword">for</span>(<span class="keyword">int</span> mipmapLevel = <span class="number">0</span>; mipmapLevel &lt; sw::MIPMAP_LEVELS; mipmapLevel++)</div><div class="line">			&#123;</div><div class="line">				<span class="keyword">int</span> surfaceLevel = mipmapLevel + baseLevel;</div><div class="line"></div><div class="line">				<span class="keyword">if</span>(surfaceLevel &gt; maxLevel)</div><div class="line">				&#123;</div><div class="line">					surfaceLevel = maxLevel;</div><div class="line">				&#125;</div><div class="line"></div><div class="line">				egl::Image *surface = texture-&gt;getImage(surfaceLevel);</div><div class="line">				device-&gt;setTextureLevel(sampler, <span class="number">0</span>, mipmapLevel, surface, sw::TEXTURE_2D);</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">break</span>;</div><div class="line">        ……</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x42-Calculate-texture’s-coordinate-in-VertexProcessor"><a href="#0x42-Calculate-texture’s-coordinate-in-VertexProcessor" class="headerlink" title="0x42 Calculate texture’s coordinate in VertexProcessor."></a>0x42 Calculate texture’s coordinate in VertexProcessor.</h2><p>It generate LLVM IR for texture coordinate calculation in vertex shader code.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> VertexProgram::program(UInt&amp; index)</div><div class="line">&#123;</div><div class="line">    ……</div><div class="line">    <span class="keyword">for</span>(<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; shader-&gt;getLength(); i++)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">const</span> Shader::Instruction *instruction = shader-&gt;getInstruction(i);</div><div class="line">		Shader::Opcode opcode = instruction-&gt;opcode;</div><div class="line">        ……</div><div class="line">    &#125;</div><div class="line">    ……</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h2 id="0x43-Clip-and-interpolate-texture-coordinate-in-SetupProcessor"><a href="#0x43-Clip-and-interpolate-texture-coordinate-in-SetupProcessor" class="headerlink" title="0x43 Clip and interpolate texture coordinate in SetupProcessor()"></a>0x43 Clip and interpolate texture coordinate in SetupProcessor()</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">void</span> SetupRoutine::generate()</div><div class="line">&#123;</div><div class="line">    <span class="comment">// Culling</span></div><div class="line">	<span class="keyword">if</span>(solidTriangle)</div><div class="line">	&#123;</div><div class="line">        Float A = (y2 - y0) * x1 + (y1 - y2) * x0 + (y0 - y1) * x2; <span class="comment">// Area</span></div><div class="line"></div><div class="line">		If(A == <span class="number">0.0f</span>)</div><div class="line">		&#123;</div><div class="line">			Return(<span class="literal">false</span>);</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		Int w0w1w2 = *Pointer&lt;Int&gt;(v0 + pos * <span class="number">16</span> + <span class="number">12</span>) ^</div><div class="line">				 *Pointer&lt;Int&gt;(v1 + pos * <span class="number">16</span> + <span class="number">12</span>) ^</div><div class="line">				 *Pointer&lt;Int&gt;(v2 + pos * <span class="number">16</span> + <span class="number">12</span>);</div><div class="line"></div><div class="line">		A = IfThenElse(w0w1w2 &lt; <span class="number">0</span>, -A, A);</div><div class="line"></div><div class="line">        <span class="keyword">if</span>(state.cullMode == CULL_CLOCKWISE)</div><div class="line">		&#123;</div><div class="line">			If(A &gt;= <span class="number">0.0f</span>) Return(<span class="literal">false</span>);</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(state.cullMode == CULL_COUNTERCLOCKWISE)</div><div class="line">		&#123;</div><div class="line">			If(A &lt;= <span class="number">0.0f</span>) Return(<span class="literal">false</span>);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    </div><div class="line">    ……</div><div class="line">	Int n = *Pointer&lt;Int&gt;(polygon + OFFSET(Polygon,n));</div><div class="line">	Int m = *Pointer&lt;Int&gt;(polygon + OFFSET(Polygon,i));</div><div class="line"></div><div class="line">    If(m != <span class="number">0</span> || Bool(!solidTriangle))<span class="comment">// Clipped triangle</span></div><div class="line">	&#123;</div><div class="line">        ……</div><div class="line">        For(Int q = <span class="number">0</span>, q &lt; state.multiSample, q++)</div><div class="line">		&#123;</div><div class="line">            ……</div><div class="line">			Xq[n] = Xq[<span class="number">0</span>];</div><div class="line">			Yq[n] = Yq[<span class="number">0</span>];</div><div class="line"></div><div class="line">			<span class="comment">// Setup edge for Rasterize</span></div><div class="line">			&#123;</div><div class="line">				Int i = <span class="number">0</span>;</div><div class="line"></div><div class="line">                Do</div><div class="line">				&#123;</div><div class="line">					edge(primitive, data, Xq[i + <span class="number">1</span> - d], Yq[i + <span class="number">1</span> - d], Xq[i + d], Yq[i + d], q);</div><div class="line"></div><div class="line">					i++;</div><div class="line">				&#125;</div><div class="line">				Until(i &gt;= n)</div><div class="line">			&#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">        </div><div class="line">    ……</div><div class="line">	<span class="keyword">if</span>(state.interpolateW)</div><div class="line">	&#123;</div><div class="line">        ……</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">if</span>(state.interpolateZ)</div><div class="line">	&#123;</div><div class="line">        ……</div><div class="line">    &#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span>(<span class="keyword">int</span> interpolant = <span class="number">0</span>; interpolant &lt; MAX_FRAGMENT_INPUTS; interpolant++)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">for</span>(<span class="keyword">int</span> component = <span class="number">0</span>; component &lt; <span class="number">4</span>; component++)</div><div class="line">		&#123;</div><div class="line">            <span class="keyword">int</span> attribute = state.gradient[interpolant][component].attribute;</div><div class="line">                </div><div class="line">			<span class="keyword">bool</span> flat = state.gradient[interpolant][component].flat;</div><div class="line">			<span class="keyword">bool</span> wrap = state.gradient[interpolant][component].wrap;</div><div class="line"></div><div class="line">			<span class="keyword">if</span>(attribute != Unused)</div><div class="line">			&#123;</div><div class="line">				setupGradient(primitive, tri, w012, M, v0, v1, v2, OFFSET(Vertex,v[attribute][component]), OFFSET(Primitive,V[interpolant][component]), flat, sprite, state.perspective, wrap, component);</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h2 id="0x44-Pass-parameter-for-pixel-shader"><a href="#0x44-Pass-parameter-for-pixel-shader" class="headerlink" title="0x44 Pass parameter for pixel shader"></a>0x44 Pass parameter for pixel shader</h2><p> The parameter includes texture sampler and texture’s coordinate. These parameter is encapsulated in DrawData.<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">struct</span> <span class="title">DrawData</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">const</span> Constants *constants;</div><div class="line">	<span class="keyword">const</span> <span class="keyword">void</span> *input[MAX_VERTEX_INPUTS];</div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">int</span> stride[MAX_VERTEX_INPUTS];</div><div class="line">	Texture mipmap[TOTAL_IMAGE_UNITS];</div><div class="line">	<span class="keyword">const</span> <span class="keyword">void</span> *indices;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> Renderer::executeTask(<span class="keyword">int</span> threadIndex)</div><div class="line">&#123;</div><div class="line">	<span class="keyword">switch</span>(task[threadIndex].type)</div><div class="line">	&#123;</div><div class="line">	    <span class="keyword">case</span> Task::PRIMITIVES:</div><div class="line">            ……</div><div class="line">			<span class="keyword">break</span>;</div><div class="line">		<span class="keyword">case</span> Task::PIXELS:</div><div class="line">			&#123;</div><div class="line">				<span class="keyword">int</span> unit = task[threadIndex].primitiveUnit;</div><div class="line">				<span class="keyword">int</span> visible = primitiveProgress[unit].visible;</div><div class="line"></div><div class="line">				<span class="keyword">if</span>(visible &gt; <span class="number">0</span>)</div><div class="line">				&#123;</div><div class="line">					<span class="keyword">int</span> cluster = task[threadIndex].pixelCluster;</div><div class="line">					Primitive *primitive = primitiveBatch[unit];</div><div class="line">					DrawCall *draw = drawList[pixelProgress[cluster].drawCall &amp; DRAW_COUNT_BITS];</div><div class="line">					DrawData *data = draw-&gt;data;</div><div class="line">					PixelProcessor::RoutinePointer pixelRoutine = draw-&gt;pixelPointer;</div><div class="line"></div><div class="line">					pixelRoutine(primitive, visible, cluster, data);</div><div class="line">				&#125;</div><div class="line"></div><div class="line">				finishRendering(task[threadIndex]);</div><div class="line">			&#125;</div><div class="line">			<span class="keyword">break</span>;</div><div class="line">        ……</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line">``` C++</div><div class="line"></div><div class="line">## <span class="number">0x45</span> Fetch pixel from texture</div><div class="line">PixelProgram fetch pixel from texture by passing the clipped <span class="keyword">and</span> interpolated texture coordinate. </div><div class="line">uvwq is the texture coordinate. the following code is executed in LLVM JIT.</div><div class="line"></div><div class="line">``` C++</div><div class="line">Vector4f PixelProgram::sampleTexture(<span class="keyword">int</span> samplerIndex, Vector4f &amp;uvwq, Float4 &amp;bias, Vector4f &amp;dsx, Vector4f &amp;dsy, Vector4f &amp;offset, SamplerFunction function)</div><div class="line">&#123;</div><div class="line">	</div><div class="line">	Pointer&lt;Byte&gt; texture = data + OFFSET(DrawData, mipmap) + samplerIndex * <span class="keyword">sizeof</span>(Texture);</div><div class="line">	Vector4f c = SamplerCore(constants, state.sampler[samplerIndex]).sampleTexture(texture, uvwq.x, uvwq.y, uvwq.z, uvwq.w, bias, dsx, dsy, offset, function);</div><div class="line"></div><div class="line">	<span class="keyword">return</span> c;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>Here is the detail texture sample algorithm, from the following code, we can see SwiftShader uses Bilinear interpolation to sample the texture.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line">Vector4s SamplerCore::sampleQuad2D(Pointer&lt;Byte&gt; &amp;texture, Float4 &amp;u, Float4 &amp;v, Float4 &amp;w, Vector4f &amp;offset, Float &amp;lod, Int face[<span class="number">4</span>], <span class="keyword">bool</span> secondLOD, SamplerFunction function)</div><div class="line">&#123;</div><div class="line">	<span class="comment">// Bilinear interpolation</span></div><div class="line">	<span class="keyword">if</span>(componentCount &gt;= <span class="number">1</span>)</div><div class="line">	&#123;</div><div class="line">		<span class="keyword">if</span>(has16bitTextureComponents() &amp;&amp; hasUnsignedTextureComponent(<span class="number">0</span>))</div><div class="line">		&#123;</div><div class="line">			c0.x = As&lt;UShort4&gt;(c0.x) - MulHigh(As&lt;UShort4&gt;(c0.x), f0u) + MulHigh(As&lt;UShort4&gt;(c1.x), f0u);</div><div class="line">			c2.x = As&lt;UShort4&gt;(c2.x) - MulHigh(As&lt;UShort4&gt;(c2.x), f0u) + MulHigh(As&lt;UShort4&gt;(c3.x), f0u);</div><div class="line">			c.x  = As&lt;UShort4&gt;(c0.x) - MulHigh(As&lt;UShort4&gt;(c0.x), f0v) + MulHigh(As&lt;UShort4&gt;(c2.x), f0v);</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">else</span></div><div class="line">		&#123;</div><div class="line">			<span class="keyword">if</span>(hasUnsignedTextureComponent(<span class="number">0</span>))</div><div class="line">			&#123;</div><div class="line">				c0.x = MulHigh(As&lt;UShort4&gt;(c0.x), f1u1v);</div><div class="line">				c1.x = MulHigh(As&lt;UShort4&gt;(c1.x), f0u1v);</div><div class="line">				c2.x = MulHigh(As&lt;UShort4&gt;(c2.x), f1u0v);</div><div class="line">				c3.x = MulHigh(As&lt;UShort4&gt;(c3.x), f0u0v);</div><div class="line">			&#125;</div><div class="line">			<span class="keyword">else</span></div><div class="line">			&#123;</div><div class="line">				c0.x = MulHigh(c0.x, f1u1vs);</div><div class="line">				c1.x = MulHigh(c1.x, f0u1vs);</div><div class="line">				c2.x = MulHigh(c2.x, f1u0vs);</div><div class="line">				c3.x = MulHigh(c3.x, f0u0vs);</div><div class="line">			&#125;</div><div class="line"></div><div class="line">            c.x = (c0.x + c1.x) + (c2.x + c3.x);</div><div class="line">			<span class="keyword">if</span>(!hasUnsignedTextureComponent(<span class="number">0</span>)) c.x = AddSat(c.x, c.x);<span class="comment">// Correct for signed fractions</span></div><div class="line">	    &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1789,7 +1811,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-count">42</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
