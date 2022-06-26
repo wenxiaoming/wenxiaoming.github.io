@@ -254,6 +254,150 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/02/20/Mixed Render Architecture/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Kevin Wen">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Kevin Wen's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/02/20/Mixed Render Architecture/" itemprop="url">Mixed Render Architecture</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-02-20T22:21:36+09:00">
+                2022-02-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/2022/02/20/Mixed Render Architecture/" class="leancloud_visitors" data-flag-title="Mixed Render Architecture">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="0x1-混合渲染架构"><a href="#0x1-混合渲染架构" class="headerlink" title="0x1 混合渲染架构"></a>0x1 混合渲染架构</h1><p>在开发渲染程序的过程中，我们常常会碰到需要把多个渲染引擎混合在一起使用的场景，如android中渲染视频数据的时候还需要渲染UI。游戏中渲染游戏3D场景的时候还需要渲染UI等场景。本文对这种混合渲染的架构进行了总结。下面对五种混合渲染方式进行了分别介绍。</p>
+<h1 id="0x2-SurfaceView"><a href="#0x2-SurfaceView" class="headerlink" title="0x2 SurfaceView"></a>0x2 SurfaceView</h1><p><img src="/2022/02/20/Mixed Render Architecture/SurfaceView.png" alt=""><br>我们知道SurfaceView是在Android中提出的概念。Android中的UI显示采用了View的架构进行处理，View可以满足大部分的绘图需求，但是有时候，View却显得力不从心，所以Android提供了SurfaceView给Android开发者，以满足更多的绘图需求。</p>
+<p>SurfaceView是一个组件，可用于在View层次结构中嵌入其他合成层。但因为SurfaceView拥有独立于主View之外的独立渲染线程，SurfaceView的内容对其他View来说是透明的，也就是说SurfaceView的绘制游离于其他View的控制之外。</p>
+<p>使用SurfaceView进行渲染时，SurfaceFlinger会直接将SurfaceView的输出缓冲区直接合成到屏幕上。如果没有SurfaceView，则需要将绘制内容先绘制到其他View对应的Surface中，注意该Surface也包括了其他View的内容绘制，然后再作为一层合成到屏幕上，而使用SurfaceView进行渲染可以省去额外的工作。但是SurfaceView是作为单独的一层合成到屏幕上的，在拥有绘制灵活性的同时也消耗了更多的内存。</p>
+<p>View和SurfaceView的区别主要有这两点，<br>一是View适用于主动更新的情况，而SurfaceView则适用于被动更新的情况，比如频繁刷新界面。另外一点是View是在主线程中对页面进行刷新，而SurfaceView则需要开启一个子线程来对页面进行刷新。</p>
+<p>GLSurfaceView<br>GLSurfaceView提供了帮助管理EGL上下文、在线程间通信以及与activity生命周期交互的辅助程序类。GLSurfaceView会创建一个渲染线程，并在线程上配置EGL上下文。大多数应用无需了解有关 EGL 的任何信息即可通过 GLSurfaceView 来使用GLES。</p>
+<h1 id="0x3-TextureView"><a href="#0x3-TextureView" class="headerlink" title="0x3 TextureView"></a>0x3 TextureView</h1><p><img src="/2022/02/20/Mixed Render Architecture/TextureView.png" alt=""><br>TextureView一般和SurfaceTexture配合使用。<br>SurfaceTexture一般包括producer和consumer模块，producer负责生产texture，生产好了通知consumer，consumer把texture作为view的贴图输入完成SurfaceTexture的绘制。TextureView 类是一个结合了 View 和 SurfaceTexture 的 View 对象。可以理解为在主窗口的体系之内的子View，和主窗口的其他View形成父子关系，可以一起联动，形成复杂的渲染效果。</p>
+<p>SurfaceTexture 是Surface和OpenGL ES (GLES)纹理的组合。SurfaceTexture实例用于提供输出到 GLES 纹理的接口。</p>
+<p>SurfaceTexture包含一个以应用为使用方的BufferQueue实例。当生产方将新的缓冲区排入队列时，onFrameAvailable() 回调会通知应用。然后，应用调用updateTexImage()。这会释放先前占用的缓冲区，从队列中获取新缓冲区并执行EGL调用，从而使GLES可将此缓冲区作为外部纹理使用。</p>
+<p>TextureView对象会对SurfaceTexture进行包装，从而响应回调以及获取新的缓冲区。在TextureView获取新的缓冲区时，TextureView会发出View失效请求，并使用最新缓冲区的内容作为数据源进行绘图，根据View状态的指示，以相应的方式在相应的位置进行呈现。</p>
+<p>与SurfaceView 相比，TextureView具有更出色的UI绘制操作能力，但在视频上以分层方式合成界面元素时，SurfaceView具有性能方面的优势。当客户端使用SurfaceView呈现内容时，SurfaceView会为客户端提供单独的合成层。如果设备支持，SurfaceFlinger会将单独的层合成为硬件叠加层。当客户端使用TextureView呈现内容时，界面工具包会使用GPU将 TextureView的内容合成到视图层次结构中。对内容进行的更新可能会导致其他View元素重绘，例如，在其他View被置于TextureView顶部时。View呈现完成后，SurfaceFlinger会合成应用界面层和所有其他层，以便每个可见像素合成两次。</p>
+<h1 id="0x4-同一个Shared-Context-直接渲染"><a href="#0x4-同一个Shared-Context-直接渲染" class="headerlink" title="0x4 同一个Shared Context 直接渲染"></a>0x4 同一个Shared Context 直接渲染</h1><p><img src="/2022/02/20/Mixed Render Architecture/Direct Render.png" alt=""><br>我们把这种渲染混合方式叫做DirectRender。<br>简单把流程说明如下，这里假设渲染采用EGL与系统窗口系统进行对接。<br>Main Render负责创建EGL环境，然后CPU准备绘制数据，并把绘制数据送到GPU，然后调用GPU Draw函数进行绘制，注意这个时候并没有调用SwapBuffer，<br>而是去调用了Sub Render的绘制流程，在SubRender中同样完成绘制数据准备和调用GPU Draw函数进行绘制的过程，最后再去调用SwapBuffer。<br>在Main Render和Sub Render的切换过程中，涉及到GL状态的切换，可能两个Render之间的设置存在冲突，需要有一个保存和恢复的过程，另外有些状态的设置需要在两个引擎之间配合好，否则会出现各种显示问题。<br>另外一点是这个Main Render和Sub Render是在同一个渲染线程中运行，没有多线程的切换。</p>
+<h1 id="0x5-同一个Shared-Context-fbo渲染"><a href="#0x5-同一个Shared-Context-fbo渲染" class="headerlink" title="0x5 同一个Shared Context fbo渲染"></a>0x5 同一个Shared Context fbo渲染</h1><p><img src="/2022/02/20/Mixed Render Architecture/FBO Render.png" alt=""><br>简单把流程说明如下，<br>Main Render负责创建EGL环境，然后CPU准备绘制数据，并把绘制数据送到GPU，然后调用GPU Draw函数进行绘制，<br>然后调用了Sub Render的绘制流程，Sub Render的绘制结果是保存在framebuffer object中，这个framebuffer object和一个texture绑定在一起。<br>在SubRender中同样完成绘制数据准备和调用GPU Draw函数进行绘制以后，也就是说对framebuffer object进行了写入，这个时候texture也就准备好了，<br>Main Render拿着这个texture作为输入，再进行一次绘制，最后再去调用SwapBuffer输出。<br>在Main Render和Sub Render的切换过程中，也涉及到GL状态的切换，有些状态的设置也是需要在两个引擎之间配合好，否则会出现各种显示问题。另外一点是这个Main Render和Sub Render也是在同一个渲染线程中运行。</p>
+<h1 id="0x6-shared-context渲染"><a href="#0x6-shared-context渲染" class="headerlink" title="0x6 shared context渲染"></a>0x6 shared context渲染</h1><p><img src="/2022/02/20/Mixed Render Architecture/Shared Context Render.png" alt=""></p>
+<p>简单把流程说明如下，<br>Main Render负责创建EGL环境，然后CPU准备绘制数据，并把绘制数据送到GPU，然后调用GPU Draw函数进行绘制。<br>Sub Render通过shared context的方式创建，也是需要完成EGL设置的过程，另外这个Sub Render创建的Surface是Pbuffer，是offscreen的。<br>另外这个Sub Render的绘制结果也是保存在framebuffer object中，这个framebuffer object和一个texture绑定在一起。<br>在SubRender中同样完成绘制数据准备和调用GPU Draw函数进行绘制以后，这个时候Main Render和Sub Render有一个sync的操作。<br>保证对Sub Render对framebuffer object进行了写入，texture也是准备好了。<br>然后Main Render拿着这个texture作为输入，再进行一次绘制，最后再去调用SwapBuffer输出。<br>在Main Render和Sub Render的切换过程中，由于采用的是Shared Context架构，GL状态在Main Render和Sub Render之间相对比较独立，相互的影响比较小。另外一点是这个Main Render和Sub Render是在两个独立的渲染线程中运行。</p>
+<p>下面再对Shared Context的绘制渲染架构进行详细的分析。<br>我们知道OpenGL是一个线程级别的状态机，其操作被局限在一个线程中进行。OpenGL 的绘制命令都是作用在当前的 Context 上，这个 Current Context是一个线程私有thread-local）的变量。如果在多线程环境下操作同一个opengl context，对opengl api的调用需要加锁进行保护。否则会出现各种问题。<br>通过共享context架构，上下文是可以在多个线程间共享的，在使用eglCreateContext时， 可以传入一个已创建成功的上下文， 这样就可以得到一个共享的上下文(Shared Context)，我们可以实现多个渲染线程并行处理，其中一些线程作为生产者，这些生产者一般是离屏渲染，生成相关纹理供另外的线程消费、</p>
+<p>举例来说, Google为Android的MediaCodec设计了一套基于OpenGL的Pipeline, 其涉及的模块包括 Video Capture, Pre-processing, Encode, Decode, Post processing，Render等。上述的整个Pipeline会在多个线程中工作. 可以使用Shared Context的方式为这个架构设计高度优化的Pipeline，这样设计思路也比较自然。如果强制设计为单独context的架构，各个线程的OpenGL操作都需要post任务到OpenGL线程来处理，涉及到多次加锁保护的过程，无论是架构的可读性，还是系统的性能应该都会受到影响。</p>
+<p>另外Shared Context架构下共享资源有纹理，shader，Buffer等。不共享资源有FBO, VAO等。</p>
+<h1 id="0x7-Shared-Contxt架构下纹理共享访问问题"><a href="#0x7-Shared-Contxt架构下纹理共享访问问题" class="headerlink" title="0x7 Shared Contxt架构下纹理共享访问问题"></a>0x7 Shared Contxt架构下纹理共享访问问题</h1><p>这个问题是Shared Contxt架构下渲染绘制crash问题，场景是webview播放视频的时候crash，crash的位置在GPU驱动中，但是具体原因未知。<br>大概的渲染流程是这样的，UI渲染是Main Render负责的，webview播放视频是Sub Render绘制完成的，其中用到了Shared context架构，webview播放视频的过程渲染到纹理中，Main Render拿到这个纹理后完成真正的视频内容绘制。<br>通过分析大概的渲染流程，我怀疑是Shared context架构下纹理访问冲突问题。根据前面的分析，Sub Render会通过填充纹理内容的方式生产绘制内容，Main Render得到纹理内容以后再读入GPU，最后完成渲染。如果Main Render读取纹理内容的同时，Sub Render正在填充纹理的话，肯定就发生访问冲突了。</p>
+<p>我们通过一个单元测试来模拟这个问题。看看出现crash的地方是否和真实场景下出错的地方一致。<br>piglit下面有相关的Shared Context测试，代码位于piglit/tests/glx/glx-multithread-texture.c<br>其中包括一个纹理填充线程，一个纹理读取线程。我们通过在修改测试代码，模拟前面说的读取个填充纹理同时发生的情况。<br>但是很遗憾，没有出现crash。看来这个问题对timing很敏感，应该是特定时序下发生的问题<br>看来这能在GPU驱动代码mesa中hack来复现了。如下所示，这个是在Main Render执行纹理读取设置的时候加一个sleep等待。等待Sub Render有足够的时间去修改纹理设置。果然这样hack以后问题必现，而且出错的堆栈和真实场景下完全一致。<br>这样问题基本定位，最后发送确实是webview里面播放视频的时候分配的buffer不够用，导致Main Render和Sub Render出现纹理访问冲突的问题。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">diff --git a/src/mesa/state_tracker/st_sampler_view.c b/src/mesa/state_tracker/st_sampler_view.c</div><div class="line">index e4add1bd2c6.<span class="number">.61</span>b3ffe2e33 <span class="number">100644</span></div><div class="line">--- a/src/mesa/state_tracker/st_sampler_view.c</div><div class="line">+++ b/src/mesa/state_tracker/st_sampler_view.c</div><div class="line">@@ <span class="number">-642</span>,<span class="number">7</span> +<span class="number">642</span>,<span class="number">15</span> @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,</div><div class="line">...</div><div class="line">       struct pipe_sampler_view *view = sv-&gt;view;</div><div class="line">+</div><div class="line">+      <span class="keyword">static</span> <span class="keyword">int</span> counter = <span class="number">0</span>;</div><div class="line">+      <span class="keyword">while</span> (counter++ &lt; <span class="number">20</span>) &#123;</div><div class="line">+         sleep(<span class="number">5</span>);</div><div class="line">+      &#125;</div><div class="line">+      </div><div class="line">       assert(stObj-&gt;pt == view-&gt;texture);</div><div class="line">       assert(!check_sampler_swizzle(st, stObj, view, glsl130_or_later));</div><div class="line">       assert(get_sampler_view_format(st, stObj, srgb_skip_decode) == view-&gt;format);</div></pre></td></tr></table></figure>
+<h1 id="0x8-参考资料"><a href="#0x8-参考资料" class="headerlink" title="0x8 参考资料"></a>0x8 参考资料</h1><p><a href="https://source.android.google.cn/devices/graphics/arch-st?hl=zh-cn" target="_blank" rel="external">https://source.android.google.cn/devices/graphics/arch-st?hl=zh-cn</a><br><a href="https://zhuanlan.zhihu.com/p/444440326" target="_blank" rel="external">https://zhuanlan.zhihu.com/p/444440326</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/02/13/Linux Memory Management/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -333,7 +477,7 @@
       
         
           
-            <p><img src="/2022/02/13/Linux Memory Management/1.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/2.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/2.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/3.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/4.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/5.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/6.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/7.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/8.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/9.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/10.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/11.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/12.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/13.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/14.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/15.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/16.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/17.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/18.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/19.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/20.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/21.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/22.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/23.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/24.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/25.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/26.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/27.png" alt=""></p>
+            <p><img src="/2022/02/13/Linux Memory Management/1.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/2.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/3.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/4.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/5.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/6.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/7.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/8.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/9.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/10.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/11.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/12.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/13.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/14.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/15.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/16.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/17.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/18.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/19.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/20.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/21.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/22.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/23.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/24.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/25.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/26.png" alt=""><br><img src="/2022/02/13/Linux Memory Management/27.png" alt=""></p>
 
           
         
@@ -1751,137 +1895,6 @@ Detection output
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/22/Cycles in Blender/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Kevin Wen">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Kevin Wen's Blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/02/22/Cycles in Blender/" itemprop="url">Cycles in Blender</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-02-22T19:02:32+09:00">
-                2020-02-22
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/2020/02/22/Cycles in Blender/" class="leancloud_visitors" data-flag-title="Cycles in Blender">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="0x1-Blender简介"><a href="#0x1-Blender简介" class="headerlink" title="0x1 Blender简介"></a>0x1 Blender简介</h1><p>   Blender是一款开源的跨平台全能三维动画制作软件，提供从建模、动画、材质、渲染、到音频处理、视频剪辑等一系列动画短片制作解决方案。Blender的代码大体架构如下。<br>   <img src="/2020/02/22/Cycles in Blender/architecture.png" alt=""></p>
-<p>   如图所示，Blender内置了基于物理渲染的光线追踪渲染器Cycles， Cycles除了实现CPU处理以外，还提供了OpenCL和CUDA的GPU加速，可以大幅度提升渲染速度。<br>   Cycles具有如下特点。Pach-Tracer渲染算法，多核CPU加速渲染，CUDA和OpenCL的GPU渲染支持，多GPU支持，CPU与GPU 混合加速渲染内核。</p>
-<p>   除了Cycles以外，Blender从2.8版本开始还提供了EEVEE渲染引擎，EEVEE同样是基于物理渲染的光线追踪渲染器，其目标是提升渲染速度，因为目前Cycles的渲染速度还是比较慢的。<br>   本文会对Blender中Cycles的执行流程做进行分析，后续也会对EEVEE的执行流程做介绍。</p>
-<h1 id="0x2-Cycles中的线程模型"><a href="#0x2-Cycles中的线程模型" class="headerlink" title="0x2 Cycles中的线程模型"></a>0x2 Cycles中的线程模型</h1><p>   Cycles中的线程模型如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/thread_model.png" alt=""><br>   Cycles启动以后会创建Session线程，Session会创建一个线程池，这个线程池中的线程数量是cpu的核数。只要有需要并行处理的任务就push到线程池中的queue中，然后空闲线程从queue中取得需要处理的任务并执行。<br>   上图中左边的线程是Session线程，中间的线程TaskScheduler是线程池中其中一个线程的执行过程，线程池中其他线程的执行流程类似。<br>   上图最右边最上边的框中列出了创建线程池中线程的代码。中间的框列出了线程池中的空闲线程从队列中取出任务的过程。下面的框列出了如何把任务push到线程池的代码，注意这些push操作可以在Session中执行，也可以在线程池中的线程运行过程中执行。</p>
-<h1 id="0x3-创建Session"><a href="#0x3-创建Session" class="headerlink" title="0x3 创建Session"></a>0x3 创建Session</h1><p>   创建Session的流程图如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/start session.svg" alt=""><br>   这个过程主要是构建Scene Graph的过程，Scene Graph的结构体定义如下，其中可以看到需要渲染的数据都保存在这个结构体中，包括Camera，Film，Shader，Mesh，Light，Integrator等。</p>
-<p>   其中的sync_data过程可以理解成把数据从Blender的上层模块设置到Cycles渲染器中。这样Cycles执行光线跟踪的时候就可以用到这些设置。</p>
-<p>   数据设置好了以后就可以开始render过程，这个过程是采用光线跟踪的方式渲染出图像。<br>   这个过程中需要关注的是ShaderManager, ShaderManager管理着ShaderGraph，ShaderGraph管理着Node，并且把多个Node连接起来，组成特定操作的Pipeline.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Scene</span> &#123;</span></div><div class="line"> <span class="keyword">public</span>:</div><div class="line">  <span class="comment">/* Optional name. Is used for logging and reporting. */</span></div><div class="line">  <span class="built_in">string</span> name;</div><div class="line"></div><div class="line">  <span class="comment">/* data */</span></div><div class="line">  Camera *camera;</div><div class="line">  Camera *dicing_camera;</div><div class="line">  LookupTables *lookup_tables;</div><div class="line">  Film *film;</div><div class="line">  Background *background;</div><div class="line">  Integrator *integrator;</div><div class="line"></div><div class="line">  <span class="comment">/* data lists */</span></div><div class="line">  <span class="built_in">vector</span>&lt;Object *&gt; objects;</div><div class="line">  <span class="built_in">vector</span>&lt;Mesh *&gt; meshes;</div><div class="line">  <span class="built_in">vector</span>&lt;Shader *&gt; shaders;</div><div class="line">  <span class="built_in">vector</span>&lt;Light *&gt; lights;</div><div class="line">  <span class="built_in">vector</span>&lt;ParticleSystem *&gt; particle_systems;</div><div class="line"></div><div class="line">  <span class="comment">/* data managers */</span></div><div class="line">  ImageManager *image_manager;</div><div class="line">  LightManager *light_manager;</div><div class="line">  ShaderManager *shader_manager;</div><div class="line">  MeshManager *mesh_manager;</div><div class="line">  ObjectManager *object_manager;</div><div class="line">  ParticleSystemManager *particle_system_manager;</div><div class="line">  CurveSystemManager *curve_system_manager;</div><div class="line">  BakeManager *bake_manager;</div><div class="line"></div><div class="line">  <span class="comment">/* default shaders */</span></div><div class="line">  Shader *default_surface;</div><div class="line">  Shader *default_light;</div><div class="line">  Shader *default_background;</div><div class="line">  Shader *default_empty;</div><div class="line"></div><div class="line">  <span class="comment">/* device */</span></div><div class="line">  Device *device;</div><div class="line">  DeviceScene dscene;</div><div class="line"></div><div class="line">  <span class="comment">/* parameters */</span></div><div class="line">  SceneParams params;</div><div class="line"></div><div class="line">  <span class="comment">/* mutex must be locked manually by callers */</span></div><div class="line">  thread_mutex mutex;</div><div class="line">  ......</div><div class="line">&#125;;</div></pre></td></tr></table></figure>
-<h1 id="0x4-光线跟踪的执行"><a href="#0x4-光线跟踪的执行" class="headerlink" title="0x4 光线跟踪的执行"></a>0x4 光线跟踪的执行</h1><p>   光线跟踪的执行流程如下所示。<br>   <img src="/2020/02/22/Cycles in Blender/path render.svg" alt=""><br>   这个过程是一个典型的光线跟踪渲染过程，先构建BVH结构体用于后续的加速，然后把一幅图像划分成tile的形式进行渲染，每个线程只处理一个tile，当然每一个位置还需要根据设置的sample的数量进行多次处理，最后根据多次处理的结果生成每一个位置对应的最后的像素值。<br>   这里的svm指的是shader virtual machine, svm对shader的执行进行了抽象，把shader中的操作提练成一个个op的形式，通过对op执行的模拟来执行shader，这些op可以理解成是shader的IR(Intermediate Representation).</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1931,7 +1944,7 @@ Detection output
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">43</span>
+                <span class="site-state-item-count">44</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

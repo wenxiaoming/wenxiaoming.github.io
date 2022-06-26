@@ -256,6 +256,34 @@
 
       <h2 class="post-title">
         
+            <a class="post-title-link" href="/2022/02/20/Mixed Render Architecture/" itemprop="url">
+              
+                <span itemprop="name">Mixed Render Architecture</span>
+              
+            </a>
+        
+      </h2>
+
+      <div class="post-meta">
+        <time class="post-time" itemprop="dateCreated"
+              datetime="2022-02-20T22:21:36+09:00"
+              content="2022-02-20" >
+          02-20
+        </time>
+      </div>
+
+    </header>
+  </article>
+
+
+    
+      
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      <h2 class="post-title">
+        
             <a class="post-title-link" href="/2019/03/23/How escher support physically based render/" itemprop="url">
               
                 <span itemprop="name">How escher support physically based render</span>
@@ -406,7 +434,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
-                <span class="site-state-item-count">43</span>
+                <span class="site-state-item-count">44</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -688,42 +716,6 @@
                 $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
               },
               error: function(newcounter, error) {
-                console.log('Failed to create');
-              }
-            });
-          }
-        },
-        error: function(error) {
-          console.log('Error:' + error.code + " " + error.message);
-        }
-      });
-    }
-
-    $(function() {
-      var Counter = AV.Object.extend("Counter");
-      if ($('.leancloud_visitors').length == 1) {
-        addCount(Counter);
-      } else if ($('.post-title-link').length > 1) {
-        showTime(Counter);
-      }
-    });
-  </script>
-
-
-
-  
-
-  
-
-  
-
-  
-
-  
-
-</body>
-</html>
-counter, error) {
                 console.log('Failed to create');
               }
             });
